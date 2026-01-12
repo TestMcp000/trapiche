@@ -1,0 +1,4 @@
+# Lighthouse Performance Reports Directory
+# 
+# 將 Lighthouse 報告 (HTML 格式) 儲存於此目錄
+# 命名格式: lighthouse-mobile-YYYY-MM-DD-HH-MM.html

@@ -1,0 +1,251 @@
+/**
+ * Print Styles for AI Analysis Report Detail
+ *
+ * Admin-only stylesheet for browser print/PDF export.
+ * Hides navigation, keeps report content, A4-friendly layout.
+ *
+ * @see uiux_refactor.md §4 item 6 - PDF Export (Print CSS)
+ * @see doc/specs/completed/AI_ANALYSIS_v2.md §7 Phase 3
+ */
+
+@media print {
+  /* ==========================================================================
+   * Hide Non-Essential UI Elements
+   * ========================================================================== */
+
+  /* Global navigation and admin chrome */
+  .admin-sidebar,
+  nav,
+  aside,
+  header:not(.print-header) {
+    display: none !important;
+  }
+
+  /* All buttons except print-specific ones */
+  button:not(.print-only),
+  .no-print {
+    display: none !important;
+  }
+
+  /* Modal backdrop - make transparent for print */
+  .print-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+  }
+
+  /* ==========================================================================
+   * Report Container Reset
+   * ========================================================================== */
+
+  /* Modal container - convert to full page */
+  .print-container {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Report content scrollable area - make visible */
+  .print-content {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* ==========================================================================
+   * Page Layout (A4 Friendly)
+   * ========================================================================== */
+
+  @page {
+    size: A4;
+    margin: 2cm 1.5cm;
+  }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #000 !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ==========================================================================
+   * Typography
+   * ========================================================================== */
+
+  h1 {
+    font-size: 18pt;
+    margin-bottom: 0.5cm;
+  }
+
+  h2 {
+    font-size: 14pt;
+    margin-top: 0.8cm;
+    margin-bottom: 0.3cm;
+  }
+
+  h3 {
+    font-size: 12pt;
+    margin-top: 0.5cm;
+    margin-bottom: 0.2cm;
+  }
+
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* ==========================================================================
+   * Code Blocks
+   * ========================================================================== */
+
+  pre,
+  code {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    font-size: 9pt;
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd !important;
+  }
+
+  pre {
+    padding: 0.5cm !important;
+    margin: 0.3cm 0 !important;
+    page-break-inside: avoid;
+  }
+
+  /* ==========================================================================
+   * Tables
+   * ========================================================================== */
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    page-break-inside: avoid;
+  }
+
+  th,
+  td {
+    border: 1px solid #ccc !important;
+    padding: 0.2cm 0.3cm;
+    text-align: left;
+  }
+
+  th {
+    background: #f0f0f0 !important;
+    font-weight: 600;
+  }
+
+  /* ==========================================================================
+   * Page Break Control
+   * ========================================================================== */
+
+  h1,
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  table,
+  figure,
+  pre,
+  blockquote {
+    page-break-inside: avoid;
+  }
+
+  /* Avoid breaking immediately after headings */
+  h1 + *,
+  h2 + *,
+  h3 + * {
+    page-break-before: avoid;
+  }
+
+  /* ==========================================================================
+   * Report Metadata Section
+   * ========================================================================== */
+
+  .print-metadata {
+    display: block !important;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.5cm;
+    margin-bottom: 0.5cm;
+  }
+
+  .print-metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5cm;
+  }
+
+  /* ==========================================================================
+   * Status Badges (Preserve Colors)
+   * ========================================================================== */
+
+  .print-status-completed {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+  }
+
+  .print-status-failed {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+  }
+
+  .print-status-pending {
+    background: #fef9c3 !important;
+    color: #854d0e !important;
+  }
+
+  /* ==========================================================================
+   * Links
+   * ========================================================================== */
+
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
+
+  /* Show URL for external links */
+  a[href^="http"]:after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #666;
+  }
+
+  /* ==========================================================================
+   * Footer / Timestamp
+   * ========================================================================== */
+
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 8pt;
+    color: #666;
+    border-top: 1px solid #ccc;
+    padding-top: 0.2cm;
+  }
+}
+
+/* ==========================================================================
+ * Screen-only styles (hide print elements on screen)
+ * ========================================================================== */
+
+@media screen {
+  .print-only,
+  .print-footer {
+    display: none !important;
+  }
+}

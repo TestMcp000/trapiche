@@ -1,0 +1,600 @@
+-- ============================================
+-- DROP: Import/Export RPC Functions
+-- ============================================
+-- 
+-- 執行此腳本刪除所有 Import/Export 相關函數
+-- Must be before main tables as functions reference them
+--
+-- ============================================
+
+DROP FUNCTION IF EXISTS public.import_blog_bundle_atomic(JSONB, JSONB, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.import_blog_posts_batch(JSONB, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.import_blog_categories_batch(JSONB) CASCADE;
+
+-- Import/Export Jobs Table
+DROP TABLE IF EXISTS public.import_export_jobs CASCADE;
+
+
+-- ============================================
+-- DROP: 主網站表格 (Main Website)
+-- ============================================
+-- 
+-- 執行此腳本刪除所有主網站相關表格
+--
+-- ============================================
+
+
+DROP FUNCTION IF EXISTS public.increment_cache_version() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_site_admin_changes() CASCADE;
+
+-- 刪除表格（使用 CASCADE，連帶移除 policies/indexes/triggers 等依賴物件）
+DROP TABLE IF EXISTS system_settings;
+DROP TABLE IF EXISTS public.audit_logs CASCADE;
+DROP TABLE IF EXISTS public.content_history CASCADE;
+DROP TABLE IF EXISTS public.site_content CASCADE;
+DROP TABLE IF EXISTS public.portfolio_items CASCADE;
+DROP TABLE IF EXISTS public.services CASCADE;
+DROP TABLE IF EXISTS public.company_settings CASCADE;
+DROP TABLE IF EXISTS public.posts CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
+DROP TABLE IF EXISTS public.site_admins CASCADE;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: 留言系統表格 (Comments)
+-- ============================================
+-- 
+-- 執行此腳本刪除所有留言系統相關表格
+--
+-- ============================================
+
+
+-- 刪除表格（使用 CASCADE，連帶移除 policies/indexes/triggers 等依賴物件）
+DROP TABLE IF EXISTS public.spam_decision_log CASCADE;
+DROP TABLE IF EXISTS public.comment_rate_limits CASCADE;
+DROP TABLE IF EXISTS public.comment_public_settings CASCADE;
+DROP TABLE IF EXISTS public.comment_settings CASCADE;
+-- Note: site_admins is dropped in 01_drop/01_main.sql section
+DROP TABLE IF EXISTS public.comment_blacklist CASCADE;
+DROP TABLE IF EXISTS public.comments CASCADE;
+
+-- 刪除類型
+DROP TYPE IF EXISTS public.comment_target_type CASCADE;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: 報告系統表格 (Reports)
+-- ============================================
+-- 
+-- 執行此腳本刪除所有報告系統相關表格
+--
+-- ============================================
+
+
+-- 刪除表格（使用 CASCADE，連帶移除 policies/indexes/triggers 等依賴物件）
+DROP TABLE IF EXISTS public.reports CASCADE;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: 畫廊表格 (Gallery)
+-- ============================================
+-- 
+-- 執行此腳本刪除所有畫廊相關表格
+--
+-- ============================================
+
+
+-- 刪除表格（按依賴順序；使用 CASCADE，連帶移除 policies/indexes/triggers 等依賴物件）
+DROP TABLE IF EXISTS public.gallery_pins CASCADE;
+DROP TABLE IF EXISTS public.gallery_items CASCADE;
+DROP TABLE IF EXISTS public.gallery_categories CASCADE;
+
+-- 刪除類型
+DROP TYPE IF EXISTS public.gallery_pin_surface CASCADE;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: 反應系統表格 (Reactions)
+-- ============================================
+-- 
+-- 執行此腳本刪除所有反應相關表格與觸發器
+--
+-- ============================================
+
+
+-- 刪除函數
+DROP FUNCTION IF EXISTS public.fn_apply_like_delta() CASCADE;
+DROP FUNCTION IF EXISTS public.fn_cleanup_reactions_on_comment_delete() CASCADE;
+DROP FUNCTION IF EXISTS public.fn_cleanup_on_post_delete() CASCADE;
+DROP FUNCTION IF EXISTS public.fn_cleanup_on_gallery_item_delete() CASCADE;
+
+
+-- 刪除表格（使用 CASCADE，連帶移除 policies/indexes/triggers 等依賴物件）
+DROP TABLE IF EXISTS public.reaction_rate_limits CASCADE;
+DROP TABLE IF EXISTS public.reactions CASCADE;
+
+-- 刪除類型
+DROP TYPE IF EXISTS public.reaction_target_type CASCADE;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: Feature Settings Table
+-- Version: 1.0
+-- ============================================
+
+-- Drop RPC function
+DROP FUNCTION IF EXISTS public.is_feature_enabled(TEXT);
+
+-- Drop table (CASCADE handles policies)
+DROP TABLE IF EXISTS public.feature_settings CASCADE;
+
+-- ============================================
+-- DONE
+-- ============================================
+
+-- ============================================
+-- DROP: 電商表格 (Shop / E-commerce)
+-- ============================================
+-- 
+-- 版本 Version: 2.0
+-- 最後更新 Last Updated: 2025-12-20
+--
+-- 整合內容：
+-- - 函數刪除
+-- - Webhook / 審計表刪除
+-- - 會員資料表刪除
+-- - 核心表格刪除
+--
+-- 注意：按照依賴順序刪除（函數 → 附屬表 → 核心表）
+--
+-- ============================================
+
+
+-- ============================================
+-- PART 1: 刪除函數
+-- ============================================
+
+-- Coupon Redemption Lock（P0-5 Step 3）
+DROP FUNCTION IF EXISTS public.redeem_coupon(TEXT, UUID, UUID, INTEGER);
+
+-- Atomic Order Creation（P0-2 Checkout Atomic）
+DROP FUNCTION IF EXISTS public.create_order_with_reservation(
+  UUID, TEXT, TEXT, JSONB, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT, INTEGER, INTEGER, TEXT, INTEGER
+);
+
+-- Vault Helper Functions（P0-5 Step 1）
+DROP FUNCTION IF EXISTS public.store_payment_secret(TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.read_payment_secret(UUID);
+DROP FUNCTION IF EXISTS public.update_payment_secret(UUID, TEXT);
+DROP FUNCTION IF EXISTS public.delete_payment_secret(UUID);
+
+-- 公開可見性檢查函數（P0-4）
+DROP FUNCTION IF EXISTS public.is_shop_visible() CASCADE;
+
+-- 公開設定讀取函數（P1-2）
+DROP FUNCTION IF EXISTS public.get_shop_settings_public();
+
+-- 支付成功處理函數（Phase 1）
+DROP FUNCTION IF EXISTS process_payment_success(UUID, TEXT, TEXT, JSONB);
+
+-- 釋放逾時庫存函數（P4-1 TTL）
+DROP FUNCTION IF EXISTS release_expired_reservations();
+
+
+-- ============================================
+-- PART 2: 刪除 Webhook 與審計表
+-- ============================================
+
+-- 支付審計日誌（Phase 1）
+DROP TABLE IF EXISTS payment_audit_logs;
+
+-- Webhook 事件記錄（PS1-2 Idempotency）
+DROP TABLE IF EXISTS webhook_events;
+
+
+-- ============================================
+-- PART 3: 刪除會員資料表
+-- ============================================
+
+-- 會員資料（CRM）
+DROP TABLE IF EXISTS customer_profiles;
+-- Sequence for short_id (must drop after table)
+DROP SEQUENCE IF EXISTS customer_profiles_short_id_seq;
+
+
+-- ============================================
+-- PART 4: 刪除核心表格（反向依賴順序）
+-- ============================================
+
+-- 操作日誌 (removed - using audit_logs in 01_main.sql section)
+-- DROP TABLE IF EXISTS shop_audit_logs;
+
+-- 金流設定
+DROP TABLE IF EXISTS payment_provider_configs;
+
+-- 優惠券使用記錄（依賴 coupons + orders）
+DROP TABLE IF EXISTS coupon_redemptions;
+
+-- 優惠券
+DROP TABLE IF EXISTS coupons;
+
+-- 訂單明細（依賴 orders）
+DROP TABLE IF EXISTS order_items;
+
+-- 訂單
+DROP TABLE IF EXISTS orders;
+
+-- 庫存保留（依賴 product_variants）
+DROP TABLE IF EXISTS inventory_reservations;
+
+-- 商品變體（依賴 products）
+DROP TABLE IF EXISTS product_variants;
+
+-- 商品
+DROP TABLE IF EXISTS products;
+
+-- 商城設定
+DROP TABLE IF EXISTS shop_settings;
+
+-- Vault 擴充（P0-5）
+-- 注意：不 DROP extension 以避免刪除其他可能使用 Vault 的資料
+-- DROP EXTENSION IF EXISTS supabase_vault;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: Landing Sections Table
+-- ============================================
+--
+-- Execute this script to drop all landing sections related objects.
+-- Must be run before 02_add/09_landing_sections.sql for clean reinstall.
+--
+-- ============================================
+
+-- Drop policies first (CASCADE handles this, but explicit for clarity)
+DROP POLICY IF EXISTS "Public can read visible landing sections" ON public.landing_sections;
+DROP POLICY IF EXISTS "Admins can manage landing sections" ON public.landing_sections;
+
+-- Drop index
+DROP INDEX IF EXISTS public.idx_landing_sections_visible_sort;
+
+-- Drop table (CASCADE removes remaining dependencies)
+DROP TABLE IF EXISTS public.landing_sections CASCADE;
+
+-- ============================================
+-- DONE
+-- ============================================
+
+-- ============================================
+-- DROP: Theme/Site Config Table
+-- ============================================
+-- 
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2025-12-23
+--
+-- 執行此腳本刪除主題配置相關表格
+--
+-- ============================================
+
+
+-- Drop policies first (CASCADE handles this, but explicit for clarity)
+DROP POLICY IF EXISTS "Public can read site config" ON public.site_config;
+DROP POLICY IF EXISTS "Owner can manage site config" ON public.site_config;
+
+-- Drop table (CASCADE removes remaining dependencies)
+DROP TABLE IF EXISTS public.site_config CASCADE;
+
+
+-- ============================================
+-- DONE
+-- ============================================
+-- ============================================
+-- DROP: Users Module Tables
+-- ============================================
+-- 
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2025-12-28
+--
+-- 執行此腳本刪除所有使用者模組相關表格
+--
+-- ============================================
+
+
+-- ============================================
+-- PART 1: 刪除觸發器與函式
+-- ============================================
+
+DROP TRIGGER IF EXISTS on_auth_user_sync ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_auth_user_sync() CASCADE;
+
+
+-- ============================================
+-- PART 2: 刪除表格（按依賴順序）
+-- ============================================
+
+-- 使用者預約（無外部依賴）
+DROP TABLE IF EXISTS public.user_appointments CASCADE;
+
+-- 使用者後台檔案（無外部依賴）
+DROP TABLE IF EXISTS public.user_admin_profiles CASCADE;
+
+-- 使用者目錄（被其他表參照，最後刪除）
+DROP TABLE IF EXISTS public.user_directory CASCADE;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: Page Views Analytics Table & RPC
+-- ============================================
+--
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2026-01-01
+--
+-- @see doc/SPEC.md (Analytics -> Page Views)
+-- @see ARCHITECTURE.md §10 - 資料一致性與安全
+--
+-- 執行順序 Execution Order:
+-- 1. Drop policies
+-- 2. Drop indexes (implicit with table drop)
+-- 3. Drop function
+-- 4. Drop table
+--
+-- ============================================
+
+
+-- ============================================
+-- PART 1: Drop RLS Policies
+-- ============================================
+
+DROP POLICY IF EXISTS "Admins can read page views" ON public.page_view_daily;
+
+
+-- ============================================
+-- PART 2: Drop Function
+-- ============================================
+
+DROP FUNCTION IF EXISTS public.increment_page_view(DATE, TEXT, TEXT);
+
+
+-- ============================================
+-- PART 3: Drop Table (cascades indexes)
+-- ============================================
+
+DROP TABLE IF EXISTS public.page_view_daily;
+
+
+-- ============================================
+-- 完成 DONE - Page Views Analytics
+-- ============================================
+
+-- ============================================
+-- DROP: AI Analysis Report Shares (Public Share Links)
+-- ============================================
+-- 
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2026-01-03
+--
+-- 依賴順序 DROP ORDER:
+-- 1. Drop function first (depends on nothing)
+-- 2. Drop table (after function)
+--
+-- Must be before 17_ai_analysis_custom_template_refs.sql drop
+-- and 12_ai_analysis.sql drop (FK dependency)
+--
+-- ============================================
+
+
+-- ============================================
+-- PART 1: Drop Function
+-- ============================================
+
+DROP FUNCTION IF EXISTS public.get_shared_ai_report(TEXT);
+
+
+-- ============================================
+-- PART 2: Drop Table
+-- ============================================
+
+DROP TABLE IF EXISTS public.ai_analysis_report_shares;
+
+
+-- ============================================
+-- 完成 DONE - AI Analysis Report Shares
+-- ============================================
+
+-- ============================================
+-- DROP: AI Analysis Custom Template References
+-- ============================================
+-- 
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2026-01-03
+--
+-- Must be before 15_ai_analysis_templates.sql drop (FK dependency)
+--
+-- ============================================
+
+-- Drop cross-field CHECK
+ALTER TABLE public.ai_analysis_reports
+DROP CONSTRAINT IF EXISTS ai_analysis_reports_custom_template_ref_check;
+
+-- Drop index
+DROP INDEX IF EXISTS idx_ai_reports_custom_template;
+
+-- Drop column
+ALTER TABLE public.ai_analysis_reports
+DROP COLUMN IF EXISTS custom_template_id;
+
+-- Drop new template_id CHECK
+ALTER TABLE public.ai_analysis_reports
+DROP CONSTRAINT IF EXISTS ai_analysis_reports_template_id_check;
+
+-- Restore original CHECK (built-in templates only)
+ALTER TABLE public.ai_analysis_reports
+ADD CONSTRAINT ai_analysis_reports_template_id_check 
+CHECK (template_id IN ('user_behavior', 'sales', 'rfm', 'content_recommendation'));
+
+-- Drop cross-field CHECK
+ALTER TABLE public.ai_analysis_schedules
+DROP CONSTRAINT IF EXISTS ai_analysis_schedules_custom_template_ref_check;
+
+-- Drop index
+DROP INDEX IF EXISTS idx_ai_schedules_custom_template;
+
+-- Drop column
+ALTER TABLE public.ai_analysis_schedules
+DROP COLUMN IF EXISTS custom_template_id;
+
+-- Drop new template_id CHECK
+ALTER TABLE public.ai_analysis_schedules
+DROP CONSTRAINT IF EXISTS ai_analysis_schedules_template_id_check;
+
+-- Restore original CHECK (built-in templates only)
+ALTER TABLE public.ai_analysis_schedules
+ADD CONSTRAINT ai_analysis_schedules_template_id_check 
+CHECK (template_id IN ('user_behavior', 'sales', 'rfm', 'content_recommendation'));
+
+-- ============================================
+-- 完成 DONE - AI Analysis Custom Template References
+-- ============================================
+
+-- ============================================
+-- DROP: AI Analysis Custom Templates Table
+-- ============================================
+-- 
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2026-01-01
+--
+-- 執行此腳本刪除自訂分析模板表格
+--
+-- ============================================
+
+
+-- ============================================
+-- PART 1: 刪除表格
+-- ============================================
+
+DROP TABLE IF EXISTS public.ai_analysis_templates CASCADE;
+
+
+-- ============================================
+-- 完成 DONE - AI Analysis Templates
+-- ============================================
+
+-- ============================================
+-- DROP: AI Analysis Module Tables & RPC
+-- ============================================
+-- 
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2025-12-30
+--
+-- 執行此腳本刪除所有 AI 分析模組相關表格與函數
+--
+-- ============================================
+
+
+-- ============================================
+-- PART 1: 刪除函數
+-- ============================================
+
+DROP FUNCTION IF EXISTS public.increment_ai_usage(TEXT, NUMERIC) CASCADE;
+
+
+-- ============================================
+-- PART 2: 刪除表格（按依賴順序）
+-- ============================================
+
+-- AI 分析排程（先刪除，因為依賴 ai_analysis_reports）
+DROP TABLE IF EXISTS public.ai_analysis_schedules CASCADE;
+
+-- AI 分析報告
+DROP TABLE IF EXISTS public.ai_analysis_reports CASCADE;
+
+-- AI 使用量統計
+DROP TABLE IF EXISTS public.ai_usage_monthly CASCADE;
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
+
+-- ============================================
+-- DROP: Embedding Module Tables (pgvector)
+-- ============================================
+-- 
+-- 版本 Version: 1.0
+-- 最後更新 Last Updated: 2025-12-30
+--
+-- @see uiux_refactor.md §6.3 - Data Intelligence Platform (Module C)
+--
+-- ============================================
+
+
+-- DROP Policies First
+DROP POLICY IF EXISTS "Admins can read embeddings" ON public.embeddings;
+DROP POLICY IF EXISTS "Admins can manage embeddings" ON public.embeddings;
+DROP POLICY IF EXISTS "Admins can read embedding queue" ON public.embedding_queue;
+DROP POLICY IF EXISTS "Admins can manage embedding queue" ON public.embedding_queue;
+DROP POLICY IF EXISTS "Anyone can read similar items" ON public.similar_items;
+DROP POLICY IF EXISTS "Admins can manage similar items" ON public.similar_items;
+DROP POLICY IF EXISTS "Admins can read search logs" ON public.search_logs;
+DROP POLICY IF EXISTS "Admins can insert search logs" ON public.search_logs;
+DROP POLICY IF EXISTS "Owner can delete search logs" ON public.search_logs;
+
+-- DROP Indexes
+DROP INDEX IF EXISTS public.idx_embeddings_vector;
+DROP INDEX IF EXISTS public.idx_embeddings_target;
+DROP INDEX IF EXISTS public.idx_embeddings_quality;
+DROP INDEX IF EXISTS public.idx_embeddings_created;
+DROP INDEX IF EXISTS public.idx_embeddings_tsv;
+DROP INDEX IF EXISTS public.idx_embedding_queue_status;
+DROP INDEX IF EXISTS public.idx_embedding_queue_claimable;
+DROP INDEX IF EXISTS public.idx_similar_items_source;
+DROP INDEX IF EXISTS public.idx_similar_items_computed;
+DROP INDEX IF EXISTS public.idx_search_logs_created;
+DROP INDEX IF EXISTS public.idx_search_logs_low_quality;
+DROP INDEX IF EXISTS public.idx_search_logs_mode;
+DROP INDEX IF EXISTS public.idx_search_logs_created_by;
+
+-- DROP RPC Functions
+DROP FUNCTION IF EXISTS public.match_embeddings(vector(1536), float, int, text[]);
+DROP FUNCTION IF EXISTS public.search_embeddings_keyword(text, int, text[]);
+DROP FUNCTION IF EXISTS public.claim_embedding_queue_items(int, int);
+
+-- DROP Tables
+DROP TABLE IF EXISTS public.search_logs CASCADE;
+DROP TABLE IF EXISTS public.similar_items CASCADE;
+DROP TABLE IF EXISTS public.embedding_queue CASCADE;
+DROP TABLE IF EXISTS public.embeddings CASCADE;
+
+-- Note: We do NOT drop the vector extension as it may be used by other features.
+
+
+-- ============================================
+-- 完成 DONE
+-- ============================================
