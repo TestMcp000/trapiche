@@ -1,7 +1,7 @@
 ﻿# AI Safety Risk Engine — Spec
 
 > Status: DRAFT  
-> Last Updated: 2026-01-13  
+> Last Updated: 2026-01-17  
 > Scope: comment UGC safety risk engine (V1: text only)
 
 See also:
@@ -24,7 +24,7 @@ See also:
 - **(3B) Safety 審核資料落點**：新建 `public.comment_safety_assessments`（保存歷史/可稽核），並在 `comment_moderation` 存放「latest pointer / 快速查詢欄位」
 - **(4B) 流程順序（優先省 LLM 成本）**：Spam **local gate** → Spam external（Akismet / reCAPTCHA）→ Safety（只在 external 通過且候選公開時跑 RAG/LLM；**外部服務全部不可用**才 `pending`；但 **reCAPTCHA 啟用且 token 缺失 → 一律 `pending`**）
 - **(5B) Safety settings SSOT**：新建 `public.safety_settings`（singleton）存 threshold/model/timeout/feature toggle + user-facing messages
-- **(6A) OpenRouter 呼叫邊界**：擴充 `lib/infrastructure/openrouter/**` 提供通用 `runChatCompletion`，domain 只做 prompt/parse
+- **(6A) Gemini 推論入口**：第三層推論改用 Gemini（Native JSON Mode：`responseMimeType` + `responseSchema`），Gemini API access 限定在 server-only `lib/infrastructure/gemini/**`；domain 只做 prompt/parse
 
 ---
 
@@ -37,6 +37,14 @@ See also:
 1. **即時攔截 (Immediate Interception)**：即時阻止高風險內容公開發布。
 2. **語境感知 (Contextual Awareness)**：區分日常誇飾用語（如：「笑死」）與真實的痛苦表達（如：「想永遠睡著」）。
 3. **持續進化 (Continuous Evolution)**：系統必須能從新出現的黑話與諮商師回饋中學習，且優先透過資料更新完成閉環（不依賴頻繁程式碼部署）。
+
+### 核心策略（Implementation Principles）
+
+1. **Zero Regex Parsing**：第三層採用 Gemini Native JSON Mode（`responseMimeType` + `responseSchema`），以 constrained decoding 確保輸出結構穩定。
+2. **雙軌進化 (Dual-Loop Evolution)**：
+   - **快軌 (Fast Loop)**：更新 Safety corpus（RAG）即時修正新黑話/隱喻。
+   - **慢軌 (Slow Loop)**：Fine-tuning / Prompt / Threshold 低頻迭代（見 §4.3）。
+3. **Prompt Alignment**：在 prompt 內顯式列出 `risk_level` enum，避免 constrained decoding 下的輸出空間不對齊。
 
 ---
 
@@ -60,10 +68,11 @@ See also:
 
 ### 技術/架構約束 (本 repo 必須遵守)
 
-- **延遲預算 (Latency Budget)**：同步檢查（層級 1–3）必須在 **2000ms** 內完成；任何超時/不可用必須 **Fail Closed → HELD**。
-- **隱私權 (PII)**：任何送往外部 AI（包含 embeddings 與 LLM）之內容，必須在呼叫外部 API *之前* 完成去識別化（避免 PII 外洩）。
+- **延遲預算 (Latency Budget)**：留言提交的同步決策必須在 **2000ms** 內完成；Safety Layer 2/3 與 LLM call 必須有嚴格 timeout；Safety 任一外部依賴錯誤/超時 → **Fail Closed → HELD**（不公開、轉人工）。
+- **隱私權 (PII)**：任何送往外部 AI（包含 embeddings 與 LLM）之內容，必須在呼叫外部 API _之前_ 完成去識別化（避免 PII 外洩）。
 - **Client bundle 零侵入**：所有 Safety/AI 相關程式碼必須 server-only（不得進入 client bundle；public UI 不得 import admin/AI deps）。
 - **AI SDK/通道限制**（參考 `ARCHITECTURE.md`）：
+  - Gemini SDK / API 只允許在 server-only `lib/infrastructure/gemini/**`
   - OpenRouter API 只允許在 server-only `lib/infrastructure/openrouter/**`
   - OpenAI SDK 只允許在 `supabase/functions/**`（本功能 V1 不新增新的 OpenAI Edge Function）
 
@@ -72,6 +81,26 @@ See also:
 ## 3. 架構：三層防禦網 (The 3-Layer Defense)
 
 系統採用「瑞士起司模型 (Swiss Cheese Model)」，每一層負責過濾特定類型的風險訊號。
+
+```mermaid
+graph TD
+    C[留言內容] --> L1{Layer 1: 關鍵字/規則}
+    L1 -->|命中| H1[HELD]
+    L1 -->|未命中| L2[Layer 2: RAG (Safety corpus)]
+    L2 --> L3[Layer 3: Gemini Native JSON]
+    L3 --> D1{risk_level}
+    D1 -->|High_Risk| H2[HELD]
+    D1 -->|Uncertain| H2
+    D1 -->|Safe| D2{confidence >= threshold?}
+    D2 -->|yes| A1[APPROVED]
+    D2 -->|no| H3[HELD]
+```
+
+#### V1 Decision Rules（單一真相來源）
+
+- `risk_level` = `High_Risk` / `Uncertain` → **永遠 `HELD`**
+- `risk_level` = `Safe` 且 `confidence >= safety_settings.risk_threshold` → `APPROVED`
+- 其餘（含 `confidence < threshold`、任一外部依賴 error/timeout/parse fail）→ `HELD`（Fail Closed）
 
 ### 3.0 在本 repo 的落點（乾淨分離、方便迭代、避免拖慢載入）
 
@@ -83,10 +112,10 @@ V1 以「pure engine + IO orchestration」模式落地（沿用既有 spam pipel
   - Pure（無 IO、可單測）：
     - `lib/modules/safety-risk-engine/engine.ts`（layer 1/decision rules）
     - `lib/modules/safety-risk-engine/pii.ts`（去識別化：email/phone/地址/姓名等）
-    - `lib/modules/safety-risk-engine/prompt.ts`（prompt 組裝/輸出 JSON schema）
+    - `lib/modules/safety-risk-engine/prompt.ts`（prompt 組裝/輸出 JSON 合約）
   - IO（server-only、可觀測）：
     - `lib/modules/safety-risk-engine/rag-io.ts`（RAG 檢索：semantic search + optional rerank）
-    - `lib/modules/safety-risk-engine/llm-io.ts`（第三層推論：只呼叫 `lib/infrastructure/openrouter/**` 的通用 runner）
+    - `lib/modules/safety-risk-engine/llm-io.ts`（第三層推論：只呼叫 `lib/infrastructure/gemini/**` 的通用 runner）
     - `lib/modules/safety-risk-engine/admin-io.ts`（回饋寫入：新增黑話/標註結果）
 
 此設計確保：不新增 client-side 依賴、不影響 public SSR/LCP；僅在「留言提交」的互動路徑消耗延遲預算。
@@ -95,7 +124,7 @@ V1 以「pure engine + IO orchestration」模式落地（沿用既有 spam pipel
 
 - **機制**：Aho-Corasick 或 RegExp 匹配 Safety Blocklist（獨立於 spam blacklist）。
 - **目標**：明確、無歧義、可直接判定的高風險內容（例如具體方法、武器名稱 + 自傷意圖搭配）。
-- **動作**：立即 `REJECTED` 或 `HELD`（可配置；預設偏保守）。
+- **動作（V1）**：一律 `HELD`（不做 `REJECTED`；保留稽核/人工介入空間）。
 - **成本**：~0ms（純計算）。
 
 ### 第二層：語意檢索（RAG）
@@ -125,29 +154,29 @@ V1 以「pure engine + IO orchestration」模式落地（沿用既有 spam pipel
 
 第二層檢索會先對 query 生成 embedding（外部 API），因此 **用戶留言必須先經過去識別化** 再送去做 query embedding，以符合本 repo 的 AI/PII 約束。
 
-### 第三層：推論（LLM）— V1 選擇 OpenRouter（Server-only）
+### 第三層：推論（LLM）— V1 選擇 Gemini Native JSON（Server-only）
 
 #### 架構選擇結論
 
-V1 第三層推論 **選擇 OpenRouter（Next.js server-only）**，不新增 Supabase Edge Function（OpenAI）來做 LLM 推論。
+V1 第三層推論 **直接使用 Gemini 模型作為推論入口**（Next.js server-only），並啟用 **Native JSON Mode + responseSchema** 取得穩定、可驗證的結構化輸出（避免 parsing/誤判；Zero Regex parsing）。
 
-#### 理由（乾淨分離 + 方便迭代 + 不拖慢載入）
+#### 理由（穩定輸出 + 更低誤差面）
 
-- **單一 runtime**：避免同一套 prompt/去識別化/timeout 邏輯在 Node（Next.js）與 Deno（Edge Function）重複實作。
-- **更少 hop**：Next.js → OpenRouter（1 hop），避免 Next.js → Supabase Function → OpenAI（2 hops）。
-- **部署/版本一致**：Safety 引擎、規則、prompt、timeout 策略跟著主站一起版本化，降低 drift。
-- **符合既有架構守門**：OpenRouter 通道已被限制在 `lib/infrastructure/openrouter/**` 且 server-only，不進 client bundle。
+- **Constrained Decoding**：用 `responseMimeType: "application/json"` + `responseSchema` 強制輸出結構，降低 parsing failure 與後處理成本。
+- **Prompt Alignment**：在 prompt 內顯式列出 `risk_level` enum 選項，對齊 constrained decoding 的輸出空間，降低機率扭曲。
+- **單一 runtime**：LLM、去識別化、timeout 策略跟著主站版本化，避免 drift。
+- **可熱切換 model_id**：`safety_settings.model_id` 可填 `gemini-1.5-flash` 或 `tunedModels/*`（慢軌迭代）。
 
 #### 目標/輸入/輸出
 
 - **目標**：判讀語氣、意圖、上下文細節，避免僅靠關鍵字誤判。
 - **輸入**：去識別化後的用戶留言 + RAG Top-K（建議 3）上下文。
-- **輸出**：結構化 JSON：`risk_level`, `confidence`, `reason`（必要時加 `categories`）。
+- **輸出**：結構化 JSON：`risk_level`（`Safe`/`High_Risk`/`Uncertain`）、`confidence`、`reason`。
 
 #### Fail Closed（超時與不可用）
 
 - **LLM call 必須設定嚴格 timeout**（建議：1200–1500ms 內；可配置）。
-- 任一外部依賴（embedding/LLM/rerank）錯誤或超時時，整體決策 **預設 `HELD`**（交由人工審核）。
+- Gemini API 錯誤/超時、或 schema validation 失敗 → 整體決策 **預設 `HELD`**（交由人工審核）。
 
 ---
 
@@ -163,7 +192,7 @@ V1 第三層推論 **選擇 OpenRouter（Next.js server-only）**，不新增 Su
 2. **Blocklist 播種**
    - 建立初始高置信度關鍵字/規則（只放「不太可能誤報」的片段）。
 3. **Prompt baseline**
-   - 使用固定 JSON schema 的 prompt（見 §5.1），先追求穩定輸出與低延遲。
+   - 使用固定 JSON 合約的 prompt（見 §5.1），先追求穩定輸出與低延遲。
 
 ### 階段二：運作期（Runtime Decision Flow）
 
@@ -251,7 +280,8 @@ Spam external checks 指「會打外部服務」的 spam 檢查（但仍屬於 s
 
 #### 決策與落庫語意（對應現有 comments 模型）
 
-- `REJECTED`：不落庫（回 400；訊息可由 safety settings 控制）
+- `REJECTED`：不落庫（回 400）。（Safety Risk Engine V1 不使用 `REJECTED`；保留給 spam pipeline 或未來 policy）
+- `PENDING`：落庫但不可公開（`is_approved=false`；通常用於 external checks 全部不可用或 reCAPTCHA token 缺失，等待重試/人工處理）
 - `HELD`：落庫但不可公開（`is_approved=false`，進 safety queue；訊息可由 safety settings 控制）
 - `APPROVED`：代表 spam external checks 已通過且 Safety 同步評估通過，落庫為可公開狀態（`is_approved=true`）
 
@@ -263,12 +293,16 @@ graph TD
     E1 -->|all unavailable| P2[落庫: pending<br/>（external 失效 + retry）]
     E1 -->|spam/pending/reject| P1
     E1 -->|passed / degraded| K1[Safety Layer 1: 關鍵字/規則]
-    K1 -->|命中| H1[決策: HELD/REJECTED]
+    K1 -->|命中| H1[決策: HELD]
     K1 -->|未命中| D1[去識別化 (PII)]
     D1 --> R2[Safety Layer 2: RAG (Safety corpus)]
-    R2 --> L3[Safety Layer 3: LLM (OpenRouter + timeout)]
-    L3 -->|HELD/REJECTED| H2[落庫/回應（safety settings）]
-    L3 -->|APPROVED| F1[落庫: approved]
+    R2 --> L3[Safety Layer 3: LLM (Gemini + timeout)]
+    L3 -->|timeout/error/parse fail| H2[落庫: HELD<br/>（safety settings）]
+    L3 --> D2{risk_level}
+    D2 -->|High_Risk / Uncertain| H2
+    D2 -->|Safe| D3{confidence >= threshold?}
+    D3 -->|no| H2
+    D3 -->|yes| F1[落庫: approved]
 ```
 
 ### 階段三：進化期（Feedback Loops）
@@ -282,23 +316,92 @@ graph TD
 - **目標延遲**
   - < 1 分鐘（可允許 queue/worker；必要時可提供「立即生成」按鈕直接呼叫 embedding Edge Function）。
 
-#### B. 慢軌更新（Prompt/Threshold Tuning）— 低頻迭代
+#### B. 慢軌更新（Fine-tuning / Prompt Tuning）— 低頻迭代
 
-V1 不做 LoRA 訓練；改以 **Prompt 版本化 + 閾值調整** 迭代（可存 DB 以避免頻繁部署）。
+慢軌提供兩種手段（低頻、但能顯著改善語氣/語境判讀）：
 
-> 若未來要上 LoRA/自架模型：再新增 Phase 2，並以「模型 ID / prompt ID」可熱切換的方式上線。
+1. **Prompt / Threshold**：版本化 prompt + 調整 `safety_settings.risk_threshold`（可熱更新）。
+2. **Fine-tuning（Google AI Studio）**：V1 即納入（可執行/可產出資料）；透過「訓練表」沉澱高品質樣本，再匯出到 AI Studio 微調取得 `tunedModels/*`，最後更新 `safety_settings.model_id`。
+
+#### B1. 雙表架構（Operational Log → Training Dataset）
+
+Slow loop 採用 ETL（Extract / Transform / Load）流程：
+
+- **Step 1: 來源表（Operational）**：`public.comment_safety_assessments`
+  - 用途：記錄每次 safety 判斷的稽核資料（「發生過什麼」）。
+  - 新增欄位：`human_reviewed_status`（`pending|verified_safe|verified_risk|corrected`；預設 `pending`）。
+- **Step 2: 篩選與清洗（Transform）**
+  - 只選 `human_reviewed_status != 'pending'` 的資料。
+  - 去重：同一筆來源（或同一段 input）不重複進訓練集（見 §9.6 unique/index 建議）。
+  - 格式化：組合成 fine-tuning 需要的 `input_messages`（messages array，JSONB）/ `output_json`（JSONB）。匯出給 Gemini 時可在 script 端將 messages render 成單一字串。
+- **Step 3: 訓練表（Training）**：`public.safety_training_datasets`
+  - 用途：存放「可直接拿去訓練」的高品質樣本（與線上稽核資料解耦）。
+
+補充（V1 規則）：
+
+- Promote API 必須收到 **諮商師修正後** 的 `output_json`（不得缺 reason；若前端未傳，後端應直接拒絕晉升）
+- `dataset_batch` 不手填：由 `safety_settings.training_active_batch`（Active Batch）自動帶入，避免資料歸檔混亂
+
+#### B2. SOP（訓練 Model_v2）
+
+1. 後台審核：將 `comment_safety_assessments.human_reviewed_status` 設為 `verified_safe / verified_risk / corrected`（並由 promote 動作產出訓練樣本）。
+2. 產生訓練資料：從 `safety_training_datasets` 依 `dataset_batch` 撈出樣本匯出（建議平衡 safe/risk）；`dataset_batch` 來源為 `safety_settings.training_active_batch`（Active Batch）。
+3. 上傳 Google AI Studio 進行 fine-tuning。
+4. 取得 Model ID（例：`tunedModels/gemini-safety-v2`）。
+5. 更新 `safety_settings.model_id` 使其生效（不需重新部署）。
 
 ---
 
 ## 5. 資料合約 (Data Contracts)
 
-### 5.1 LLM Prompt（OpenRouter）結構範例
+### 5.1 LLM Prompt（Gemini Native JSON）結構範例
 
-```json
-{
-  "system": "你是一個危機預防助手。你的目標是偵測自我傷害或自殺意圖，並把不確定情況交由人工審核。",
-  "user": "分析以下留言的風險，僅回傳 JSON。\n\n[RAG 上下文]\n- '登出人生' 常用於自殺隱喻 (similarity: 0.92)\n- '想永遠睡著' 在此語境下意味著自殺意念 (similarity: 0.88)\n\n[留言]\n{deidentified_user_input}\n\n[輸出要求]\n僅回傳 JSON: {\"risk_level\": \"High\"|\"Safe\", \"confidence\": 0.0-1.0, \"reason\": \"簡短說明\"}"
-}
+Gemini call 必須設定：
+
+- `responseMimeType: "application/json"`
+- `responseSchema: SafetySchema`（Constrained Decoding）
+
+#### JSON Schema（Strict Output）
+
+```typescript
+const SafetySchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    risk_level: {
+      type: SchemaType.STRING,
+      format: "enum",
+      enum: ["Safe", "High_Risk", "Uncertain"],
+    },
+    reason: { type: SchemaType.STRING },
+    confidence: { type: SchemaType.NUMBER },
+  },
+  required: ["risk_level", "reason", "confidence"],
+};
+```
+
+> `SchemaType` 來自 Gemini SDK（例如 `@google/generative-ai`）；若改用 REST 直接呼叫 Gemini API，請使用等價的 JSON schema 物件。
+
+#### Prompt Engineering（Alignment）
+
+**關鍵規範**：prompt 文字中必須顯式列出 schema enum 選項，確保 constrained decoding 的輸出空間對齊。
+
+```text
+你是一個危機預防助手。請參考以下 [已知案例] 來判斷 [用戶留言] 的風險。
+
+[已知案例 / RAG Context]
+... (由 Layer 2 插入) ...
+
+[用戶留言]
+${user_input}
+
+[指令]
+請評估風險等級。
+你必須嚴格從以下三個選項中選擇一個作為 risk_level：
+1. "Safe" (安全/無害/玩笑)
+2. "High_Risk" (有自傷意圖/求救訊號)
+3. "Uncertain" (無法判斷/語意模糊)
+
+請以 JSON 格式回答。
 ```
 
 ### 5.2 風險評估物件（建議存於 DB）
@@ -313,25 +416,32 @@ interface CommentSafetyAssessment {
   decision: "APPROVED" | "HELD" | "REJECTED";
 
   // Layer 1
-  layer_1_hit: string | null;
+  layer1_hit: string | null;
 
   // Layer 2
-  layer_2_context: Array<{
+  layer2_context: Array<{
     text: string;
     label: string;
     score: number; // similarity / rerank score
   }>;
 
   // Layer 3 (LLM)
-  provider: "openrouter";
-  model_id: string; // e.g. "openai/gpt-4o-mini"
-  ai_risk_level: "High" | "Safe";
+  provider: "gemini";
+  model_id: string; // e.g. "gemini-1.5-flash" | "tunedModels/*"
+  ai_risk_level: "High_Risk" | "Uncertain" | "Safe";
   confidence: number; // 0.0-1.0
   ai_reason: string;
+  latency_ms?: number;
 
   // Feedback loop
-  human_label?: "True_Positive" | "False_Positive" | "True_Negative" | "False_Negative";
+  human_label?:
+    | "True_Positive"
+    | "False_Positive"
+    | "True_Negative"
+    | "False_Negative";
+  human_reviewed_status?: "pending" | "verified_safe" | "verified_risk" | "corrected";
   reviewed_by?: string;
+  reviewed_at?: string; // ISO 8601
 }
 ```
 
@@ -339,24 +449,24 @@ interface CommentSafetyAssessment {
 
 ## 6. 故障模式與降級策略 (Failure Modes & Fallbacks)
 
-| 情境 | 行為 | 用戶體驗 |
-| --- | --- | --- |
-| Vector DB/RPC 不可用 | 跳過第二層，直接進第三層；若仍不確定 → `HELD` | 正常，準確度略降 |
-| Embedding API 不可用（query embedding 失敗） | 視同第二層不可用；繼續第三層 | 正常，準確度略降 |
-| LLM API 超時/離線 | **Fail Closed → `HELD`** | 顯示「您的留言正在審核中」 |
-| 外部依賴速率限制 | 直接 `HELD`（或放入 queue 非同步補判；V1 先以 Held 為主） | 顯示「審核中」 |
-| 結果模糊（低信心） | `HELD` 轉人工審核 | 顯示「等待審核中」 |
+| 情境                                         | 行為                                                      | 用戶體驗                   |
+| -------------------------------------------- | --------------------------------------------------------- | -------------------------- |
+| Vector DB/RPC 不可用                         | 跳過第二層，直接進第三層；若仍不確定 → `HELD`             | 正常，準確度略降           |
+| Embedding API 不可用（query embedding 失敗） | 視同第二層不可用；繼續第三層                              | 正常，準確度略降           |
+| Gemini API 超時/離線                         | **Fail Closed → `HELD`**                                  | 顯示「您的留言正在審核中」 |
+| 外部依賴速率限制                             | 直接 `HELD`（或放入 queue 非同步補判；V1 先以 Held 為主） | 顯示「審核中」             |
+| 結果模糊（低信心）                           | `HELD` 轉人工審核                                         | 顯示「等待審核中」         |
 
 ---
 
 ## 7. 覆用 / 不建議覆用清單（本 repo 現況）
 
-| 能力 | 建議 | 理由 | 對應模組 |
-| --- | --- | --- | --- |
-| Embeddings + semantic search | **覆用** | 已有 pgvector schema/RPC/queue/權限與守門；只需新增 `target_type` | `lib/modules/embedding/**`, `supabase/**` |
-| Preprocessing pipeline | **覆用** | 清洗/切片/品質閘門已可插拔；Safety 可加強 PII redactor | `lib/modules/preprocessing/**` |
-| RAG retrieval orchestration | **覆用底層、不覆用 ai-analysis 實作** | `analysis-rag-io.ts` 是分析模板導向且目前 chunk content placeholder；Safety 需 query=留言、corpus=安全語料 | `lib/modules/embedding/**` + 新 `lib/modules/safety-risk-engine/rag-io.ts` |
-| De-identification（PII） | **建議抽共用 pure util** | Safety/AI Analysis 都需要；避免 Node/Deno 重複實作 | 可抽到 `lib/security/*`（pure）再被各 domain 依賴 |
+| 能力                         | 建議                                  | 理由                                                                                                       | 對應模組                                                                   |
+| ---------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Embeddings + semantic search | **覆用**                              | 已有 pgvector schema/RPC/queue/權限與守門；只需新增 `target_type`                                          | `lib/modules/embedding/**`, `supabase/**`                                  |
+| Preprocessing pipeline       | **覆用**                              | 清洗/切片/品質閘門已可插拔；Safety 可加強 PII redactor                                                     | `lib/modules/preprocessing/**`                                             |
+| RAG retrieval orchestration  | **覆用底層、不覆用 ai-analysis 實作** | `analysis-rag-io.ts` 是分析模板導向且目前 chunk content placeholder；Safety 需 query=留言、corpus=安全語料 | `lib/modules/embedding/**` + 新 `lib/modules/safety-risk-engine/rag-io.ts` |
+| De-identification（PII）     | **建議抽共用 pure util**              | Safety/AI Analysis 都需要；避免 Node/Deno 重複實作                                                         | 可抽到 `lib/security/*`（pure）再被各 domain 依賴                          |
 
 ---
 
@@ -384,7 +494,7 @@ interface CommentSafetyAssessment {
 
 - **Queue filters**
   - `status`: `HELD`（Safety 引擎擋下）
-  - `risk_level`: High / Safe（通常只列 High 或不確定）
+  - `risk_level`: High_Risk / Uncertain / Safe（通常只列 High_Risk 或 Uncertain，或依 confidence 篩選）
   - `confidence` 範圍、日期範圍、targetType（post/gallery_item）
 - **List row（最小可用資訊）**
   - 留言摘要、目標內容（post/gallery item）、時間、使用者顯示名
@@ -410,7 +520,7 @@ interface CommentSafetyAssessment {
 
 - UI 只做：呈現 + 觸發 server actions（延用既有 admin comments 的模式）
 - 所有 DB/外部 API：在 `lib/modules/safety-risk-engine/*-io.ts`（server-only）完成
-- UI 端不得 import OpenRouter/OpenAI SDK；不得在 client component 直接呼叫外部 AI
+- UI 端不得 import OpenRouter/OpenAI/Gemini SDK；不得在 client component 直接呼叫外部 AI
 
 ### 8.4 權限與資料安全
 
@@ -427,6 +537,7 @@ interface CommentSafetyAssessment {
 
 - 用途：管理 slang / cases（支援 draft→active→deprecated），並作為 embeddings 的內容來源
 - `target_id`：使用 `id(uuid)` 作為 embeddings 的 target_id
+- 核心欄位（最小）：`id`, `kind(slang|case)`, `status(draft|active|deprecated)`, `label`, `content`, `created_by`, `updated_by`, `created_at`, `updated_at`
 - 寫入/審核建議：
   - editor/owner 可新增 draft
   - 僅 owner 可把 draft 升級為 active（避免 corpus 汙染）
@@ -435,10 +546,12 @@ interface CommentSafetyAssessment {
 
 - 用途：集中管理 safety feature toggle、threshold、model、timeout、user-facing messages
 - 建議為 singleton row（`id=1`），並提供預設值（避免 null 分支）
+- 核心欄位（最小）：`is_enabled`, `model_id`, `timeout_ms`, `risk_threshold`, `training_active_batch`, `held_message`, `rejected_message`, `layer1_blocklist`
 
 ### 9.3 `public.comment_safety_assessments`（3B：歷史/稽核）
 
 - 用途：保存每次 Safety 評估的完整輸出（layer details + model/latency），供審核、回饋、迭代
+- 補充（V1 fine-tuning）：新增 `human_reviewed_status`（`pending|verified_safe|verified_risk|corrected`）作為 ETL 的來源篩選欄位（見 §4.3.B1 與 §9.6）
 - 建議關聯：
   - `comment_id` → `public.comments.id`（ON DELETE CASCADE）
   - human label/ reviewer 欄位可直接存此表（或之後拆 review log）
@@ -449,7 +562,7 @@ interface CommentSafetyAssessment {
 
 - `safety_latest_assessment_id`（指向 `comment_safety_assessments.id`）
 - `safety_latest_decision`（APPROVED/HELD/REJECTED）
-- `safety_latest_risk_level`（High/Safe）
+- `safety_latest_risk_level`（High_Risk/Uncertain/Safe）
 - `safety_latest_confidence`（0-1）
 
 ### 9.5 `public.embeddings`（2A：擴充 target_type check constraint）
@@ -464,3 +577,32 @@ interface CommentSafetyAssessment {
 - `supabase/functions/generate-embedding` 的 `targetType` allowlist 同步擴充
 - `lib/modules/embedding/embedding-target-content-io.ts` 能 fetch `safety_*` 的 raw content（來源：`safety_corpus_items`）
 - `public.embedding_queue` 的 `target_type` CHECK constraint 也需同步擴充（否則無法 enqueue corpus embeddings）
+
+### 9.6 `public.safety_training_datasets`（V1：Fine-tuning training set）
+
+- 用途：存放「可直接拿去訓練」的高品質樣本（與線上稽核資料解耦）
+- 核心欄位（建議）：
+  - `input_messages`：訓練輸入（messages array, JSONB；system + user；user 內含去識別化留言 + RAG context）
+  - `output_json`：諮商師修正後的目標 JSONB（`{risk_level, confidence, reason}`）
+  - `source_log_id`：回鏈到 `comment_safety_assessments.id`（方便除錯/回溯）
+  - `dataset_batch`：資料批次/版本（由 `safety_settings.training_active_batch` 提供；例：`2026-01_cold_start`, `2026-02_slang_update`）
+- 去重建議：
+  - `(source_log_id, dataset_batch)` unique（避免同一來源重複匯入同一批次）
+  - 或新增 `input_hash`（sha256）並對 `(input_hash, dataset_batch)` unique（避免多筆來源生成相同 input）
+
+---
+
+## 10. 文件維護 (Maintenance)
+
+### 10.1 與其他文件的關係
+
+- 既有行為的單一事實來源（SSoT）：`doc/SPEC.md`
+- 本文件：Safety Risk Engine 的設計、資料合約與 schema（供實作與稽核對齊）
+
+### 10.2 升級到 completed（可選）
+
+若要把本規格從 `proposed/` 升級到 `completed/`，建議流程：
+
+1. 移動或複製到 `doc/specs/completed/safety-risk-engine-spec.md`
+2. 更新 `doc/specs/README.md` 的索引列
+3. 更新 `doc/SPEC.md` 中的 spec link（並確保本文件內的章節編號/標題維持穩定，避免破壞 in-code `@see`）

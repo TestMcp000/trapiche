@@ -28,7 +28,7 @@ import type {
 // =============================================================================
 
 /** Default provider name for assessment records (audit only, not SDK access). */
-const PROVIDER_NAME = 'llm';
+const PROVIDER_NAME = 'gemini';
 
 // =============================================================================
 // Types
@@ -182,7 +182,7 @@ function createLayer1Result(
         layer2Context: [],
         provider: PROVIDER_NAME,
         modelId: settings.modelId,
-        aiRiskLevel: 'High',
+        aiRiskLevel: 'High_Risk',
         confidence: 1.0,
         aiReason: `Blocklist pattern matched: ${matchedPattern}`,
     };
@@ -210,7 +210,7 @@ function createFailClosedResult(
         layer2Context: ragContext,
         provider: PROVIDER_NAME,
         modelId: settings.modelId,
-        aiRiskLevel: 'High',
+        aiRiskLevel: 'Uncertain',
         confidence: 0,
         aiReason: `Fail Closed: ${errorReason}`,
         latencyMs,

@@ -236,7 +236,8 @@
         "approve": "核准",
         "reject": "拒絕",
         "label": "標註",
-        "promoteToCorpus": "加入語料庫"
+        "promoteToCorpus": "加入語料庫",
+        "promoteToTraining": "加入訓練集"
       },
       "labels": {
         "truePositive": "真陽性",
@@ -283,6 +284,8 @@
         "timeout": "逾時時間 (ms)",
         "threshold": "風險閾值",
         "thresholdDesc": "自動核准的最低信心分數 (0.0-1.0)",
+        "trainingBatch": "當前訓練批次 (Active Batch)",
+        "trainingBatchDesc": "加入訓練集時會自動寫入此 batch ID（例：2026-01_cold_start, 2026-02_slang_update）",
         "heldMessage": "待審訊息",
         "heldMessageDesc": "留言被暫留時顯示的訊息",
         "rejectedMessage": "拒絕訊息",
@@ -290,6 +293,17 @@
         "save": "儲存設定",
         "saving": "儲存中...",
         "saved": "設定已儲存！"
+      },
+      "training": {
+        "title": "修正並加入訓練集",
+        "subtitle": "目前批次：{batch}（由安全設定提供）",
+        "riskLevel": "風險等級 (risk_level)",
+        "confidence": "信心分數 (confidence)",
+        "reason": "理由 (reason)",
+        "reasonHint": "請重寫/修正理由，避免把錯誤 reasoning 帶進訓練資料。",
+        "cancel": "取消",
+        "save": "加入訓練集",
+        "saving": "寫入中..."
       }
     },
     "common": {

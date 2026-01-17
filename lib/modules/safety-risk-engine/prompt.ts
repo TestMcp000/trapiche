@@ -2,7 +2,7 @@
  * Safety Risk Engine - Prompt Composition & Parsing
  *
  * Pure module for composing LLM prompts and parsing JSON responses.
- * Handles the contract between Safety Risk Engine and OpenRouter.
+ * Handles the contract between Safety Risk Engine and Gemini.
  *
  * @see doc/specs/proposed/safety-risk-engine-spec.md §5.1
  */
@@ -26,7 +26,7 @@ export const SAFETY_SYSTEM_PROMPT = `你是一個危機預防助手。你的目�
 重要規則：
 1. 只回傳 JSON，不要包含任何其他文字
 2. 區分日常誇飾用語（如「笑死」「累死」）與真實的危機訊號
-3. 若不確定，傾向標記為 High 交由人工審核（寧可誤報，不可漏報）
+3. 若不確定，請將 risk_level 標記為 Uncertain（並適度降低 confidence）
 4. 考慮上下文語境，單一詞彙不足以判斷意圖`;
 
 /**
@@ -42,7 +42,7 @@ const USER_PROMPT_TEMPLATE = `分析以下留言的風險，僅回傳 JSON。
 {COMMENT}
 
 [輸出要求]
-僅回傳 JSON: {"risk_level": "High"|"Safe", "confidence": 0.0-1.0, "reason": "簡短說明"}`;
+僅回傳 JSON: {"risk_level": "Safe"|"High_Risk"|"Uncertain", "confidence": 0.0-1.0, "reason": "簡短說明"}`;
 
 /**
  * Default response when no RAG context available.
@@ -114,7 +114,7 @@ export function getSafetyPromptMessages(
 /**
  * Valid risk level values.
  */
-const VALID_RISK_LEVELS: SafetyRiskLevel[] = ['High', 'Safe'];
+const VALID_RISK_LEVELS: SafetyRiskLevel[] = ['Safe', 'High_Risk', 'Uncertain'];
 
 /**
  * Check if a value is a valid risk level.
@@ -197,8 +197,8 @@ export function extractJsonFromResponse(raw: string): string | null {
  *
  * @example
  * ```typescript
- * const response = parseSafetyLlmResponse('```json\n{"risk_level": "High", "confidence": 0.85, "reason": "..."}\n```');
- * // Returns: { risk_level: 'High', confidence: 0.85, reason: '...' }
+ * const response = parseSafetyLlmResponse('```json\n{"risk_level": "High_Risk", "confidence": 0.85, "reason": "..."}\n```');
+ * // Returns: { risk_level: 'High_Risk', confidence: 0.85, reason: '...' }
  * ```
  */
 export function parseSafetyLlmResponse(raw: string): SafetyLlmResponse | null {

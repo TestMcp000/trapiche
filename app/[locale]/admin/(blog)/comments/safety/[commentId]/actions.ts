@@ -5,14 +5,19 @@ import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
     getSafetyAssessmentDetail,
     labelSafetyAssessment,
+    updateSafetyAssessmentHumanReviewedStatus,
     approveSafetyComment,
     rejectSafetyComment,
     promoteToCorpus,
+    promoteSafetyAssessmentToTrainingDataset,
 } from '@/lib/modules/safety-risk-engine/admin-io';
 import type {
     SafetyAssessmentDetail,
     SafetyHumanLabel,
     SafetyCorpusKind,
+    SafetyHumanReviewedStatus,
+    SafetyLlmResponse,
+    SafetyTrainingDatasetRow,
 } from '@/lib/types/safety-risk-engine';
 
 async function checkAdmin() {
@@ -29,7 +34,7 @@ async function checkAdmin() {
  */
 export async function fetchAssessmentByCommentAction(
     commentId: string
-): Promise<{ assessment: SafetyAssessmentDetail | null; comment: { content: string } | null }> {
+): Promise<{ assessment: SafetyAssessmentDetail | null; comment: { content: string } | null; trainingActiveBatch: string | null }> {
     await checkAdmin();
 
     // Get latest assessment for this comment
@@ -51,11 +56,32 @@ export async function fetchAssessmentByCommentAction(
         .single();
 
     if (!moderation?.safety_latest_assessment_id) {
-        return { assessment: null, comment: comment ? { content: comment.content } : null };
+        const { data: settings } = await supabase
+            .from('safety_settings')
+            .select('training_active_batch')
+            .eq('id', 1)
+            .single();
+
+        return {
+            assessment: null,
+            comment: comment ? { content: comment.content } : null,
+            trainingActiveBatch: settings?.training_active_batch ?? null,
+        };
     }
 
     const assessment = await getSafetyAssessmentDetail(moderation.safety_latest_assessment_id);
-    return { assessment, comment: comment ? { content: comment.content } : null };
+
+    const { data: settings } = await supabase
+        .from('safety_settings')
+        .select('training_active_batch')
+        .eq('id', 1)
+        .single();
+
+    return {
+        assessment,
+        comment: comment ? { content: comment.content } : null,
+        trainingActiveBatch: settings?.training_active_batch ?? null,
+    };
 }
 
 /**
@@ -104,4 +130,42 @@ export async function promoteDetailToCorpusAction(data: {
     const user = await checkAdmin();
     const itemId = await promoteToCorpus(data, user.id);
     return { success: !!itemId, itemId: itemId ?? undefined };
+}
+
+/**
+ * Promote assessment to training dataset with corrected output JSON.
+ *
+ * IMPORTANT: correctedOutputJson is required (must include reason).
+ */
+export async function promoteDetailToTrainingAction(
+    assessmentId: string,
+    correctedOutputJson: SafetyLlmResponse
+): Promise<{ success: boolean; dataset?: SafetyTrainingDatasetRow; error?: string }> {
+    const user = await checkAdmin();
+
+    try {
+        const existingAssessment = await getSafetyAssessmentDetail(assessmentId);
+
+        const dataset = await promoteSafetyAssessmentToTrainingDataset({
+            assessmentId,
+            reviewerId: user.id,
+            correctedOutputJson,
+        });
+
+        // Best-effort: mark review status for ETL bookkeeping
+        let status: SafetyHumanReviewedStatus = 'corrected';
+        if (existingAssessment?.aiRiskLevel === correctedOutputJson.risk_level) {
+            if (correctedOutputJson.risk_level === 'Safe') status = 'verified_safe';
+            else if (correctedOutputJson.risk_level === 'High_Risk') status = 'verified_risk';
+        }
+
+        await updateSafetyAssessmentHumanReviewedStatus(assessmentId, status, user.id);
+
+        return { success: true, dataset };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown promote error',
+        };
+    }
 }

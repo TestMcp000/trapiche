@@ -12,12 +12,20 @@ import 'server-only';
 import { createAdminClient } from '@/lib/infrastructure/supabase/admin';
 import { createClient } from '@/lib/infrastructure/supabase/server';
 import { enqueueEmbedding } from '@/lib/embeddings';
+import {
+    SAFETY_SYSTEM_PROMPT,
+    composeSafetyPrompt,
+    isValidSafetyLlmResponse,
+} from '@/lib/modules/safety-risk-engine/prompt';
+import { redactPii } from '@/lib/modules/safety-risk-engine/pii';
 import type {
     SafetyDecision,
     SafetyRiskLevel,
     SafetyAssessmentDraft,
     SafetyRagContext,
     SafetyHumanLabel,
+    SafetyHumanReviewedStatus,
+    SafetyTrainingDatasetRow,
     SafetyQueueItem,
     SafetyQueueFilters,
     SafetyCorpusItem,
@@ -63,6 +71,7 @@ interface AssessmentInsertRow {
     confidence: number | null;
     ai_reason: string | null;
     latency_ms: number | null;
+    human_reviewed_status?: SafetyHumanReviewedStatus;
 }
 
 // =============================================================================
@@ -85,9 +94,9 @@ interface AssessmentInsertRow {
  *   decision: 'HELD',
  *   layer1Hit: null,
  *   layer2Context: [...],
- *   provider: 'openrouter',
- *   modelId: 'openai/gpt-4o-mini',
- *   aiRiskLevel: 'High',
+ *   provider: 'gemini',
+ *   modelId: 'gemini-1.5-flash',
+ *   aiRiskLevel: 'High_Risk',
  *   confidence: 0.85,
  *   aiReason: 'Potential crisis indicators detected',
  * });
@@ -365,13 +374,14 @@ export async function getSafetyAssessmentDetail(
         decision: data.decision as SafetyDecision,
         layer1Hit: data.layer1_hit,
         layer2Context: (data.layer2_context ?? []) as SafetyRagContext[],
-        provider: data.provider ?? 'openrouter',
+        provider: data.provider ?? 'gemini',
         modelId: data.model_id,
         aiRiskLevel: data.ai_risk_level as SafetyRiskLevel | null,
         confidence: data.confidence,
         aiReason: data.ai_reason,
         latencyMs: data.latency_ms,
         humanLabel: data.human_label as SafetyHumanLabel | null,
+        humanReviewedStatus: (data.human_reviewed_status ?? null) as SafetyHumanReviewedStatus | null,
         reviewedBy: data.reviewed_by,
         reviewedAt: data.reviewed_at,
     };
@@ -406,6 +416,155 @@ export async function labelSafetyAssessment(
     }
 
     return true;
+}
+
+/**
+ * Update human_reviewed_status for ETL selection.
+ */
+export async function updateSafetyAssessmentHumanReviewedStatus(
+    assessmentId: string,
+    status: SafetyHumanReviewedStatus,
+    reviewerId: string
+): Promise<boolean> {
+    const supabase = createAdminClient();
+
+    const { error } = await supabase
+        .from('comment_safety_assessments')
+        .update({
+            human_reviewed_status: status,
+            reviewed_by: reviewerId,
+            reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', assessmentId);
+
+    if (error) {
+        console.error('[updateSafetyAssessmentHumanReviewedStatus] Update error:', error);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Promote an assessment into safety_training_datasets for fine-tuning.
+ *
+ * Stores:
+ * - input_messages: structured {role, content}[] (PII redacted)
+ * - output_json: corrected target JSON (must include reason)
+ *
+ * IMPORTANT: correctedOutputJson is required. If missing/invalid, this function throws.
+ */
+export async function promoteSafetyAssessmentToTrainingDataset(
+    params: {
+        assessmentId: string;
+        reviewerId: string;
+        correctedOutputJson: unknown;
+    }
+): Promise<SafetyTrainingDatasetRow> {
+    const supabase = createAdminClient();
+
+    if (!params.correctedOutputJson) {
+        throw new Error('Missing correctedOutputJson');
+    }
+
+    if (!isValidSafetyLlmResponse(params.correctedOutputJson)) {
+        throw new Error('Invalid correctedOutputJson (must match SafetyLlmResponse)');
+    }
+
+    const { data: settings, error: settingsError } = await supabase
+        .from('safety_settings')
+        .select('training_active_batch')
+        .eq('id', 1)
+        .single();
+
+    if (settingsError || !settings?.training_active_batch) {
+        throw new Error('Safety training_active_batch not configured in safety_settings');
+    }
+
+    const datasetBatch = settings.training_active_batch;
+
+    const { data: assessment, error: assessmentError } = await supabase
+        .from('comment_safety_assessments')
+        .select('id, comment_id, layer2_context')
+        .eq('id', params.assessmentId)
+        .single();
+
+    if (assessmentError || !assessment) {
+        throw new Error(
+            `Failed to load assessment (${params.assessmentId}): ${assessmentError?.message ?? 'Unknown error'}`
+        );
+    }
+
+    const { data: comment, error: commentError } = await supabase
+        .from('comments')
+        .select('content')
+        .eq('id', assessment.comment_id)
+        .single();
+
+    if (commentError || !comment) {
+        throw new Error(
+            `Failed to load comment (${assessment.comment_id}): ${commentError?.message ?? 'Unknown error'}`
+        );
+    }
+
+    const ragContext = (assessment.layer2_context ?? []) as SafetyRagContext[];
+    const redactedText = redactPii(comment.content ?? '').text;
+    const userPrompt = composeSafetyPrompt(redactedText, ragContext);
+
+    const inputMessages = [
+        { role: 'system' as const, content: SAFETY_SYSTEM_PROMPT },
+        { role: 'user' as const, content: userPrompt },
+    ];
+
+    const { data: inserted, error: insertError } = await supabase
+        .from('safety_training_datasets')
+        .insert({
+            input_messages: inputMessages,
+            output_json: params.correctedOutputJson,
+            source_log_id: assessment.id,
+            dataset_batch: datasetBatch,
+            created_by: params.reviewerId,
+        })
+        .select('id, input_messages, output_json, source_log_id, dataset_batch, created_by, created_at')
+        .single();
+
+    if (insertError) {
+        // Unique violation: already promoted
+        if ((insertError as { code?: string }).code === '23505') {
+            const { data: existing } = await supabase
+                .from('safety_training_datasets')
+                .select('id, input_messages, output_json, source_log_id, dataset_batch, created_by, created_at')
+                .eq('source_log_id', assessment.id)
+                .eq('dataset_batch', datasetBatch)
+                .single();
+
+            if (!existing) {
+                throw new Error('Unique violation but cannot load existing training dataset row');
+            }
+
+            return {
+                id: existing.id,
+                inputMessages: existing.input_messages,
+                outputJson: existing.output_json,
+                sourceLogId: existing.source_log_id,
+                datasetBatch: existing.dataset_batch,
+                createdBy: existing.created_by,
+                createdAt: existing.created_at,
+            };
+        }
+
+        throw new Error(`Failed to insert training dataset row: ${insertError.message}`);
+    }
+
+    return {
+        id: inserted.id,
+        inputMessages: inserted.input_messages,
+        outputJson: inserted.output_json,
+        sourceLogId: inserted.source_log_id,
+        datasetBatch: inserted.dataset_batch,
+        createdBy: inserted.created_by,
+        createdAt: inserted.created_at,
+    };
 }
 
 /**
@@ -699,6 +858,7 @@ export async function getSafetySettingsForAdmin(): Promise<SafetyEngineSettings 
         modelId: data.model_id,
         timeoutMs: data.timeout_ms,
         riskThreshold: parseFloat(data.risk_threshold),
+        trainingActiveBatch: data.training_active_batch ?? '2026-01_cold_start',
         heldMessage: data.held_message,
         rejectedMessage: data.rejected_message,
         layer1Blocklist: (data.layer1_blocklist ?? []) as string[],
@@ -714,6 +874,7 @@ export async function updateSafetySettings(
         modelId: string;
         timeoutMs: number;
         riskThreshold: number;
+        trainingActiveBatch: string;
         heldMessage: string;
         rejectedMessage: string;
         layer1Blocklist: string[];
@@ -729,6 +890,7 @@ export async function updateSafetySettings(
     if (settings.modelId !== undefined) update.model_id = settings.modelId;
     if (settings.timeoutMs !== undefined) update.timeout_ms = settings.timeoutMs;
     if (settings.riskThreshold !== undefined) update.risk_threshold = settings.riskThreshold;
+    if (settings.trainingActiveBatch !== undefined) update.training_active_batch = settings.trainingActiveBatch;
     if (settings.heldMessage !== undefined) update.held_message = settings.heldMessage;
     if (settings.rejectedMessage !== undefined) update.rejected_message = settings.rejectedMessage;
     if (settings.layer1Blocklist !== undefined) update.layer1_blocklist = settings.layer1Blocklist;

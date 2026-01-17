@@ -1,7 +1,7 @@
 # Step-by-Step Execution Plan — AI Safety Risk Engine (Comments) V1
 
 > Status: **COMPLETE ✅ (Maintenance Mode)**  
-> Last Updated: 2026-01-14  
+> Last Updated: 2026-01-17  
 > Owner: Site Owner  
 > Audience: executor agent（照本檔逐項驗證/維護；若引入 drift，先照 §3 playbook 修復）  
 > Mode: **Maintenance**（V1 已落地；本檔保留 constraints + playbooks）
@@ -11,15 +11,16 @@
 In Scope（V1）:
 
 - Blog / Gallery 的文字留言（`POST /api/comments`）
-- 三層防禦：Layer 1 rules → Layer 2 RAG → Layer 3 LLM（OpenRouter）
+- 三層防禦：Layer 1 rules → Layer 2 RAG → Layer 3 LLM（Gemini）
 - Safety corpus（slang/cases）後台維護 + embeddings（覆用既有 pipeline）
 - Safety queue（HELD）後台人工審核/標註 + 快軌 promote-to-corpus
+- Fine-tuning dataset（ETL）：review → `safety_training_datasets`（`input_messages`/`output_json` JSONB；batch 由 `safety_settings.training_active_batch`）→ export → Google AI Studio
 
 Out of Scope（由其他模組處理 / V2）:
 
 - 一般辱罵/惡意攻擊（spam/abuse）
 - 圖片分析（Gallery image）
-- 進階模型訓練（LoRA、自架模型）
+- LoRA / 自架模型
 
 ---
 
@@ -71,15 +72,17 @@ Out of Scope（由其他模組處理 / V2）:
 - Safety detail: `app/[locale]/admin/(blog)/comments/safety/[commentId]/page.tsx`
 - Safety corpus: `app/[locale]/admin/(blog)/comments/safety/corpus/page.tsx`
 - Safety settings: `app/[locale]/admin/(blog)/comments/safety/settings/page.tsx`
+  - `training_active_batch`（Active Batch）：用於「加入訓練集」時自動填入 `dataset_batch`
 
 ---
 
 ## 4) Constraints（Non‑Negotiables）
 
 - **Latency budget**：Safety layer 1–3 同步路徑必須在 **2000ms** 內完成；任何 timeout/unavailable → **Fail Closed → HELD**
-- **PII**：任何送往外部 AI（embeddings / OpenRouter）前必須先去識別化（pure）
+- **PII**：任何送往外部 AI（embeddings / Gemini）前必須先去識別化（pure）
 - **Bundle boundary**：Safety/AI code 必須 server-only；public UI 不得 import admin/AI deps
 - **AI SDK boundaries**：
+  - Gemini SDK / API access：只允許在 `lib/infrastructure/gemini/**`（server-only）
   - OpenRouter API access：只允許在 `lib/infrastructure/openrouter/**`（server-only）
   - OpenAI SDK：只允許在 `supabase/functions/**`
 - **IO boundaries**：API routes 保持薄（parse/validate → call use-case/lib → return）；IO modules 必須 `import 'server-only';`
@@ -193,4 +196,3 @@ Out of Scope（由其他模組處理 / V2）:
 
 - 若 `02_add/*.sql` 有改動：同步 `COMBINED_ADD.sql` + `COMBINED_GRANTS.sql`
 - 最終以 `COMBINED_*` 能 fresh install 為準（runbook 見 `doc/RUNBOOK.md`）
-

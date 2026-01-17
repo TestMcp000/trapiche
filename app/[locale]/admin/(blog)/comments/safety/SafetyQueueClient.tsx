@@ -70,9 +70,19 @@ export default function SafetyQueueClient() {
 
     const getRiskBadgeColor = (level: SafetyRiskLevel | null) => {
         switch (level) {
-            case 'High': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+            case 'High_Risk': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+            case 'Uncertain': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
             case 'Safe': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
             default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        }
+    };
+
+    const formatRiskLevel = (level: SafetyRiskLevel | null) => {
+        switch (level) {
+            case 'High_Risk': return '高風險';
+            case 'Uncertain': return '不確定';
+            case 'Safe': return '安全';
+            default: return 'N/A';
         }
     };
 
@@ -100,7 +110,8 @@ export default function SafetyQueueClient() {
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                     <option value="">{t('filters.riskLevel')}</option>
-                    <option value="High">高風險</option>
+                    <option value="High_Risk">高風險</option>
+                    <option value="Uncertain">不確定</option>
                     <option value="Safe">安全</option>
                 </select>
 
@@ -163,7 +174,7 @@ export default function SafetyQueueClient() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskBadgeColor(item.riskLevel)}`}>
-                                            {item.riskLevel || 'N/A'}
+                                            {formatRiskLevel(item.riskLevel)}
                                         </span>
                                         {item.confidence !== null && (
                                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">

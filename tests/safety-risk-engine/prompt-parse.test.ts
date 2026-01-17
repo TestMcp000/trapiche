@@ -32,7 +32,7 @@ const MOCK_RAG_CONTEXT: SafetyRagContext[] = [
 ];
 
 const VALID_LLM_RESPONSE = {
-    risk_level: 'High',
+    risk_level: 'High_Risk',
     confidence: 0.85,
     reason: '留言包含自殺意念暗示',
 };
@@ -127,19 +127,19 @@ describe('Prompt - isValidSafetyLlmResponse', () => {
     });
 
     it('rejects confidence out of range', () => {
-        const response1 = { risk_level: 'High', confidence: 1.5, reason: 'test' };
-        const response2 = { risk_level: 'High', confidence: -0.1, reason: 'test' };
+        const response1 = { risk_level: 'High_Risk', confidence: 1.5, reason: 'test' };
+        const response2 = { risk_level: 'High_Risk', confidence: -0.1, reason: 'test' };
         assert.equal(isValidSafetyLlmResponse(response1), false);
         assert.equal(isValidSafetyLlmResponse(response2), false);
     });
 
     it('rejects missing reason', () => {
-        const response = { risk_level: 'High', confidence: 0.8 };
+        const response = { risk_level: 'High_Risk', confidence: 0.8 };
         assert.equal(isValidSafetyLlmResponse(response), false);
     });
 
     it('rejects empty reason', () => {
-        const response = { risk_level: 'High', confidence: 0.8, reason: '' };
+        const response = { risk_level: 'High_Risk', confidence: 0.8, reason: '' };
         assert.equal(isValidSafetyLlmResponse(response), false);
     });
 
@@ -160,13 +160,13 @@ describe('Prompt - isValidSafetyLlmResponse', () => {
 
 describe('Prompt - extractJsonFromResponse', () => {
     it('extracts plain JSON', () => {
-        const raw = '{"risk_level": "High", "confidence": 0.85, "reason": "test"}';
+        const raw = '{"risk_level": "High_Risk", "confidence": 0.85, "reason": "test"}';
         const result = extractJsonFromResponse(raw);
         assert.equal(result, raw);
     });
 
     it('extracts JSON from markdown code block', () => {
-        const json = '{"risk_level": "High", "confidence": 0.85, "reason": "test"}';
+        const json = '{"risk_level": "High_Risk", "confidence": 0.85, "reason": "test"}';
         const raw = '```json\n' + json + '\n```';
         const result = extractJsonFromResponse(raw);
         assert.equal(result, json);
@@ -180,7 +180,7 @@ describe('Prompt - extractJsonFromResponse', () => {
     });
 
     it('extracts JSON with extra whitespace', () => {
-        const raw = '  \n  {"risk_level": "High", "confidence": 0.85, "reason": "test"}  \n  ';
+        const raw = '  \n  {"risk_level": "High_Risk", "confidence": 0.85, "reason": "test"}  \n  ';
         const result = extractJsonFromResponse(raw);
         assert.ok(result?.includes('"risk_level"'));
     });
@@ -204,7 +204,7 @@ describe('Prompt - parseSafetyLlmResponse', () => {
         const result = parseSafetyLlmResponse(raw);
 
         assert.notEqual(result, null);
-        assert.equal(result!.risk_level, 'High');
+        assert.equal(result!.risk_level, 'High_Risk');
         assert.equal(result!.confidence, 0.85);
     });
 
@@ -213,7 +213,7 @@ describe('Prompt - parseSafetyLlmResponse', () => {
         const result = parseSafetyLlmResponse(raw);
 
         assert.notEqual(result, null);
-        assert.equal(result!.risk_level, 'High');
+        assert.equal(result!.risk_level, 'High_Risk');
     });
 
     it('returns null for invalid JSON', () => {

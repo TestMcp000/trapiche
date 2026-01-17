@@ -256,16 +256,17 @@ interface ApiErrorResponse {
 
 **SDK / Secrets / Client Bundle 規則（安全 + SEO + bundle）**
 
-- `app/**` 與 `components/**`（含 admin client components）不得 import `openai` / `openrouter` SDK（避免 SDK/Secrets 進 client bundle）
+- `app/**` 與 `components/**`（含 admin client components）不得 import `openai` / `openrouter` / `@google/generative-ai` SDK（避免 SDK/Secrets 進 client bundle）
 - Secrets 只能在 server/Edge：
   - OpenAI key：Supabase Secrets（Edge Functions 讀取）
   - OpenRouter key：環境變數（server-only `lib/infrastructure/openrouter/**` 讀取）
+  - Gemini key：環境變數（server-only `lib/infrastructure/gemini/**` 讀取；建議 `GEMINI_API_KEY`）
 - Next.js admin UI 只能「觸發 job/查詢狀態」，不得直接呼叫 OpenAI/OpenRouter SDK
 
 **Guardrails（已落地；新增 module/deps 時需擴充）**
 
 - `tests/architecture-boundaries.test.ts` 已包含：
-  - AI SDK import allowlist（openai 只在 `supabase/functions/**`；openrouter 只在 `lib/infrastructure/openrouter/**` 且 server-only）
+  - AI SDK import allowlist（openai 只在 `supabase/functions/**`；openrouter 只在 `lib/infrastructure/openrouter/**`；gemini 只在 `lib/infrastructure/gemini/**`；且都必須 server-only）
   - Edge Functions isolation（`supabase/functions/**` 禁止 import `next/*`, `react*`, `app/**`）
 - 合併前必跑：`uiux_refactor.md` §2 grep checklist + `npm test` / `npm run type-check` / `npm run lint`
 

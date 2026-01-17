@@ -28,7 +28,7 @@ import type { SafetyLlmResponse } from '../../lib/types/safety-risk-engine';
 const TEST_BLOCKLIST = ['自殺方法', '結束生命'];
 
 const HIGH_RISK_RESPONSE: SafetyLlmResponse = {
-    risk_level: 'High',
+    risk_level: 'High_Risk',
     confidence: 0.85,
     reason: '包含自殺意念暗示',
 };
@@ -156,7 +156,7 @@ describe('Engine - makeSafetyDecision', () => {
             const result = makeSafetyDecision(HIGH_RISK_RESPONSE);
 
             assert.equal(result.decision, 'HELD');
-            assert.ok(result.reason.includes('High risk'));
+            assert.ok(result.reason.includes('High_Risk'));
         });
 
         it('returns APPROVED for Safe with high confidence', () => {

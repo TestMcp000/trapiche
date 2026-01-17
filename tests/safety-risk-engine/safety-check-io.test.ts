@@ -31,7 +31,7 @@ function createSafeLlmResponse(confidence: number = 0.85): SafetyLlmResponse {
 
 function createHighRiskLlmResponse(confidence: number = 0.85): SafetyLlmResponse {
     return {
-        risk_level: 'High',
+        risk_level: 'High_Risk',
         confidence,
         reason: 'Potential crisis content detected.',
     };
@@ -113,7 +113,7 @@ describe('makeSafetyDecision', () => {
         const response = createHighRiskLlmResponse(0.9);
         const result = makeSafetyDecision(response, 0.7);
         assert.strictEqual(result.decision, 'HELD');
-        assert.ok(result.reason.includes('High risk'));
+        assert.ok(result.reason.includes('High_Risk'));
     });
 
     it('returns HELD for high risk content with low confidence', () => {

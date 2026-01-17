@@ -34,6 +34,7 @@ export async function updateSafetySettingsAction(
         modelId: string;
         timeoutMs: number;
         riskThreshold: number;
+        trainingActiveBatch: string;
         heldMessage: string;
         rejectedMessage: string;
     }>

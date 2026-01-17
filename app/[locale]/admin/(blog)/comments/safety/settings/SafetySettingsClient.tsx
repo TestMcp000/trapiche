@@ -18,6 +18,7 @@ export default function SafetySettingsClient() {
     const [modelId, setModelId] = useState('');
     const [timeoutMs, setTimeoutMs] = useState(5000);
     const [riskThreshold, setRiskThreshold] = useState(0.5);
+    const [trainingActiveBatch, setTrainingActiveBatch] = useState('');
     const [heldMessage, setHeldMessage] = useState('');
     const [rejectedMessage, setRejectedMessage] = useState('');
 
@@ -31,6 +32,7 @@ export default function SafetySettingsClient() {
                     setModelId(result.modelId);
                     setTimeoutMs(result.timeoutMs);
                     setRiskThreshold(result.riskThreshold);
+                    setTrainingActiveBatch(result.trainingActiveBatch);
                     setHeldMessage(result.heldMessage || '');
                     setRejectedMessage(result.rejectedMessage || '');
                 }
@@ -53,6 +55,7 @@ export default function SafetySettingsClient() {
                 modelId,
                 timeoutMs,
                 riskThreshold,
+                trainingActiveBatch,
                 heldMessage,
                 rejectedMessage,
             });
@@ -125,7 +128,7 @@ export default function SafetySettingsClient() {
                         value={modelId}
                         onChange={(e) => setModelId(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                        placeholder="openai/gpt-4o-mini"
+                        placeholder="gemini-1.5-flash"
                     />
                 </div>
 
@@ -155,6 +158,19 @@ export default function SafetySettingsClient() {
                         min="0"
                         max="1"
                         step="0.05"
+                    />
+                </div>
+
+                {/* Training Active Batch */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('trainingBatch')}</label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('trainingBatchDesc')}</p>
+                    <input
+                        type="text"
+                        value={trainingActiveBatch}
+                        onChange={(e) => setTrainingActiveBatch(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                        placeholder="2026-01_cold_start"
                     />
                 </div>
 

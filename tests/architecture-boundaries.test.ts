@@ -526,6 +526,7 @@ test('AI SDK imports are restricted to allowed locations (bundle guard)', () => 
   // P1: Guardrail per uiux_refactor.md §6.1 - AI SDKs must not leak into client bundle
   // - openai: ONLY allowed in supabase/functions/**
   // - openrouter: ONLY allowed in lib/infrastructure/openrouter/** with server-only, NOT in 'use client' files
+  // - gemini: ONLY allowed in lib/infrastructure/gemini/** with server-only, NOT in 'use client' files
   const roots = ['app', 'components', 'lib']
     .map((p) => path.join(repoRoot, p))
     .filter((p) => fs.existsSync(p));
@@ -536,6 +537,8 @@ test('AI SDK imports are restricted to allowed locations (bundle guard)', () => 
   // Patterns for AI SDK imports
   const openaiPattern = /from\s+['"]openai['"]|require\s*\(\s*['"]openai['"]\s*\)/;
   const openrouterPattern = /from\s+['"]openrouter['"]|require\s*\(\s*['"]openrouter['"]\s*\)/;
+  const geminiPattern =
+    /from\s+['"]@google\/generative-ai['"]|require\s*\(\s*['"]@google\/generative-ai['"]\s*\)/;
 
   for (const filePath of files) {
     const rel = toPosixPath(path.relative(repoRoot, filePath));
@@ -554,6 +557,11 @@ test('AI SDK imports are restricted to allowed locations (bundle guard)', () => 
       errors.push(`${rel} is a client component but imports/uses 'openrouter'`);
     }
 
+    // Rule 3: gemini SDK in client components is FORBIDDEN
+    if (isClient && geminiPattern.test(code)) {
+      errors.push(`${rel} is a client component but imports/uses '@google/generative-ai'`);
+    }
+
     // Rule 3: openrouter in lib must have server-only (if it's in lib/infrastructure/openrouter)
     if (rel.startsWith('lib/') && openrouterPattern.test(code)) {
       const hasServerOnly = /import\s+['"]server-only['"]/.test(code);
@@ -562,6 +570,17 @@ test('AI SDK imports are restricted to allowed locations (bundle guard)', () => 
         errors.push(`${rel} uses 'openrouter' but is not in lib/infrastructure/openrouter/`);
       } else if (!hasServerOnly) {
         errors.push(`${rel} uses 'openrouter' but is missing import 'server-only'`);
+      }
+    }
+
+    // Rule 4: gemini SDK must only be in lib/infrastructure/gemini/ with server-only
+    if (geminiPattern.test(code)) {
+      const hasServerOnly = /import\s+['"]server-only['"]/.test(code);
+      const isAllowedDir = rel.startsWith('lib/infrastructure/gemini/');
+      if (!isAllowedDir) {
+        errors.push(`${rel} uses '@google/generative-ai' but is not in lib/infrastructure/gemini/`);
+      } else if (!hasServerOnly) {
+        errors.push(`${rel} uses '@google/generative-ai' but is missing import 'server-only'`);
       }
     }
   }

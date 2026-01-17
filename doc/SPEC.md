@@ -141,10 +141,10 @@ This document describes **implemented** behavior and its technical details.
 ### Safety Risk Engine
 
 - Spec: `specs/proposed/safety-risk-engine-spec.md`
-- Decision semantics:
-  - `REJECTED`: Content blocked, not stored
-  - `HELD`: Content stored but not public, awaiting human review
-  - `APPROVED`: Content published
+- Decision semantics (V1):
+  - Safety decisions: `APPROVED` / `HELD` (Safety V1 does not emit `REJECTED`)
+  - `High_Risk` / `Uncertain` → `HELD`
+  - `Safe` + `confidence >= threshold` → `APPROVED` (else `HELD`)
 - Fail Closed: Any timeout/error → HELD (safe default)
 - PII de-identification before sending to external AI
 - Admin routes:

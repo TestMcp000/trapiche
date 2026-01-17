@@ -9,8 +9,14 @@ import {
     approveDetailCommentAction,
     rejectDetailCommentAction,
     promoteDetailToCorpusAction,
+    promoteDetailToTrainingAction,
 } from './actions';
-import type { SafetyAssessmentDetail, SafetyHumanLabel, SafetyCorpusKind } from '@/lib/types/safety-risk-engine';
+import type {
+    SafetyAssessmentDetail,
+    SafetyHumanLabel,
+    SafetyCorpusKind,
+    SafetyRiskLevel,
+} from '@/lib/types/safety-risk-engine';
 
 interface SafetyDetailClientProps {
     commentId: string;
@@ -22,11 +28,19 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
 
     const [assessment, setAssessment] = useState<SafetyAssessmentDetail | null>(null);
     const [commentContent, setCommentContent] = useState<string>('');
+    const [trainingActiveBatch, setTrainingActiveBatch] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [showPromoteModal, setShowPromoteModal] = useState(false);
     const [promoteText, setPromoteText] = useState('');
     const [promoteLabel, setPromoteLabel] = useState('');
     const [promoteKind, setPromoteKind] = useState<SafetyCorpusKind>('slang');
+
+    const [showTrainingModal, setShowTrainingModal] = useState(false);
+    const [trainingRiskLevel, setTrainingRiskLevel] = useState<SafetyRiskLevel>('Uncertain');
+    const [trainingConfidence, setTrainingConfidence] = useState(0.7);
+    const [trainingReason, setTrainingReason] = useState('');
+    const [trainingSaving, setTrainingSaving] = useState(false);
+    const [trainingError, setTrainingError] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchData() {
@@ -34,6 +48,7 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                 const result = await fetchAssessmentByCommentAction(commentId);
                 setAssessment(result.assessment);
                 setCommentContent(result.comment?.content || '');
+                setTrainingActiveBatch(result.trainingActiveBatch);
             } catch (error) {
                 console.error('Failed to fetch assessment:', error);
             } finally {
@@ -82,11 +97,56 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
         }
     };
 
+    const openTrainingModal = () => {
+        if (!assessment) return;
+
+        setTrainingRiskLevel(assessment.aiRiskLevel ?? 'Uncertain');
+        setTrainingConfidence(assessment.confidence ?? 0.7);
+        setTrainingReason(assessment.aiReason ?? '');
+        setTrainingError(null);
+        setShowTrainingModal(true);
+    };
+
+    const handlePromoteToTraining = async () => {
+        if (!assessment) return;
+
+        const trimmedReason = trainingReason.trim();
+        if (!trimmedReason) {
+            setTrainingError('Reason 不能為空（需要諮商師修正/確認）');
+            return;
+        }
+
+        const confidence = Number.isFinite(trainingConfidence) ? trainingConfidence : 0;
+        if (confidence < 0 || confidence > 1) {
+            setTrainingError('Confidence 必須在 0.0 - 1.0 之間');
+            return;
+        }
+
+        setTrainingSaving(true);
+        setTrainingError(null);
+
+        const result = await promoteDetailToTrainingAction(assessment.id, {
+            risk_level: trainingRiskLevel,
+            confidence,
+            reason: trimmedReason,
+        });
+
+        setTrainingSaving(false);
+
+        if (!result.success) {
+            setTrainingError(result.error ?? '加入訓練集失敗');
+            return;
+        }
+
+        setShowTrainingModal(false);
+        alert(`已加入訓練集（batch: ${result.dataset?.datasetBatch ?? trainingActiveBatch ?? 'unknown'}）`);
+    };
+
     const getRiskBadgeColor = (level: string | null) => {
         switch (level) {
-            case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-            case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-            case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+            case 'High_Risk': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+            case 'Uncertain': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+            case 'Safe': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
             default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
         }
     };
@@ -216,6 +276,12 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                             >
                                 {t('actions.promoteToCorpus')}
                             </button>
+                            <button
+                                onClick={openTrainingModal}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            >
+                                {t('actions.promoteToTraining')}
+                            </button>
                         </div>
 
                         {/* Label Actions */}
@@ -293,6 +359,84 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                             >
                                 加入語料庫
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Training Modal */}
+            {showTrainingModal && assessment && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-lg w-full mx-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('training.title')}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            {t('training.subtitle', { batch: trainingActiveBatch ?? '未設定' })}
+                        </p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('training.riskLevel')}
+                                </label>
+                                <select
+                                    value={trainingRiskLevel}
+                                    onChange={(e) => setTrainingRiskLevel(e.target.value as SafetyRiskLevel)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                                >
+                                    <option value="Safe">Safe</option>
+                                    <option value="High_Risk">High_Risk</option>
+                                    <option value="Uncertain">Uncertain</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('training.confidence')}
+                                </label>
+                                <input
+                                    type="number"
+                                    value={trainingConfidence}
+                                    onChange={(e) => setTrainingConfidence(parseFloat(e.target.value))}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('training.reason')}
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('training.reasonHint')}</p>
+                                <textarea
+                                    value={trainingReason}
+                                    onChange={(e) => setTrainingReason(e.target.value)}
+                                    rows={4}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                                />
+                            </div>
+
+                            {trainingError && (
+                                <div className="text-sm text-red-600 dark:text-red-400">{trainingError}</div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button
+                                onClick={() => setShowTrainingModal(false)}
+                                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                                disabled={trainingSaving}
+                            >
+                                {t('training.cancel')}
+                            </button>
+                            <button
+                                onClick={handlePromoteToTraining}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                                disabled={trainingSaving}
+                            >
+                                {trainingSaving ? t('training.saving') : t('training.save')}
                             </button>
                         </div>
                     </div>

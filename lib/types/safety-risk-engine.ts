@@ -15,14 +15,27 @@
  * Safety decision outcomes.
  * - APPROVED: Content is safe to publish
  * - HELD: Content requires human review (Fail Closed default)
- * - REJECTED: Content is rejected (not stored)
+ * - REJECTED: Reserved (not used by Safety V1)
  */
 export type SafetyDecision = 'APPROVED' | 'HELD' | 'REJECTED';
 
 /**
  * Risk level classification from LLM.
  */
-export type SafetyRiskLevel = 'High' | 'Safe';
+export type SafetyRiskLevel = 'Safe' | 'High_Risk' | 'Uncertain';
+
+/**
+ * Human-reviewed status for fine-tuning ETL.
+ * - pending: not reviewed yet
+ * - verified_safe: reviewed and confirmed safe
+ * - verified_risk: reviewed and confirmed high risk
+ * - corrected: model output was wrong and corrected for training
+ */
+export type SafetyHumanReviewedStatus =
+    | 'pending'
+    | 'verified_safe'
+    | 'verified_risk'
+    | 'corrected';
 
 /**
  * Human label for feedback loop (per spec §5.2).
@@ -161,6 +174,9 @@ export interface SafetyEngineSettings {
 
     /** Confidence threshold for auto-approval. */
     riskThreshold: number;
+
+    /** Active dataset batch ID for fine-tuning ETL/promotions. */
+    trainingActiveBatch: string;
 
     /** Message to show for HELD status. */
     heldMessage: string;
@@ -369,9 +385,26 @@ export interface SafetyAssessmentDetail {
     /** Human label (feedback). */
     humanLabel: SafetyHumanLabel | null;
 
+    /** Human-reviewed status (fine-tuning ETL). */
+    humanReviewedStatus: SafetyHumanReviewedStatus | null;
+
     /** Reviewed by user ID. */
     reviewedBy: string | null;
 
     /** Reviewed at. */
     reviewedAt: string | null;
+}
+
+// =============================================================================
+// Fine-tuning Dataset Types
+// =============================================================================
+
+export interface SafetyTrainingDatasetRow {
+    id: string;
+    inputMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+    outputJson: SafetyLlmResponse;
+    sourceLogId: string | null;
+    datasetBatch: string;
+    createdBy: string | null;
+    createdAt: string;
 }

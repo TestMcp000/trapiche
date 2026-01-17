@@ -23,9 +23,10 @@ import type { SafetyEngineSettings } from '@/lib/types/safety-risk-engine';
  */
 const DEFAULT_SETTINGS: SafetyEngineSettings = {
     isEnabled: false,
-    modelId: 'openai/gpt-4o-mini',
+    modelId: 'gemini-1.5-flash',
     timeoutMs: 1500,
     riskThreshold: 0.70,
+    trainingActiveBatch: '2026-01_cold_start',
     heldMessage: 'Your comment is being reviewed.',
     rejectedMessage: 'Your comment could not be posted.',
     layer1Blocklist: [],
@@ -44,6 +45,7 @@ interface SafetySettingsRow {
     model_id: string | null;
     timeout_ms: number | null;
     risk_threshold: number | null;
+    training_active_batch: string | null;
     held_message: string | null;
     rejected_message: string | null;
     layer1_blocklist: string[] | null;
@@ -100,6 +102,7 @@ export async function getSafetySettings(): Promise<SafetyEngineSettings> {
         modelId: row.model_id ?? DEFAULT_SETTINGS.modelId,
         timeoutMs: row.timeout_ms ?? DEFAULT_SETTINGS.timeoutMs,
         riskThreshold: Number(row.risk_threshold) || DEFAULT_SETTINGS.riskThreshold,
+        trainingActiveBatch: row.training_active_batch ?? DEFAULT_SETTINGS.trainingActiveBatch,
         heldMessage: row.held_message ?? DEFAULT_SETTINGS.heldMessage,
         rejectedMessage: row.rejected_message ?? DEFAULT_SETTINGS.rejectedMessage,
         layer1Blocklist: parseBlocklist(row.layer1_blocklist),

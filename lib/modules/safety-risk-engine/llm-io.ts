@@ -2,16 +2,25 @@
  * Safety Risk Engine - LLM IO Module
  *
  * Server-only module for Layer 3 LLM safety assessment.
- * Uses OpenRouter chat completion with strict timeout.
+ * Uses Gemini Native JSON Mode with strict timeout + responseSchema.
  *
  * @see doc/specs/proposed/safety-risk-engine-spec.md §3 (Layer 3)
- * @see ARCHITECTURE.md §3.13 - OpenRouter API boundaries
+ * @see ARCHITECTURE.md §3.13 - SDK / secrets / client bundle rules
  */
 import 'server-only';
 
-import { runChatCompletion, isChatCompletionConfigured } from '@/lib/infrastructure/openrouter/openrouter-chat-io';
+import {
+    runGeminiJsonCompletion,
+    isGeminiConfigured,
+    SchemaType,
+    type ResponseSchema,
+} from '@/lib/infrastructure/gemini/gemini-json-io';
 import { redactPii } from '@/lib/modules/safety-risk-engine/pii';
-import { getSafetyPromptMessages, parseSafetyLlmResponse } from '@/lib/modules/safety-risk-engine/prompt';
+import {
+    SAFETY_SYSTEM_PROMPT,
+    composeSafetyPrompt,
+    parseSafetyLlmResponse,
+} from '@/lib/modules/safety-risk-engine/prompt';
 import type { SafetyRagContext, SafetyLlmResponse, SafetyEngineSettings } from '@/lib/types/safety-risk-engine';
 
 // =============================================================================
@@ -35,6 +44,25 @@ const SAFETY_TEMPERATURE = 0.3;
  * JSON response should be small (<100 tokens typically).
  */
 const SAFETY_MAX_TOKENS = 256;
+
+/**
+ * Gemini response schema for Safety LLM output.
+ *
+ * @see doc/specs/proposed/safety-risk-engine-spec.md §5.1
+ */
+const SAFETY_RESPONSE_SCHEMA: ResponseSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        risk_level: {
+            type: SchemaType.STRING,
+            format: 'enum',
+            enum: ['Safe', 'High_Risk', 'Uncertain'],
+        },
+        reason: { type: SchemaType.STRING },
+        confidence: { type: SchemaType.NUMBER },
+    },
+    required: ['risk_level', 'reason', 'confidence'],
+};
 
 // =============================================================================
 // Types
@@ -85,7 +113,7 @@ export interface SafetyLlmAssessmentResult {
  * Run safety LLM assessment on comment.
  *
  * Applies PII redaction, composes prompt with RAG context,
- * calls OpenRouter LLM, and parses the response.
+ * calls Gemini, and parses the response.
  *
  * Implements Fail Closed: parse failures or timeouts return
  * { success: false } so caller can apply HELD decision.
@@ -113,11 +141,11 @@ export async function runSafetyLlmAssessment(
 ): Promise<SafetyLlmAssessmentResult> {
     const { comment, ragContext, settings } = input;
 
-    // Check if OpenRouter is configured
-    if (!isChatCompletionConfigured()) {
+    // Check if Gemini is configured
+    if (!isGeminiConfigured()) {
         return {
             success: false,
-            error: 'OpenRouter API not configured',
+            error: 'Gemini API not configured',
         };
     }
 
@@ -126,7 +154,7 @@ export async function runSafetyLlmAssessment(
     const redactedText = piiResult.text;
 
     // Step 2: Compose prompt with RAG context
-    const messages = getSafetyPromptMessages(redactedText, ragContext);
+    const userPrompt = composeSafetyPrompt(redactedText, ragContext);
 
     // Step 3: Calculate timeout (use min of settings and max)
     const timeoutMs = Math.min(settings.timeoutMs, MAX_LLM_TIMEOUT_MS);
@@ -135,34 +163,36 @@ export async function runSafetyLlmAssessment(
     const startTime = Date.now();
 
     try {
-        const chatResult = await runChatCompletion({
-            messages,
+        const geminiResult = await runGeminiJsonCompletion({
             model: settings.modelId,
+            systemInstruction: SAFETY_SYSTEM_PROMPT,
+            userPrompt,
+            responseSchema: SAFETY_RESPONSE_SCHEMA,
             timeoutMs,
             temperature: SAFETY_TEMPERATURE,
-            maxTokens: SAFETY_MAX_TOKENS,
+            maxOutputTokens: SAFETY_MAX_TOKENS,
         });
 
         const latencyMs = Date.now() - startTime;
 
         // Check for LLM call failure
-        if (!chatResult.success || !chatResult.content) {
+        if (!geminiResult.success || !geminiResult.content) {
             return {
                 success: false,
-                error: chatResult.error ?? 'LLM returned empty response',
+                error: geminiResult.error ?? 'Gemini returned empty response',
                 latencyMs,
                 redactedText,
             };
         }
 
         // Step 5: Parse LLM response
-        const parsedResponse = parseSafetyLlmResponse(chatResult.content);
+        const parsedResponse = parseSafetyLlmResponse(geminiResult.content);
 
         if (!parsedResponse) {
             return {
                 success: false,
                 error: 'Failed to parse LLM response as valid JSON',
-                model: chatResult.model,
+                model: settings.modelId,
                 latencyMs,
                 redactedText,
             };
@@ -172,7 +202,7 @@ export async function runSafetyLlmAssessment(
         return {
             success: true,
             response: parsedResponse,
-            model: chatResult.model,
+            model: settings.modelId,
             latencyMs,
             redactedText,
         };
@@ -190,8 +220,8 @@ export async function runSafetyLlmAssessment(
 /**
  * Check if LLM safety assessment is available.
  *
- * @returns True if OpenRouter API is configured
+ * @returns True if Gemini API is configured
  */
 export function isLlmAssessmentAvailable(): boolean {
-    return isChatCompletionConfigured();
+    return isGeminiConfigured();
 }

@@ -48,7 +48,7 @@ Templates:
 | [admin-errorlog-spec.md](proposed/admin-errorlog-spec.md) | Spec | DRAFT | 2026-01-02 | Admin Error Log — Spec |
 | [admin-i18n-toggle-spec.md](proposed/admin-i18n-toggle-spec.md) | Spec | Stable (Implemented) | 2026-01-04 | Admin i18n Toggle — Spec |
 | [ANALYTICS_PERSONALIZATION_UMAMI.md](proposed/ANALYTICS_PERSONALIZATION_UMAMI.md) | PRD | Draft | 2026-01-04 | Behavior Analytics + Personalization (Umami + Supabase) - Product Requirements Document (PRD) |
-| [safety-risk-engine-spec.md](proposed/safety-risk-engine-spec.md) | Spec | DRAFT | 2026-01-13 | AI Safety Risk Engine — Spec |
+| [safety-risk-engine-spec.md](proposed/safety-risk-engine-spec.md) | Spec | DRAFT | 2026-01-17 | AI Safety Risk Engine — Spec |
 
 <!-- AUTO-GENERATED:SPECS_PROPOSED:END -->
 

@@ -118,7 +118,7 @@ export interface SafetyDecisionResult {
  * Implements Fail Closed policy:
  * - null response → HELD (parse/network failure)
  * - Low confidence → HELD (uncertain)
- * - High risk + high confidence → HELD (for human review) or REJECTED
+ * - High_Risk/Uncertain → HELD (for human review, V1 policy)
  * - Safe + high confidence → APPROVED
  *
  * @param llmResponse - Parsed LLM response (or null if parse failed)
@@ -139,7 +139,15 @@ export function makeSafetyDecision(
 
     const { risk_level, confidence, reason } = llmResponse;
 
-    // Low confidence: defer to human review
+    // Priority 1: Non-safe classifications always HELD (V1 policy)
+    if (risk_level !== 'Safe') {
+        return {
+            decision: 'HELD',
+            reason: `${risk_level} detected (${(confidence * 100).toFixed(0)}% confidence): ${reason}`,
+        };
+    }
+
+    // Priority 2: Safe but low confidence → HELD
     if (confidence < confidenceThreshold) {
         return {
             decision: 'HELD',
@@ -147,16 +155,7 @@ export function makeSafetyDecision(
         };
     }
 
-    // High risk: hold for review (conservative approach in V1)
-    // Note: Could be REJECTED for very high confidence in future versions
-    if (risk_level === 'High') {
-        return {
-            decision: 'HELD',
-            reason: `High risk detected (${(confidence * 100).toFixed(0)}% confidence): ${reason}`,
-        };
-    }
-
-    // Safe with high confidence: approve
+    // Safe + high confidence → APPROVED
     return {
         decision: 'APPROVED',
         reason: `Safe (${(confidence * 100).toFixed(0)}% confidence): ${reason}`,

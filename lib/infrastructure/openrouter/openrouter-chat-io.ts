@@ -9,7 +9,6 @@
  * this module provides a generic interface for chat completion requests.
  *
  * @see ARCHITECTURE.md §3.13 - OpenRouter API access boundaries
- * @see doc/specs/proposed/safety-risk-engine-spec.md §0(6A)
  */
 import 'server-only';
 

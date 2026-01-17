@@ -3,7 +3,7 @@
 -- ============================================
 -- 
 -- Version: 1.0
--- Last Updated: 2026-01-13
+-- Last Updated: 2026-01-17
 --
 -- @see doc/specs/proposed/safety-risk-engine-spec.md
 -- @see doc/meta/STEP_PLAN.md PR-1
@@ -27,6 +27,10 @@ DROP POLICY IF EXISTS "Admins can manage safety settings" ON public.safety_setti
 DROP POLICY IF EXISTS "Admins can read safety assessments" ON public.comment_safety_assessments;
 DROP POLICY IF EXISTS "Admins can update safety assessments" ON public.comment_safety_assessments;
 
+-- safety_training_datasets policies
+DROP POLICY IF EXISTS "Admins can read safety training datasets" ON public.safety_training_datasets;
+DROP POLICY IF EXISTS "Admins can manage safety training datasets" ON public.safety_training_datasets;
+
 
 -- ============================================
 -- DROP Indexes
@@ -41,6 +45,13 @@ DROP INDEX IF EXISTS public.idx_safety_corpus_items_created;
 DROP INDEX IF EXISTS public.idx_comment_safety_assessments_comment;
 DROP INDEX IF EXISTS public.idx_comment_safety_assessments_decision;
 DROP INDEX IF EXISTS public.idx_comment_safety_assessments_created;
+DROP INDEX IF EXISTS public.idx_comment_safety_assessments_human_reviewed_status;
+
+-- safety_training_datasets indexes
+DROP INDEX IF EXISTS public.idx_safety_training_datasets_created;
+DROP INDEX IF EXISTS public.idx_safety_training_datasets_batch;
+DROP INDEX IF EXISTS public.idx_safety_training_datasets_source_log;
+DROP INDEX IF EXISTS public.uniq_safety_training_datasets_source_batch;
 
 -- comment_moderation safety indexes
 DROP INDEX IF EXISTS public.idx_comment_moderation_safety_decision;
@@ -69,6 +80,7 @@ ALTER TABLE public.comment_moderation
 -- DROP Tables
 -- ============================================
 
+DROP TABLE IF EXISTS public.safety_training_datasets CASCADE;
 DROP TABLE IF EXISTS public.comment_safety_assessments CASCADE;
 DROP TABLE IF EXISTS public.safety_corpus_items CASCADE;
 DROP TABLE IF EXISTS public.safety_settings CASCADE;
