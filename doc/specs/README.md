@@ -49,6 +49,8 @@ Templates:
 | --- | --- | --- | --- | --- |
 | [admin-errorlog-spec.md](proposed/admin-errorlog-spec.md) | Spec | DRAFT | 2026-01-02 | Admin Error Log — Spec |
 | [ANALYTICS_PERSONALIZATION_UMAMI.md](proposed/ANALYTICS_PERSONALIZATION_UMAMI.md) | PRD | Draft | 2026-01-04 | Behavior Analytics + Personalization (Umami + Supabase) - Product Requirements Document (PRD) |
+| [GALLERY_HERO_IMAGE_AND_HOTSPOTS.md](proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md) | PRD | Draft | 2026-01-19 | Home（UIUX 跟稿）+ Gallery Hero Image + Image Hotspots（圖上 Pin）- Product Requirements Document (PRD) |
+| [gallery-hotspots-spec.md](proposed/gallery-hotspots-spec.md) | Spec | DRAFT | 2026-01-19 | Gallery Hotspots（圖上 Pin）+ Home Hero 選圖 - Spec |
 
 <!-- AUTO-GENERATED:SPECS_PROPOSED:END -->
 

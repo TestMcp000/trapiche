@@ -25,3 +25,38 @@ export interface PageViewRequest {
   /** Locale of the page being viewed */
   locale: PageViewLocale;
 }
+
+// =============================================================================
+// Admin Dashboard Types
+// =============================================================================
+
+/** Locale filter for admin dashboard (includes 'all' for aggregate) */
+export type PageViewAdminLocaleFilter = 'all' | PageViewLocale;
+
+/** Daily row from page_view_daily table */
+export interface PageViewDailyRow {
+  day: string; // YYYY-MM-DD
+  path: string;
+  locale: PageViewLocale;
+  viewCount: number;
+}
+
+/** Page views summary for dashboard */
+export interface PageViewSummary {
+  totalViews: number;
+  dateRange: { from: string; to: string };
+  locale: PageViewAdminLocaleFilter;
+}
+
+/** Top page item for list display */
+export interface TopPageItem {
+  path: string;
+  viewCount: number;
+}
+
+/** Dashboard data returned to server page */
+export interface PageViewDashboardData {
+  summary: PageViewSummary;
+  topPages: TopPageItem[];
+  totalPagesCount: number; // for pagination
+}

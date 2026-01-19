@@ -22,6 +22,7 @@ import {
   isRagModeAvailable,
 } from "@/lib/modules/ai-analysis/io";
 import { listSchedules } from "@/lib/modules/ai-analysis/analysis-schedules-io";
+import { listTemplates } from "@/lib/modules/ai-analysis/analysis-templates-io";
 
 import { AIAnalysisClient } from "./AIAnalysisClient";
 
@@ -59,6 +60,7 @@ export default async function AIAnalysisPage({
     cronStatus,
     ragEnabled,
     schedulesResult,
+    customTemplates,
   ] = await Promise.all([
     listReports(user.id, 10, 0),
     getCurrentMonthUsage(),
@@ -69,6 +71,8 @@ export default async function AIAnalysisPage({
     configured && role === "owner"
       ? listSchedules(20, 0)
       : Promise.resolve({ schedules: [], total: 0 }),
+    // Fetch custom templates for template selection
+    configured ? listTemplates(role) : Promise.resolve([]),
   ]);
 
   const messages = await getMessages({ locale: routeLocale });
@@ -84,6 +88,8 @@ export default async function AIAnalysisPage({
     ragEnabled,
     // Initial schedules for owner (avoids client-side useEffect load)
     initialSchedules: schedulesResult.schedules,
+    // Custom templates for template selection
+    customTemplates,
   };
 
   return (

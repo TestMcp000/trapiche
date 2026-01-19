@@ -238,6 +238,173 @@ export async function getUserListFiltered(
 }
 
 // =============================================================================
+// User List with Filter + Search + Pagination
+// =============================================================================
+
+export interface UserListPagedParams {
+  /** Tag filter (optional) */
+  tag?: string;
+  /** Search query (optional) */
+  q?: string;
+  /** Search mode: 'text' for email/user_id fuzzy search, 'short_id' for exact match */
+  qMode?: 'text' | 'short_id';
+  /** SQL LIMIT */
+  limit: number;
+  /** SQL OFFSET */
+  offset: number;
+}
+
+export interface UserListPagedResult {
+  users: UserDirectorySummary[];
+  total: number;
+}
+
+/**
+ * Get filtered and paginated users list from user_directory table
+ *
+ * Supports:
+ * - Tag filtering (two-stage query via user_admin_profiles)
+ * - Text search (email/user_id fuzzy match using ilike)
+ * - Short ID search (exact match via customer_profiles)
+ * - Pagination with total count
+ *
+ * @param params - Filter and pagination parameters
+ * @returns UserListPagedResult with users array and total count
+ */
+export async function getUserListFilteredPaged(
+  params: UserListPagedParams
+): Promise<UserListPagedResult> {
+  const supabase = await createClient();
+
+  // Admin guard
+  const isAdmin = await isSiteAdmin(supabase);
+  if (!isAdmin) {
+    return { users: [], total: 0 };
+  }
+
+  const { tag, q, qMode = 'text', limit, offset } = params;
+
+  // Determine which user_ids to filter by based on tag and search
+  let targetUserIds: string[] | null = null;
+
+  // Step 1: Handle tag filtering (if provided)
+  if (tag && tag.trim() !== '') {
+    const normalizedTag = tag.trim();
+    const MAX_TAG_LENGTH = 64;
+    if (normalizedTag.length > MAX_TAG_LENGTH) {
+      return { users: [], total: 0 };
+    }
+
+    const [profilesEnResult, profilesZhResult] = await Promise.all([
+      supabase
+        .from('user_admin_profiles')
+        .select('user_id')
+        .contains('tags_en', [normalizedTag]),
+      supabase
+        .from('user_admin_profiles')
+        .select('user_id')
+        .contains('tags_zh', [normalizedTag]),
+    ]);
+
+    const userIdSet = new Set<string>();
+    for (const p of profilesEnResult.data || []) {
+      userIdSet.add(p.user_id);
+    }
+    for (const p of profilesZhResult.data || []) {
+      userIdSet.add(p.user_id);
+    }
+
+    if (userIdSet.size === 0) {
+      return { users: [], total: 0 };
+    }
+
+    targetUserIds = Array.from(userIdSet);
+  }
+
+  // Step 2: Handle short_id search (if qMode is 'short_id')
+  if (q && qMode === 'short_id') {
+    const normalizedShortId = q.trim().toUpperCase();
+
+    const { data: profileData, error: profileError } = await supabase
+      .from('customer_profiles')
+      .select('user_id')
+      .eq('short_id', normalizedShortId);
+
+    if (profileError) {
+      console.error('Error fetching by short_id:', profileError);
+      return { users: [], total: 0 };
+    }
+
+    const shortIdUserIds = (profileData || []).map((p) => p.user_id);
+
+    if (shortIdUserIds.length === 0) {
+      return { users: [], total: 0 };
+    }
+
+    // If we also have tag filter, intersect the user_ids
+    if (targetUserIds !== null) {
+      const intersection = shortIdUserIds.filter((id) =>
+        targetUserIds!.includes(id)
+      );
+      if (intersection.length === 0) {
+        return { users: [], total: 0 };
+      }
+      targetUserIds = intersection;
+    } else {
+      targetUserIds = shortIdUserIds;
+    }
+  }
+
+  // Step 3: Build the main query for user_directory
+  let query = supabase
+    .from('user_directory')
+    .select(
+      `
+        *,
+        customer_profiles!left(short_id)
+      `,
+      { count: 'exact' }
+    );
+
+  // Apply user_id filter if we have one from tag or short_id
+  if (targetUserIds !== null) {
+    query = query.in('user_id', targetUserIds);
+  }
+
+  // Apply text search filter (email or user_id fuzzy match)
+  if (q && qMode === 'text') {
+    // Use ilike for case-insensitive fuzzy match
+    const searchPattern = `%${q}%`;
+    query = query.or(`email.ilike.${searchPattern},user_id.ilike.${searchPattern}`);
+  }
+
+  // Apply ordering and pagination
+  query = query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  const { data: users, count: total, error: usersError } = await query;
+
+  if (usersError) {
+    console.error('Error fetching paginated users:', usersError);
+    return { users: [], total: 0 };
+  }
+
+  const transformedUsers = (users || []).map((u) => {
+    const row = u as UserDirectoryWithProfileRow;
+    return transformDirectoryToSummary(
+      row,
+      row.customer_profiles?.short_id ?? null
+    );
+  });
+
+  return {
+    users: transformedUsers,
+    total: total ?? 0,
+  };
+}
+
+// =============================================================================
 // User Detail Operations
 // =============================================================================
 

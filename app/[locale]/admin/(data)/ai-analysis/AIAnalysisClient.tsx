@@ -22,6 +22,7 @@ import type {
   AnalysisMode,
   ModelPricing,
   AnalysisScheduleListItem,
+  AnalysisCustomTemplateListItem,
   CreateScheduleRequest,
 } from "@/lib/types/ai-analysis";
 import type { CronStatus } from "@/lib/modules/ai-analysis/io";
@@ -63,6 +64,8 @@ interface AIAnalysisClientProps {
     ragEnabled: boolean;
     // Initial schedules for owner (pre-fetched by server to avoid useEffect load)
     initialSchedules?: AnalysisScheduleListItem[];
+    // Custom templates for template selection
+    customTemplates?: AnalysisCustomTemplateListItem[];
   };
 }
 
@@ -88,6 +91,9 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
   // RAG mode state (Phase 6+)
   const [selectedMode, setSelectedMode] = useState<AnalysisMode>("standard");
   const [ragTopK, setRagTopK] = useState<number>(RAG_DEFAULTS.TOP_K);
+
+  // Custom template state (PR-2B)
+  const [selectedCustomTemplateId, setSelectedCustomTemplateId] = useState<string | null>(null);
 
   // Get current model pricing for cost estimation
   const currentModelPricing =
@@ -239,9 +245,16 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
   // Handle template change - auto-select required data types
   const handleTemplateChange = (templateId: AnalysisTemplateId) => {
     setSelectedTemplate(templateId);
+    // Reset custom template selection when switching templates
+    if (templateId !== 'custom') {
+      setSelectedCustomTemplateId(null);
+    }
     const template = ANALYSIS_TEMPLATES.find((t) => t.id === templateId);
     if (template) {
       setSelectedDataTypes([...template.requiredDataTypes]);
+    } else if (templateId === 'custom') {
+      // For custom templates, require at least comments
+      setSelectedDataTypes(['comments']);
     }
   };
 
@@ -266,8 +279,15 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
     setSuccessMessage(null);
 
     startTransition(async () => {
+      // Validate custom template selection
+      if (selectedTemplate === 'custom' && !selectedCustomTemplateId) {
+        setError('Please select a custom template.');
+        return;
+      }
+
       const request = {
         templateId: selectedTemplate,
+        customTemplateId: selectedTemplate === 'custom' ? selectedCustomTemplateId : undefined,
         mode: selectedMode,
         modelId: selectedModel,
         dataTypes: selectedDataTypes,
@@ -634,7 +654,48 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   </p>
                 </button>
               ))}
+              {/* Custom Template Option */}
+              {initialData.customTemplates && initialData.customTemplates.length > 0 && (
+                <button
+                  onClick={() => handleTemplateChange('custom')}
+                  className={`p-3 rounded-lg border text-left transition-colors ${
+                    selectedTemplate === 'custom'
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}>
+                  <p className="font-medium">{ta('customTemplate.label')}</p>
+                  <p className="text-sm text-gray-600">
+                    {ta('customTemplate.select')}
+                  </p>
+                </button>
+              )}
             </div>
+
+            {/* Custom Template Selector */}
+            {selectedTemplate === 'custom' && initialData.customTemplates && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {ta('customTemplate.selectPlaceholder')}
+                </label>
+                <select
+                  value={selectedCustomTemplateId || ''}
+                  onChange={(e) => setSelectedCustomTemplateId(e.target.value || null)}
+                  className="w-full border rounded-lg px-3 py-2 bg-white"
+                >
+                  <option value="">{ta('customTemplate.selectPlaceholder')}</option>
+                  {initialData.customTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                {initialData.customTemplates.length === 0 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    {ta('customTemplate.noEnabledTemplates')}
+                  </p>
+                )}
+              </div>
+            )}
           </section>
 
           {/* Data Types */}

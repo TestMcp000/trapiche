@@ -49,10 +49,11 @@
 - Ingestion：`app/api/analytics/pageview/route.ts`、`components/analytics/PageViewTrackerClient.tsx`、`lib/analytics/pageviews-io.ts`
 - DB：`supabase/02_add/16_page_views.sql`（`page_view_daily` + `increment_page_view` RPC）
 - Spec（契約）：`doc/specs/completed/page-views-analytics-spec.md`
+- Admin Dashboard UI：`app/[locale]/admin/(data)/analytics/pageviews/page.tsx`（PR-3 完成）
 
 缺口（V1 TODO）：
 
-- Admin dashboard UI（read-only）：尚無 `/admin/*` 路由提供 page views 的查詢/視覺化
+- ✅ 已完成：Admin dashboard UI（read-only）：`/admin/(data)/analytics/pageviews`
 
 ---
 
@@ -68,7 +69,16 @@
 
 ## 3) Execution Plan（以 PR 為單位）
 
-### PR-1 — Users 後台：搜尋 + 分頁（server-side）
+### PR-1 — Users 後台：搜尋 + 分頁（server-side）✅ COMPLETED
+
+> 完成日期: 2026-01-19
+> 實作檔案:
+> - `lib/validators/admin-users.ts` — query contract validator
+> - `lib/modules/user/users-admin-io.ts` — 新增 `getUserListFilteredPaged()`
+> - `app/[locale]/admin/users/page.tsx` — server page 更新
+> - `app/[locale]/admin/users/UsersClient.tsx` — 搜尋 form + 分頁 UI
+> - `messages/zh.json` — i18n 字串
+> - `tests/validators/admin-users.test.ts` — validator 單元測試
 
 Goal：
 
@@ -142,7 +152,17 @@ Rollback：
 
 ---
 
-### PR-2 — AI Analysis：Custom Templates 後台 UI（Owner CRUD + selection）
+### PR-2 — AI Analysis：Custom Templates 後台 UI（Owner CRUD + selection）✅ COMPLETED
+
+> 完成日期: 2026-01-19
+> 實作檔案:
+> - `lib/validators/custom-template.ts` — template input validator
+> - `tests/validators/custom-template.test.ts` — validator 單元測試
+> - `app/[locale]/admin/(data)/ai-analysis/templates/page.tsx` — server page
+> - `app/[locale]/admin/(data)/ai-analysis/templates/actions.ts` — server actions (CRUD)
+> - `app/[locale]/admin/(data)/ai-analysis/templates/TemplatesClient.tsx` — client UI
+> - `app/[locale]/admin/(data)/ai-analysis/page.tsx` — 增加 customTemplates fetch
+> - `app/[locale]/admin/(data)/ai-analysis/AIAnalysisClient.tsx` — 增加 custom template selection UI
 
 Goal：
 
@@ -210,7 +230,16 @@ Rollback：
 
 ---
 
-### PR-3 — Analytics：Page Views Dashboard（Admin-only）
+### PR-3 — Analytics：Page Views Dashboard（Admin-only）✅ COMPLETED
+
+> 完成日期: 2026-01-19
+> 實作檔案:
+> - `lib/validators/page-views-admin.ts` — query contract validator
+> - `tests/validators/page-views-admin.test.ts` — validator 單元測試
+> - `lib/types/page-views.ts` — 新增 admin dashboard types
+> - `lib/analytics/pageviews-admin-io.ts` — read IO with RLS
+> - `app/[locale]/admin/(data)/analytics/pageviews/page.tsx` — server page (Option B)
+> - `messages/zh.json` — i18n 字串
 
 Goal：
 
