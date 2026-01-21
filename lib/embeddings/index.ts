@@ -8,6 +8,8 @@
 import 'server-only';
 
 export * from '@/lib/modules/embedding/embedding-generate-io';
+export * from '@/lib/modules/embedding/embedding-queue-io';
+export * from '@/lib/modules/embedding/embedding-lease-io';
 export * from '@/lib/modules/embedding/embedding-search-io';
 export * from '@/lib/modules/embedding/embedding-target-content-io';
 export * from '@/lib/modules/embedding/embedding-pure';

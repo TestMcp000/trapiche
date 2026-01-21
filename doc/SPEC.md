@@ -48,6 +48,9 @@
   - 文案/CTA：`site_content(section_key='hero')`
   - Hero artwork：`gallery_pins(surface='hero')` 選 0..1 個作品
   - Hotspots：同作品的 `gallery_hotspots`（public read；render 時 server-side markdown → html）
+- 講座邀請 CTA（Floating FAB）：
+  - 來源：`company_settings.home_event_cta_url`（可選：`home_event_cta_label_zh`）
+  - URL allowlist：只允許 `https:`/`mailto:`（write-side + render-side hardening；invalid → 不 render）
 - Suggest section：目前為 placeholder（尚未接 blog/個人化）
 - SEO：Home JSON-LD 由 `app/[locale]/page.tsx` 產生
 
@@ -62,6 +65,7 @@
 - 實作入口：`app/[locale]/page.tsx` → `components/home/HomePageV2.tsx`
 - Hamburger nav fetch/parse：`lib/modules/content/cached.ts#getHamburgerNavCached`（invalid → fallback default）
 - Hotspots markdown 安全邊界：`lib/markdown/hotspots.ts`（server-only; 禁 raw HTML + sanitize + https/mailto links）
+- External URL allowlist（single source）：`lib/validators/external-url.ts`
 
 ---
 
@@ -563,7 +567,7 @@
 
 - Canonical constraints: `../ARCHITECTURE.md` §3.11 (SEO / URL 單一來源)
 - Drift guardrails / grep checklist: `../uiux_refactor.md` §2
-- ⚠️ 已知 drift（待修復）：`lib/infrastructure/openrouter/openrouter-chat-io.ts` 直接讀 `process.env.NEXT_PUBLIC_SITE_URL`（違反單一來源；修復方案：`doc/meta/STEP_PLAN.md` PR-19）
+- Guardrail test：`tests/site-url-single-source.test.ts`（確保 `NEXT_PUBLIC_SITE_URL` 只存在於 `lib/site/site-url.ts`）
 
 ---
 
@@ -576,7 +580,6 @@
 ### Home UIUX / Navigation
 
 - Suggest section 仍為 placeholder（見 Home 章節說明；後續以 `doc/ROADMAP.md` 為準）。
-- ⚠️ Security gap（PRD FR-11.1）：Home「講座邀請」CTA URL（`company_settings.home_event_cta_url`）尚未落地 allowlist validation（`https:`/`mailto:`）；修復方案：`doc/meta/STEP_PLAN.md` PR-20
 
 ### Data Intelligence（後台）
 
@@ -626,6 +629,7 @@
 
 - SEO: `lib/seo/hreflang.ts`, `lib/seo/jsonld.ts`, `lib/site/site-url.ts`
 - Navigation v2: `lib/site/nav-resolver.ts`, `lib/types/hamburger-nav.ts`, `lib/validators/hamburger-nav.ts`
+- External URL allowlist: `lib/validators/external-url.ts`（`https:`/`mailto:`）
 - Analytics: `lib/analytics/pageviews-io.ts`, `lib/validators/page-views.ts`, `lib/types/page-views.ts`
 - i18n: `lib/i18n/locales.ts`, `messages/*.json`
 - Spam: `lib/spam/io.ts`, `lib/spam/engine.ts`（pure）

@@ -735,3 +735,38 @@ test('Admin navigation components must disable prefetch', () => {
 
   assert.deepEqual(errors, []);
 });
+
+test('Server actions in app/ do not contain direct Supabase queries', () => {
+  // PR-22 guardrail: Server actions should delegate DB operations to lib/modules/**/*-io.ts
+  const appDir = path.join(repoRoot, 'app');
+
+  if (!fs.existsSync(appDir)) {
+    return; // Skip if no app directory
+  }
+
+  const actionFiles = listSourceFiles(appDir).filter((f) =>
+    f.endsWith('actions.ts') || f.endsWith('actions.tsx')
+  );
+
+  const errors: string[] = [];
+
+  // Patterns that indicate direct DB access in server actions
+  const forbiddenPatterns = [
+    { pattern: /\.from\s*\(\s*['"]/, label: ".from('...') - direct Supabase query" },
+    { pattern: /createAdminClient\s*\(/, label: 'createAdminClient() - service role in action' },
+  ];
+
+  for (const filePath of actionFiles) {
+    const source = fs.readFileSync(filePath, 'utf8');
+    const code = stripComments(source);
+    const rel = toPosixPath(path.relative(repoRoot, filePath));
+
+    for (const rule of forbiddenPatterns) {
+      if (rule.pattern.test(code)) {
+        errors.push(`${rel} contains ${rule.label}`);
+      }
+    }
+  }
+
+  assert.deepEqual(errors, []);
+});

@@ -20,16 +20,6 @@ import { validateOptionalExternalUrl } from './external-url';
 import type { GalleryHotspotInput, GalleryHotspotReorderInput } from '@/lib/types/gallery';
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-/**
- * Allowed URL protocols for read_more_url field
- * @deprecated Use ALLOWED_URL_PROTOCOLS from external-url.ts
- */
-const ALLOWED_URL_PROTOCOLS = ['https:', 'mailto:'];
-
-// =============================================================================
 // Coordinate Validation
 // =============================================================================
 

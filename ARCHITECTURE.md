@@ -395,10 +395,12 @@ interface ApiErrorResponse {
 - `npm run lint`
   - `uiux/` 若為 prototype/獨立專案，必須有清楚邊界：不得讓 root lint 永久紅燈（eslint ignores：`eslint.config.mjs` 內含 `uiux/**`）。
 - `npm run type-check`
-  - `tsconfig.json` 含 `.next/types/**/*.ts`；type-check 前需確保 `.next/` 不 stale（例如：先跑 `npm run build` 或清掉 `.next/`）。
-  - `uiux/` 若為 prototype/獨立專案，必須避免把缺依賴/缺型別帶進 root type-check（exclude：`tsconfig.typecheck.json` 內含 `uiux`）。
+  - 使用 `tsconfig.typecheck.json`（extends `tsconfig.json`；exclude：`uiux/`, `.next/`, `.test-dist/`）
+  - 若遇到 `.next/types` 相關型別錯誤：以 `npm run build` 為準（必要時先清掉 `.next/` 再 build）
 - `npm run build`（routes/SEO/`.next/types` 相關變更必跑）
 - `npm run dev`
+- `npm run docs:check-indexes`（有變更 `doc/specs/*` 或 `doc/archive/*` 時必跑）
+- `npm run lint:md-links`（有變更 docs/README/連結時建議跑）
 
 ## 13. Documentation (Links only)
 

@@ -11,6 +11,7 @@ import {
     promoteToCorpus,
     promoteSafetyAssessmentToTrainingDataset,
 } from '@/lib/modules/safety-risk-engine/admin-io';
+import { getSafetyDetailPageData } from '@/lib/modules/safety-risk-engine/safety-detail-admin-io';
 import type {
     SafetyAssessmentDetail,
     SafetyHumanLabel,
@@ -31,56 +32,29 @@ async function checkAdmin() {
 
 /**
  * Fetch safety assessment detail by comment ID.
+ * Uses IO module to fetch page data, then retrieves assessment detail if available.
  */
 export async function fetchAssessmentByCommentAction(
     commentId: string
 ): Promise<{ assessment: SafetyAssessmentDetail | null; comment: { content: string } | null; trainingActiveBatch: string | null }> {
     await checkAdmin();
 
-    // Get latest assessment for this comment
-    const { createAdminClient } = await import('@/lib/infrastructure/supabase/admin');
-    const supabase = createAdminClient();
+    const pageData = await getSafetyDetailPageData(commentId);
 
-    // Fetch comment content
-    const { data: comment } = await supabase
-        .from('comments')
-        .select('content')
-        .eq('id', commentId)
-        .single();
-
-    // Fetch latest assessment via moderation pointer
-    const { data: moderation } = await supabase
-        .from('comment_moderation')
-        .select('safety_latest_assessment_id')
-        .eq('comment_id', commentId)
-        .single();
-
-    if (!moderation?.safety_latest_assessment_id) {
-        const { data: settings } = await supabase
-            .from('safety_settings')
-            .select('training_active_batch')
-            .eq('id', 1)
-            .single();
-
+    if (!pageData.latestAssessmentId) {
         return {
             assessment: null,
-            comment: comment ? { content: comment.content } : null,
-            trainingActiveBatch: settings?.training_active_batch ?? null,
+            comment: pageData.comment,
+            trainingActiveBatch: pageData.trainingActiveBatch,
         };
     }
 
-    const assessment = await getSafetyAssessmentDetail(moderation.safety_latest_assessment_id);
-
-    const { data: settings } = await supabase
-        .from('safety_settings')
-        .select('training_active_batch')
-        .eq('id', 1)
-        .single();
+    const assessment = await getSafetyAssessmentDetail(pageData.latestAssessmentId);
 
     return {
         assessment,
-        comment: comment ? { content: comment.content } : null,
-        trainingActiveBatch: settings?.training_active_batch ?? null,
+        comment: pageData.comment,
+        trainingActiveBatch: pageData.trainingActiveBatch,
     };
 }
 
