@@ -11,4 +11,5 @@ export { HeroStageClient } from './HeroStageClient';
 export { FloatingFab } from './FloatingFab';
 export { SuggestSectionClient } from './SuggestSectionClient';
 export { HomePageV2 } from './HomePageV2';
+export type { HomePageV2Props, HotspotWithHtml } from './HomePageV2';
 

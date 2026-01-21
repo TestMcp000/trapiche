@@ -37,6 +37,7 @@
 ---
 
 <a id="home-uiux-v2"></a>
+
 ## Home（UIUX v2）
 
 ### 功能
@@ -52,8 +53,8 @@
 
 ### 路由
 
-| 路由       | 說明 |
-| ---------- | ---- |
+| 路由        | 說明              |
+| ----------- | ----------------- |
 | `/[locale]` | Home（v2 layout） |
 
 ### 實作備註
@@ -65,6 +66,7 @@
 ---
 
 <a id="blog-system"></a>
+
 ## 部落格系統
 
 ### 功能
@@ -77,12 +79,12 @@
 
 ### 路由
 
-| 路由                               | 說明 |
-| ---------------------------------- | ------------- |
+| 路由                               | 說明                                                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `/[locale]/blog`                   | 部落格列表（支援 `?q=<q>&sort=<...>`；legacy `?category=<slug>` 會 redirect 到 `/[locale]/blog/categories/[slug]`） |
-| `/[locale]/blog/categories/[slug]` | 分類列表（支援 `?q=<q>&sort=<...>`） |
-| `/[locale]/blog/posts/[slug]`      | 文章頁（v2 canonical） |
-| `/[locale]/blog/[category]/[slug]` | legacy（301 → `/[locale]/blog/posts/[slug]`） |
+| `/[locale]/blog/categories/[slug]` | 分類列表（支援 `?q=<q>&sort=<...>`）                                                                                |
+| `/[locale]/blog/posts/[slug]`      | 文章頁（v2 canonical）                                                                                              |
+| `/[locale]/blog/[category]/[slug]` | legacy（301 → `/[locale]/blog/posts/[slug]`）                                                                       |
 
 ### 資料模型
 
@@ -98,6 +100,7 @@
 ---
 
 <a id="gallery"></a>
+
 ## 圖庫
 
 ### 功能
@@ -113,19 +116,19 @@
 
 ### 路由
 
-| 路由                                  | 說明 |
-| ------------------------------------- | ------------- |
-| `/[locale]/gallery`                   | 圖庫列表 |
-| `/[locale]/gallery/categories/[slug]` | 分類列表（v2 canonical） |
-| `/[locale]/gallery/items/[category]/[slug]` | 單一作品頁（v2 canonical） |
-| `/[locale]/gallery/[category]`        | legacy（redirect-only → `/[locale]/gallery/categories/[slug]`） |
-| `/[locale]/gallery/[category]/[slug]` | legacy（301 → `/[locale]/gallery/items/[category]/[slug]`） |
+| 路由                                        | 說明                                                            |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| `/[locale]/gallery`                         | 圖庫列表                                                        |
+| `/[locale]/gallery/categories/[slug]`       | 分類列表（v2 canonical）                                        |
+| `/[locale]/gallery/items/[category]/[slug]` | 單一作品頁（v2 canonical）                                      |
+| `/[locale]/gallery/[category]`              | legacy（redirect-only → `/[locale]/gallery/categories/[slug]`） |
+| `/[locale]/gallery/[category]/[slug]`       | legacy（301 → `/[locale]/gallery/items/[category]/[slug]`）     |
 
 ### API 端點
 
-| 路由                 | 方法 | 說明 |
-| -------------------- | ------ | ----------------------------------------------------------------------------------------------- |
-| `/api/gallery/items` | GET    | 圖庫列表分頁（供 infinite scroll；包含 `likedByMe` via `anon_id`；feature-gated） |
+| 路由                 | 方法 | 說明                                                                              |
+| -------------------- | ---- | --------------------------------------------------------------------------------- |
+| `/api/gallery/items` | GET  | 圖庫列表分頁（供 infinite scroll；包含 `likedByMe` via `anon_id`；feature-gated） |
 
 ### 置頂 / 精選項目
 
@@ -144,6 +147,7 @@
 
 - 實作入口對照：見 [模組清單](#module-inventory-single-source)。
 - Gallery item hotspots render（canonical）：`app/[locale]/gallery/items/[category]/[slug]/page.tsx`（server fetch + server markdown render + client overlay）
+- Gallery item canonical category 修正：當 `slug` 跨分類唯一且 URL 的 `category` segment 錯誤時，使用 `permanentRedirect()`（308）導向 canonical category path（符合 `../ARCHITECTURE.md` §3.11；guardrail test：`tests/seo-canonical-redirects.test.ts`）
 - Home Hero pins render：`components/home/HomePageV2.tsx`（讀 `gallery_pins(surface='hero')` + hotspots）
 
 ### Hero / Hotspots（Home + Gallery）
@@ -153,7 +157,7 @@
   - Admin UI：`/[locale]/admin/gallery/[id]` 的「設為首頁主視覺 / 取消主視覺」
 - Hotspots（0..N / per item）：
   - 資料：`gallery_hotspots`（`x/y` normalized `0..1`；`is_visible`）
-  - Admin UI：`/[locale]/admin/gallery/[id]`（圖上點選新增、pin 編輯、清單拖曳排序、顯示/隱藏）
+  - Admin UI：`/[locale]/admin/gallery/[id]`（圖上點選新增、**拖曳 pin 調整座標**、pin 編輯、清單拖曳排序、顯示/隱藏）
   - Public UI：作品頁與 Home Hero 疊 pins；點 pin 開 modal card；mobile 提供 fallback list
 - Ordering semantics（per `item_id`）：
   - Auto mode：該作品所有 `sort_order` 皆為 `NULL`；讀取順序為 `y ASC → x ASC → created_at ASC`
@@ -168,6 +172,7 @@
 ---
 
 <a id="comments"></a>
+
 ## 留言
 
 ### 功能
@@ -182,18 +187,18 @@
 
 ### API 端點
 
-| 路由                            | 方法 | 說明 |
-| ------------------------------- | ------ | ------------------------------------------- |
-| `/api/comments`                 | GET    | Public：取得留言列表 |
-| `/api/comments`                 | POST   | Public：建立留言 |
-| `/api/comments/public-settings` | GET    | Public：取得公開 settings |
-| `/api/comments/admin`           | GET    | Admin：留言列表（filters + pagination） |
-| `/api/comments/admin`           | PATCH  | Admin：approve/spam/bulk actions |
-| `/api/comments/admin`           | DELETE | Admin：刪除留言 |
-| `/api/comments/settings`        | GET    | Admin：取得 settings + blacklist |
-| `/api/comments/settings`        | PATCH  | Admin：更新 settings |
-| `/api/comments/settings`        | POST   | Admin：新增 blacklist item |
-| `/api/comments/settings`        | DELETE | Admin：移除 blacklist item |
+| 路由                            | 方法   | 說明                                     |
+| ------------------------------- | ------ | ---------------------------------------- |
+| `/api/comments`                 | GET    | Public：取得留言列表                     |
+| `/api/comments`                 | POST   | Public：建立留言                         |
+| `/api/comments/public-settings` | GET    | Public：取得公開 settings                |
+| `/api/comments/admin`           | GET    | Admin：留言列表（filters + pagination）  |
+| `/api/comments/admin`           | PATCH  | Admin：approve/spam/bulk actions         |
+| `/api/comments/admin`           | DELETE | Admin：刪除留言                          |
+| `/api/comments/settings`        | GET    | Admin：取得 settings + blacklist         |
+| `/api/comments/settings`        | PATCH  | Admin：更新 settings                     |
+| `/api/comments/settings`        | POST   | Admin：新增 blacklist item               |
+| `/api/comments/settings`        | DELETE | Admin：移除 blacklist item               |
 | `/api/comments/feedback`        | POST   | Admin：回報 spam/ham feedback 給 Akismet |
 
 ### 資料保護
@@ -226,6 +231,7 @@
 ---
 
 <a id="reactions"></a>
+
 ## 按讚 / 反應
 
 ### 功能
@@ -236,9 +242,9 @@
 
 ### API 端點
 
-| 路由            | 方法 | 說明 |
-| ---------------- | ------ | ------------------ |
-| `/api/reactions` | POST   | 切換 like 狀態 |
+| 路由             | 方法 | 說明           |
+| ---------------- | ---- | -------------- |
+| `/api/reactions` | POST | 切換 like 狀態 |
 
 ### 實作備註
 
@@ -247,6 +253,7 @@
 ---
 
 <a id="users-admin"></a>
+
 ## 使用者（後台）
 
 ### 功能
@@ -262,9 +269,9 @@
 
 > Note: Admin routes 會掛在 `/[locale]/admin/*` 下（single locale: `zh`，例如 `/zh/admin/users`）。下表為了可讀性省略 `/[locale]` 前綴。
 
-| 路由                | 說明 |
-| ------------------- | --------------------------------------------------- |
-| `/admin/users`      | 使用者列表 |
+| 路由                | 說明                                         |
+| ------------------- | -------------------------------------------- |
+| `/admin/users`      | 使用者列表                                   |
 | `/admin/users/[id]` | 使用者詳情（notes/tags/schedule + comments） |
 
 ### 資料模型
@@ -294,6 +301,7 @@
 ---
 
 <a id="theme-system"></a>
+
 ## 主題系統
 
 ### 現況（v2）
@@ -309,13 +317,12 @@
 
 > Note: Admin routes 會掛在 `/[locale]/admin/*` 下（例如 `/zh/admin/theme`）。下表為了可讀性省略 `/[locale]` 前綴。
 
-
-| 路由                   | 說明 |
-| ---------------------- | --------------------------------------------------- |
-| `/admin/theme`         | 全站主題選擇 |
-| `/admin/theme/pages`   | Per-page 主題設定 |
-| `/admin/theme/fonts`   | 字體選擇 |
-| `/admin/theme/layouts` | Per-layout token 自訂（Theme v2） |
+| 路由                   | 說明                                          |
+| ---------------------- | --------------------------------------------- |
+| `/admin/theme`         | 全站主題選擇                                  |
+| `/admin/theme/pages`   | Per-page 主題設定                             |
+| `/admin/theme/fonts`   | 字體選擇                                      |
+| `/admin/theme/layouts` | Per-layout token 自訂（Theme v2）             |
 | `/admin/theme/preview` | 後台 preview（noindex；接受 `?path=&theme=`） |
 
 ### 技術細節
@@ -347,6 +354,7 @@
 ---
 
 <a id="admin-cms"></a>
+
 ## 後台 CMS
 
 ### 功能
@@ -364,30 +372,30 @@
 
 **Dashboard（儀表板）**
 
-| 路由     | 說明 |
-| -------- | ----------- |
+| 路由     | 說明      |
+| -------- | --------- |
 | `/admin` | Dashboard |
 
 **Website / CMS / Settings（網站 / 內容 / 設定）**
 
-| 路由                          | 說明 |
-| ----------------------------- | ----------------------------------------------------- |
-| `/admin/features`             | Feature toggles |
-| `/admin/theme`                | 全站主題 |
-| `/admin/theme/pages`          | Per-page 主題 |
-| `/admin/theme/fonts`          | 字體 |
-| `/admin/theme/layouts`        | Theme layout token editor |
-| `/admin/content`              | Site content |
-| `/admin/content/[section]`    | Section content editor |
-| `/admin/landing`              | Landing page |
-| `/admin/landing/[sectionKey]` | Landing section editor |
-| `/admin/portfolio`            | Portfolio 管理 |
+| 路由                          | 說明                                           |
+| ----------------------------- | ---------------------------------------------- |
+| `/admin/features`             | Feature toggles                                |
+| `/admin/theme`                | 全站主題                                       |
+| `/admin/theme/pages`          | Per-page 主題                                  |
+| `/admin/theme/fonts`          | 字體                                           |
+| `/admin/theme/layouts`        | Theme layout token editor                      |
+| `/admin/content`              | Site content                                   |
+| `/admin/content/[section]`    | Section content editor                         |
+| `/admin/landing`              | Landing page                                   |
+| `/admin/landing/[sectionKey]` | Landing section editor                         |
+| `/admin/portfolio`            | Portfolio 管理                                 |
 | `/admin/settings`             | Company settings（theme 由 `/admin/theme` 管） |
 
 **Blog**
 
-| 路由                     | 說明 |
-| ------------------------ | ------------------- |
+| 路由                     | 說明     |
+| ------------------------ | -------- |
 | `/admin/posts`           | 文章列表 |
 | `/admin/posts/new`       | 新增文章 |
 | `/admin/posts/[id]/edit` | 編輯文章 |
@@ -395,41 +403,41 @@
 
 **Engagement（互動）**
 
-| 路由                       | 說明 |
-| -------------------------- | ------------------ |
+| 路由                       | 說明     |
+| -------------------------- | -------- |
 | `/admin/comments`          | 留言審核 |
 | `/admin/comments/settings` | 留言設定 |
 
 **Gallery（圖庫）**
 
-| 路由                        | 說明 |
-| --------------------------- | ------------------------- |
-| `/admin/gallery`            | 圖庫作品 |
+| 路由                        | 說明                                      |
+| --------------------------- | ----------------------------------------- |
+| `/admin/gallery`            | 圖庫作品                                  |
 | `/admin/gallery/[id]`       | 作品詳情（Hotspots editor + Hero toggle） |
-| `/admin/gallery/categories` | 圖庫分類 |
-| `/admin/gallery/featured`   | Featured items 管理 |
+| `/admin/gallery/categories` | 圖庫分類                                  |
+| `/admin/gallery/featured`   | Featured items 管理                       |
 
 **Users（使用者）**
 
-| 路由                | 說明 |
-| ------------------- | ----------- |
+| 路由                | 說明       |
+| ------------------- | ---------- |
 | `/admin/users`      | 使用者列表 |
 | `/admin/users/[id]` | 使用者詳情 |
 
 **System（系統）**
 
-| 路由                   | 說明 |
+| 路由                   | 說明              |
 | ---------------------- | ----------------- |
-| `/admin/import-export` | 匯入 / 匯出 |
+| `/admin/import-export` | 匯入 / 匯出       |
 | `/admin/reports`       | Report generation |
-| `/admin/history`       | Audit history |
+| `/admin/history`       | Audit history     |
 
 ### 角色權限（RBAC）
 
-| 角色   | 權限 |
+| 角色   | 權限                                 |
 | ------ | ------------------------------------ |
 | Owner  | Full access、theme editing、settings |
-| Editor | Content editing、read-only settings |
+| Editor | Content editing、read-only settings  |
 
 ### 驗證流程
 
@@ -450,6 +458,7 @@
 ---
 
 <a id="importexport-admin-only"></a>
+
 ## 匯入 / 匯出（後台）
 
 > 路由：`/admin/import-export`（掛在 `/[locale]/admin/*` 下）
@@ -464,6 +473,7 @@
 ---
 
 <a id="ai-analysis-admin-only"></a>
+
 ## AI 分析（後台）
 
 > 路由：`/admin/ai-analysis`（掛在 `/[locale]/admin/*` 下）
@@ -479,6 +489,7 @@
 ---
 
 <a id="embeddings-and-semantic-search-admin-only"></a>
+
 ## Embeddings 與語意搜尋（後台）
 
 > 路由：
@@ -498,6 +509,7 @@
 ---
 
 <a id="preprocessing-admin-only"></a>
+
 ## 資料預處理（後台）
 
 > 路由：`/admin/preprocessing`
@@ -514,6 +526,7 @@
 ---
 
 <a id="i18n"></a>
+
 ## 多語系（i18n）
 
 ### 實作
@@ -535,6 +548,7 @@
 ---
 
 <a id="seo"></a>
+
 ## SEO
 
 ### 功能
@@ -553,16 +567,14 @@
 ---
 
 <a id="known-gaps-roadmap-links"></a>
+
 ## 已知缺口（連到 Roadmap）
 
 > 目的：避免把「未完成/刻意 gated」敘述散落在各 feature 章節，造成讀者誤以為本文件描述的是「全功能已完成」狀態。
 
 ### Home UIUX / Navigation
 
-- v2 canonical routes/redirects 已大致落地（sitemap/nav/resolver/internal links），但仍有少數非 canonical URL 產出點：comments permalink（Akismet/feedback）與 admin blog preview links；修復方案見 `doc/meta/STEP_PLAN.md`（PR-9, PR-10）。
-- Query-based canonicalization 仍使用 temporary redirect（Next 307），需改為永久 redirect（301/308）並清理 legacy pages；修復方案見 `doc/meta/STEP_PLAN.md`（PR-11）。
-- JSON-LD SearchAction `urlTemplate` 使用 `?search=` 會造成多一次 redirect；修復方案見 `doc/meta/STEP_PLAN.md`（PR-11C）。
-- Comments UI 元件位於 `components/blog/*`，與 domain 邊界不一致；修復方案見 `doc/meta/STEP_PLAN.md`（PR-12）。
+- Suggest section 仍為 placeholder（見 Home 章節說明；後續以 `doc/ROADMAP.md` 為準）。
 
 ### Data Intelligence（後台）
 
@@ -579,6 +591,7 @@
 ---
 
 <a id="module-inventory-single-source"></a>
+
 ## 模組清單（單一真相來源）
 
 > 本節只列出各 domain 的**入口點**（facade / cached / admin-io）。
@@ -599,13 +612,13 @@
 
 ### Data Intelligence 模組（後台）
 
-| Module        | Facade                              | Types                              | Spec / Code Map                                        |
-| ------------- | --------------------------- | ---------------------------- | ------------------------------------------------------ |
-| Import/Export | `lib/modules/import-export/*-io.ts` | `lib/types/import-export.ts`       | `specs/completed/import-export-spec.md`                |
-| AI Analysis   | `lib/modules/ai-analysis/io.ts`     | `lib/types/ai-analysis.ts`         | `doc/archive/2025-12-30-ai-analysis-implementation.md` |
-| Embeddings    | `lib/modules/embedding/io.ts`       | `lib/types/embedding.ts`           | `specs/completed/embeddings-semantic-search-spec.md`   |
+| Module        | Facade                              | Types                                | Spec / Code Map                                        |
+| ------------- | ----------------------------------- | ------------------------------------ | ------------------------------------------------------ |
+| Import/Export | `lib/modules/import-export/*-io.ts` | `lib/types/import-export.ts`         | `specs/completed/import-export-spec.md`                |
+| AI Analysis   | `lib/modules/ai-analysis/io.ts`     | `lib/types/ai-analysis.ts`           | `doc/archive/2025-12-30-ai-analysis-implementation.md` |
+| Embeddings    | `lib/modules/embedding/io.ts`       | `lib/types/embedding.ts`             | `specs/completed/embeddings-semantic-search-spec.md`   |
 | Preprocessing | `lib/modules/preprocessing/io.ts`   | `lib/modules/preprocessing/types.ts` | `specs/completed/data-preprocessing-pipeline-spec.md`  |
-| Rerank        | `lib/rerank/io.ts`          | `lib/rerank/types.ts`        | —                                                      |
+| Rerank        | `lib/rerank/io.ts`                  | `lib/rerank/types.ts`                | —                                                      |
 
 ### Cross-cutting（跨領域 / 共用）
 

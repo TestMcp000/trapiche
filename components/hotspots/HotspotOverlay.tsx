@@ -49,16 +49,17 @@ export function HotspotOverlay({
         aria-label="作品媒材標記"
         role="group"
       >
-        {hotspots.map((hotspot, index) => (
+      {hotspots.map((hotspot, index) => (
           <div key={hotspot.id} className="pointer-events-auto">
             <HotspotPinClient
               id={hotspot.id}
               x={hotspot.x}
               y={hotspot.y}
               isActive={activeHotspotId === hotspot.id}
-              index={index}
+              displayIndex={index + 1}
+              totalCount={hotspots.length}
               onActivate={onSelectHotspot}
-              label={hotspot.media}
+              mediaLabel={hotspot.media}
             />
           </div>
         ))}

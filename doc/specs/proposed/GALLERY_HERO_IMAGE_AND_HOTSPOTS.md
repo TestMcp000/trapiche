@@ -251,6 +251,7 @@
 - Performance：作品詳情頁載入 hotspots 的查詢成本可控（目標：≤ 1 額外 query；可被 cached）。
 - Security：RLS：public 只能讀取可見作品的 hotspots；owner/editor 可完整 CRUD。
 - Accessibility：pins 可鍵盤 focus；資訊卡有清楚的可讀文字與關閉方式；fallback list 在無 hover/小螢幕仍可使用。
+  - ✅ **A11y Implementation**（PR-14）：Hotspot pins 使用 `tabIndex={0}`（自然 DOM tab order）；`aria-label` 包含「媒材標記 第 X 個，共 N 個：{媒材名稱}」語意標籤。
 - Observability：至少能在 admin side 追溯變更（優先：沿用既有 admin history pattern；或最小化 server logging）。
 
 ---
@@ -392,11 +393,16 @@
 
 ---
 
-## Implementation Status（2026-01-20）
+## Implementation Status（2026-01-21）
 
 - Implemented behavior (SSoT): `../../SPEC.md`
 - Pending / planned work: `../../ROADMAP.md`
 - Drift tracker / stable `@see`: `../../../uiux_refactor.md`
+- ✅ Admin hotspots editor 已支援「拖曳 pin 直接改座標」（x/y）（PR-13）。
+- ✅ Hotspot pins a11y：移除正數 `tabIndex`，使用自然 tab order（PR-14）。
+- ✅ Home JSON-LD SSoT 化：`siteName`/描述 fallback chain（PR-15）。
+- ✅ Home data plumbing：single data owner，避免重複 fetch（PR-16）。
+- ⚠️ Drift（SEO contract）：Gallery item canonical category 修正仍使用 `redirect()`（307），待改為 `permanentRedirect()`（308）（`../../../uiux_refactor.md` §4 item 12；修復方案：`../../meta/STEP_PLAN.md` PR-17）。
 
 ---
 

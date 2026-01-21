@@ -13,6 +13,8 @@ Template: `TEMPLATE.md`
 | File | Date | Status | Title |
 | --- | --- | --- | --- |
 | [DESIGN_SSOT.md](DESIGN_SSOT.md) | 2026-01-21 | Active（Design SSoT / 最終權威） | Design SSoT（最終權威）— Home UIUX v2 + Gallery Hero/Hotspots + Hamburger Nav v2 |
+| [2026-01-21-step-plan-v3-home-uiux-gallery-hero-hotspots-hamburger-nav.md](2026-01-21-step-plan-v3-home-uiux-gallery-hero-hotspots-hamburger-nav.md) | 2026-01-21 | COMPLETE ✅ (Archived snapshot; active plan lives in `../meta/STEP_PLAN.md`) | 2026-01-21 - Step Plan V3（Home UIUX + Gallery Hero/Hotspots + Hamburger Nav v2）(Archive) |
+| [2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md](2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md) | 2026-01-21 | COMPLETE ✅ (Archived snapshot; active plan lives in `../meta/STEP_PLAN.md`) | 2026-01-21 - Step Plan V2（Home UIUX + Gallery Hero/Hotspots + Hamburger Nav v2）(Archive) |
 | [2026-01-20-step-plan-v1-admin-gaps.md](2026-01-20-step-plan-v1-admin-gaps.md) | 2026-01-20 | — | Step-by-Step Execution Plan — V1 TODO（Admin 缺口補齊；Archived） |
 | [2026-01-20-gallery-hotspots-spec.md](2026-01-20-gallery-hotspots-spec.md) | 2026-01-20 | ARCHIVED (Merged) | Gallery Hotspots（圖上 Pin）+ Home Hero 選圖 - Spec（Archived） |
 | [2026-01-17-step-plan-safety-risk-engine-v1.md](2026-01-17-step-plan-safety-risk-engine-v1.md) | 2026-01-17 | **COMPLETE ✅ (Maintenance Mode)** | Step-by-Step Execution Plan — AI Safety Risk Engine (Comments) V1 |

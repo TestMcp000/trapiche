@@ -1,9 +1,13 @@
-# Step-by-Step Execution Plan — V2（Home UIUX + Gallery Hero/Hotspots + Hamburger Nav v2）
+# Step-by-Step Execution Plan — V3（Home UIUX + Gallery Hero/Hotspots + Hamburger Nav v2）
 
 > 狀態: Active（Drift repair plan；本檔只寫「修復方案/步驟」，不在此直接改程式碼）  
 > 最後更新: 2026-01-21（drift review refresh）  
 > 現況 SSoT（已實作行為）: `doc/SPEC.md`  
 > 目標 PRD（約束/合約）: `doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md`（Implementation Contract）
+> 歷史完成紀錄：
+>
+> - V2 snapshot（PR-9..PR-12）：`doc/archive/2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md`
+> - V3 snapshot（PR-13..PR-16）：`doc/archive/2026-01-21-step-plan-v3-home-uiux-gallery-hero-hotspots-hamburger-nav.md`
 
 ---
 
@@ -32,100 +36,91 @@
 
 > 本節只列「尚未修復」的飄移/技術債；已完成項不再保留在本檔（避免干擾後續執行）。
 
+### Drift-SEO-1（COMPLETED ✅）：Gallery item canonical redirect 已改為 `permanentRedirect()`（308）
 
-### Drift-2：Admin Blog 仍產出 v1 internal links / revalidatePath（redirect chain / 一致性）
+- **Status**: Fixed in PR-17 (2026-01-21)
+- **Fix Summary**:
+  - 程式碼修改：`app/[locale]/gallery/items/[category]/[slug]/page.tsx` 使用 `permanentRedirect()`
+  - Guardrail test：`tests/seo-canonical-redirects.test.ts`
+  - 文件同步：`uiux_refactor.md` §4 item 12, `doc/SPEC.md` Gallery 章節
 
-- 現況（SSoT）：
-  - `app/[locale]/admin/(blog)/posts/page.tsx` 的 public preview link 仍使用 `/${locale}/blog/<category>/<slug>`。
-  - `app/[locale]/admin/(blog)/posts/actions.ts` 的 `revalidatePath()` 仍對 v1 path 做精準 revalidate。
-- 風險：
-  - 內部鏈結依賴 `next.config.ts` 308 才到 v2（redirect chain + 觀感不一致）。
-  - 若未完全依賴 tag invalidation，v2 page 的 cache/ISR 定位可能不精準。
-- 修復：PR-10（Admin links 全量 canonical 化）✅ COMPLETED 2026-01-21
+### Clean-1（COMPLETED ✅）：Hotspot fallback list 改用動態 `useId()` 避免 DOM id collision
+
+- **Status**: Fixed in PR-18 (2026-01-21)
+- **Fix Summary**:
+  - 程式碼修改：`components/hotspots/HotspotFallbackList.tsx` 使用 React `useId()` hook
+  - Guardrail test：`tests/hotspot-fallbacklist-id.test.ts`
+  - 文件同步：`uiux_refactor.md` §4 item 13, `doc/meta/STEP_PLAN.md` PR-18
 
 ---
 
 ## 3) Execution Plan（Active；以 PR 為單位；每 PR 可獨立驗收/回退）
 
-### PR-9 — Comments/Akismet permalink v2 canonical + 去重（SEO / 一致性）✅ COMPLETED 2026-01-21
+### PR-17 — SEO：Gallery item canonicalization 改為永久 redirect（ARCHITECTURE compliance）✅ COMPLETED
 
-Goal：所有 permalink（Akismet、admin feedback、debug output）與 sitemap/nav 的 v2 canonical 完全一致，避免 redirect chain 與雙軌。
+> **Status**: ✅ Completed (2026-01-21)
 
-**已完成：**
+Goal：當 `slug` 跨分類唯一且 URL 的 `category` segment 錯誤時，canonicalization 必須為永久 redirect（308），避免 SEO drift。
 
-- [x] `permalink-io.ts`：使用 `buildBlogPostUrl()` / `buildGalleryItemUrl()` 產出 v2 canonical，locale 固定 `zh`
-- [x] `feedback-admin-io.ts`：去重，改呼叫 `buildPermalink()` 而非自行組字串
-- [x] 新增 `tests/comment-permalink.test.ts`（9 tests）驗證 v2 canonical patterns
-- [x] `npm test`（1012 pass）、`npm run type-check`、`npm run lint` 全通過
+**Implementation Steps：**
 
----
-
-### PR-10 — Admin Blog internal links 全量 canonical 化（避免 redirect chain）✅ COMPLETED 2026-01-21
-
-Goal：admin 產出的 public preview links 一律為 v2 canonical（與 hamburger nav resolver / sitemap 一致）。
-
-**已完成：**
-
-- [x] `app/[locale]/admin/(blog)/posts/page.tsx`：public preview link 改為 `/${locale}/blog/posts/${slug}`
-- [x] `app/[locale]/admin/(blog)/posts/actions.ts`：`revalidatePath()` 改為精準指向 v2 canonical `/${locale}/blog/posts/${slug}`
-- [x] 簡化 revalidatePath 條件檢查（移除不必要的 category 檢查）
-- [x] `npm test`（1012 pass）、`npm run type-check`、`npm run lint` 全通過
-
-DoD：
-
-- ✅ Admin UI 不再產出 v1 blog post path 作為 public preview link
-- ✅ `revalidatePath()` 精準指向 v2 canonical post route
-
----
-
-### PR-11 — Canonical redirects 永久化 + legacy routes 清理（SEO contract 對齊）✅ COMPLETED 2026-01-21
-
-Goal：所有 canonicalization 都是永久 redirect（301/308），並移除會造成重複實作/混淆的 legacy pages。
-
-**已完成：**
-
-- [x] `app/[locale]/blog/page.tsx`：改為 `permanentRedirect()` for `?category=` canonicalization
-- [x] `app/[locale]/gallery/page.tsx`：改為 `permanentRedirect()` for `?category=` canonicalization
-- [x] `app/[locale]/gallery/[category]/page.tsx`：改為 `permanentRedirect()` for legacy category path
-- [x] `app/[locale]/blog/[category]/[slug]/page.tsx`：已刪除（v1 → v2 redirect 由 `next.config.ts` 處理）
-- [x] `app/[locale]/gallery/[category]/[slug]/page.tsx`：已刪除（v1 → v2 redirect 由 `next.config.ts` 處理）
-- [x] `lib/seo/jsonld.ts`：SearchAction `urlTemplate` 改為 `?q=`
-- [x] `tests/seo-jsonld.test.ts`：更新期望值以使用 `?q=`
-- [x] `npm test`（1012 pass）、`npm run type-check`、`npm run lint` 全通過
+1. **Code change** ✅
+   - 檔案：`app/[locale]/gallery/items/[category]/[slug]/page.tsx`
+   - 將 `redirect(...)` 改為 `permanentRedirect(...)`（只改 canonicalization 那條路徑；其他 flow 不變）。
+   - 更新 imports：`import { notFound, permanentRedirect } from 'next/navigation';`（移除 `redirect`）。
+2. **Guardrail test（防回歸）** ✅
+   - 新增 `tests/seo-canonical-redirects.test.ts`：
+     - 讀取 `app/[locale]/gallery/items/[category]/[slug]/page.tsx` 原始碼
+     - assert 不包含獨立 `redirect(` 且包含 `permanentRedirect(`（只針對此檔，避免誤殺其他合理的 temporary redirects）。
+3. **Docs sync** ✅
+   - `uiux_refactor.md`：§4 item 12 標記為 ARCHIVED
+   - `doc/SPEC.md`：Gallery 章節更新「canonical category 修正」註記
+4. **驗收** ✅
+   - `npm test` - pass
+   - `npm run lint` - pass
+   - `npm run type-check` - pass
 
 DoD：
 
-- ✅ 所有 canonicalization redirect 都是永久（301/308），不再是 307
-- ✅ legacy v1 item pages 已刪除（僅保留 `next.config.ts` 的永久 redirect matrix）
+- ✅ canonicalization 使用 `permanentRedirect()`（308），不再出現 307
+- ✅ guardrail test 上線，避免回歸
+- ✅ 文件同步完成（`uiux_refactor.md` + `doc/SPEC.md`）
 
 ---
 
-### PR-12 — Comments UI folder refactor（提升內聚 / 降低跨 domain 耦合）✅ COMPLETED 2026-01-21
+### PR-18 — Hotspots UI：a11y/clean-code（避免固定 id；降低未來 drift 風險）✅ COMPLETED
 
-Goal：讓 comments UI 與 comments domain 一致，降低 blog/gallery 之間的 UI 耦合。
+> **Status**: ✅ Completed (2026-01-21)
 
-**已完成：**
+Goal：移除 Hotspot fallback list 的固定 DOM id，避免未來同頁多 overlay 時造成 id collision。
 
-- [x] 新增 `components/comments/` 目錄
-- [x] 搬移 Comments UI 元件（4 tsx + 3 CSS modules）：
-  - `ClientCommentSection.tsx`
-  - `CommentSection.tsx`
-  - `CommentForm.tsx`
-  - `CommentItem.tsx`
-  - `CommentSection.module.css`
-  - `CommentForm.module.css`
-  - `CommentItem.module.css`
-- [x] 更新 `ClientCommentSection.tsx` 內部 dynamic import 路徑
-- [x] 更新 `app/[locale]/blog/posts/[slug]/page.tsx` import 路徑
-- [x] 更新 `app/[locale]/gallery/items/[category]/[slug]/page.tsx` import 路徑
-- [x] `npm test`（1012 pass）、`npm run type-check`、`npm run lint` 全通過
+**Implementation Steps：**
+
+1. **Code change** ✅
+   - 檔案：`components/hotspots/HotspotFallbackList.tsx`
+   - 新增 `useId` import：`import { useState, useCallback, useId } from 'react';`
+   - `const listId = useId();`
+   - `aria-controls={listId}`；list 容器 `id={listId}`
+2. **Regression test** ✅
+   - 新增 `tests/hotspot-fallbacklist-id.test.ts`：
+     - assert 必須 import `useId` from React
+     - assert 不再出現 `id="hotspot-fallback-list"` 固定字串
+     - assert 不再出現 `aria-controls="hotspot-fallback-list"` 固定字串
+     - assert 使用動態 id（`id={...}` 和 `aria-controls={...}`）
+3. **Docs sync** ✅
+   - `uiux_refactor.md`：§4 item 13 標記為 ARCHIVED
+   - `doc/meta/STEP_PLAN.md`：本 PR 標記完成
+4. **驗收** ✅
+   - `npm test` - pass (1041 tests)
+   - `npm run lint` - pass
+   - `npm run type-check` - pass
 
 DoD：
 
-- ✅ comments UI 不再位於 `components/blog/*`
-- ✅ Blog/Gallery 共同使用 comments UI 時，import path 與 domain 概念一致
-
----
+- ✅ 不再有固定 `id="hotspot-fallback-list"`
+- ✅ `aria-controls` 與 `id` 一致且可多實例共存（使用 React `useId()` hook）
+- ✅ guardrail test 上線（`tests/hotspot-fallbacklist-id.test.ts`），避免回歸
+- ✅ 測試/型別/靜態檢查皆通過
 
 ## 4) 每 PR 驗證清單（不可省略）
 

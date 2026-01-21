@@ -20,6 +20,11 @@ import { NextIntlClientProvider } from 'next-intl';
 import type { AbstractIntlMessages } from 'next-intl';
 import type { GalleryItem, GalleryCategory, GalleryHotspot, GalleryHotspotInput } from '@/lib/types/gallery';
 import {
+  toNormalizedCoords,
+  isDragMovement,
+  DRAG_THRESHOLD_PX,
+} from '@/lib/modules/gallery/hotspot-coordinates';
+import {
   createHotspotAction,
   updateHotspotAction,
   deleteHotspotAction,
@@ -91,8 +96,14 @@ function GalleryItemDetailContent({
     is_visible: true,
   });
 
-  // Drag state for reordering
+  // Drag state for reordering list
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  // Pin drag-to-move state
+  const [draggingHotspotId, setDraggingHotspotId] = useState<string | null>(null);
+  const [dragStartPos, setDragStartPos] = useState<{ clientX: number; clientY: number } | null>(null);
+  const [dragPreviewCoords, setDragPreviewCoords] = useState<{ x: number; y: number } | null>(null);
+  const [originalCoordsBeforeDrag, setOriginalCoordsBeforeDrag] = useState<{ x: number; y: number } | null>(null);
 
   // =============================================================================
   // Handlers
@@ -125,9 +136,8 @@ function GalleryItemDetailContent({
     setShowModal(true);
   }, [hotspots.length, maxHotspots]);
 
-  // Click on existing pin to edit
-  const handlePinClick = useCallback((hotspot: GalleryHotspot, e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Open edit modal for a hotspot
+  const openEditModal = useCallback((hotspot: GalleryHotspot) => {
     setEditingHotspot(hotspot);
     setFormData({
       x: hotspot.x,
@@ -141,6 +151,122 @@ function GalleryItemDetailContent({
     });
     setPendingCoords(null);
     setShowModal(true);
+  }, []);
+
+  // Legacy click handler (used by list edit button)
+  const handlePinClick = useCallback((hotspot: GalleryHotspot, e: React.MouseEvent) => {
+    e.stopPropagation();
+    openEditModal(hotspot);
+  }, [openEditModal]);
+
+  // =============================================================================
+  // Pin Drag-to-Move Handlers (Pointer Events)
+  // =============================================================================
+
+  const handlePinPointerDown = useCallback((e: React.PointerEvent, hotspot: GalleryHotspot) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Capture pointer for reliable drag tracking
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+    setDraggingHotspotId(hotspot.id);
+    setDragStartPos({ clientX: e.clientX, clientY: e.clientY });
+    setOriginalCoordsBeforeDrag({ x: hotspot.x, y: hotspot.y });
+    setDragPreviewCoords(null);
+  }, []);
+
+  const handlePinPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!draggingHotspotId || !dragStartPos || !imageRef.current) return;
+
+    // Check if movement exceeds threshold
+    const hasMoved = isDragMovement(dragStartPos, { clientX: e.clientX, clientY: e.clientY }, DRAG_THRESHOLD_PX);
+
+    if (!hasMoved) return;
+
+    // Calculate new normalized coordinates
+    const rect = imageRef.current.getBoundingClientRect();
+    const newCoords = toNormalizedCoords({
+      clientX: e.clientX,
+      clientY: e.clientY,
+      rect,
+    });
+
+    setDragPreviewCoords(newCoords);
+  }, [draggingHotspotId, dragStartPos]);
+
+  const handlePinPointerUp = useCallback(async (e: React.PointerEvent, hotspot: GalleryHotspot) => {
+    if (!draggingHotspotId || !dragStartPos) {
+      // No drag was initiated
+      return;
+    }
+
+    // Release pointer capture
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+
+    const wasDragging = isDragMovement(dragStartPos, { clientX: e.clientX, clientY: e.clientY }, DRAG_THRESHOLD_PX);
+
+    // Reset drag state
+    const originalCoords = originalCoordsBeforeDrag;
+    const finalCoords = dragPreviewCoords;
+
+    setDraggingHotspotId(null);
+    setDragStartPos(null);
+    setDragPreviewCoords(null);
+    setOriginalCoordsBeforeDrag(null);
+
+    if (!wasDragging) {
+      // Movement was below threshold - treat as click (open edit modal)
+      openEditModal(hotspot);
+      return;
+    }
+
+    // It was a drag - update the position
+    if (!finalCoords || !originalCoords) return;
+
+    // Optimistically update UI
+    setHotspots(prev =>
+      prev.map(h =>
+        h.id === hotspot.id ? { ...h, x: finalCoords.x, y: finalCoords.y } : h
+      )
+    );
+
+    // Persist to server (only x/y, no sort_order change)
+    setSaving(true);
+    setError(null);
+
+    try {
+      const result = await updateHotspotAction(hotspot.id, { x: finalCoords.x, y: finalCoords.y }, locale);
+
+      if ('error' in result) {
+        // Rollback on error
+        setError(result.error);
+        setHotspots(prev =>
+          prev.map(h =>
+            h.id === hotspot.id ? { ...h, x: originalCoords.x, y: originalCoords.y } : h
+          )
+        );
+      }
+    } catch {
+      // Rollback on error
+      setError('更新標記位置失敗');
+      setHotspots(prev =>
+        prev.map(h =>
+          h.id === hotspot.id ? { ...h, x: originalCoords.x, y: originalCoords.y } : h
+        )
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [draggingHotspotId, dragStartPos, dragPreviewCoords, originalCoordsBeforeDrag, openEditModal, locale]);
+
+  const handlePinPointerCancel = useCallback((e: React.PointerEvent) => {
+    // Release pointer and reset state without making changes
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    setDraggingHotspotId(null);
+    setDragStartPos(null);
+    setDragPreviewCoords(null);
+    setOriginalCoordsBeforeDrag(null);
   }, []);
 
   // Save hotspot (create or update)
@@ -374,24 +500,38 @@ function GalleryItemDetailContent({
               />
 
               {/* Pins Overlay */}
-              {hotspots.map((hotspot, index) => (
-                <button
-                  key={hotspot.id}
-                  onClick={(e) => handlePinClick(hotspot, e)}
-                  className={`absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg transition-transform hover:scale-110 ${
-                    hotspot.is_visible
-                      ? 'bg-blue-600 hover:bg-blue-700'
-                      : 'bg-gray-400 hover:bg-gray-500'
-                  }`}
-                  style={{
-                    left: `${hotspot.x * 100}%`,
-                    top: `${hotspot.y * 100}%`,
-                  }}
-                  title={hotspot.media}
-                >
-                  {index + 1}
-                </button>
-              ))}
+              {hotspots.map((hotspot, index) => {
+                const isDragging = draggingHotspotId === hotspot.id;
+                const displayX = isDragging && dragPreviewCoords ? dragPreviewCoords.x : hotspot.x;
+                const displayY = isDragging && dragPreviewCoords ? dragPreviewCoords.y : hotspot.y;
+
+                return (
+                  <button
+                    key={hotspot.id}
+                    onPointerDown={(e) => handlePinPointerDown(e, hotspot)}
+                    onPointerMove={handlePinPointerMove}
+                    onPointerUp={(e) => handlePinPointerUp(e, hotspot)}
+                    onPointerCancel={handlePinPointerCancel}
+                    aria-label={`標記 ${index + 1}: ${hotspot.media}，拖曳調整位置或點擊編輯`}
+                    className={`absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg transition-all touch-none select-none ${
+                      isDragging
+                        ? 'scale-125 opacity-80 shadow-2xl z-50 cursor-grabbing'
+                        : 'hover:scale-110 cursor-grab'
+                    } ${
+                      hotspot.is_visible
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-gray-400 hover:bg-gray-500'
+                    }`}
+                    style={{
+                      left: `${displayX * 100}%`,
+                      top: `${displayY * 100}%`,
+                    }}
+                    title="拖曳調整位置，點擊編輯"
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
 
               {/* Pending Pin */}
               {pendingCoords && (
@@ -408,7 +548,7 @@ function GalleryItemDetailContent({
             </div>
 
             <p className="mt-2 text-xs text-gray-500 text-center">
-              {canAddMore ? '點擊圖片新增標記' : '已達標記數量上限'}
+              {canAddMore ? '點擊圖片新增標記，拖曳標記調整位置' : '已達標記數量上限，拖曳標記可調整位置'}
             </p>
           </div>
         </div>

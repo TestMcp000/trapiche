@@ -11,7 +11,7 @@
  * @see doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md (FR-7.2)
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import type { GalleryHotspotPublic } from '@/lib/types/gallery';
 
 // Inline SVG icons to avoid external dependencies
@@ -68,6 +68,7 @@ export function HotspotFallbackList({
   className = '',
 }: HotspotFallbackListProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const listId = useId();
 
   const toggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);
@@ -91,7 +92,7 @@ export function HotspotFallbackList({
         onClick={toggleExpand}
         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-secondary hover:text-foreground bg-surface-raised hover:bg-surface-raised/80 rounded-lg transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         aria-expanded={isExpanded}
-        aria-controls="hotspot-fallback-list"
+        aria-controls={listId}
       >
         <span>
           {toggleLabel} ({hotspots.length})
@@ -106,7 +107,7 @@ export function HotspotFallbackList({
       {/* Expandable List */}
       {isExpanded && (
         <div
-          id="hotspot-fallback-list"
+          id={listId}
           className="mt-2 bg-surface-raised rounded-lg overflow-hidden animate-in slide-in-from-top-2 duration-200"
           role="list"
         >

@@ -1,6 +1,6 @@
 # Admin UI/UX Cleanup Playbook（後台）— Drift Tracker / 修復手冊
 
- > Last Updated: 2026-01-11
+> Last Updated: 2026-01-11
 > Status: **ACTIVE**（維護中：只保留「飄移/未完成」項目；修復流程模板固定保留）  
 > Assumption: 專案尚未上線，DB 可直接 `reset`（遷移成本 ≈0，不保留相容性）。
 > Archive: `doc/archive/2025-12-31-uiux-refactor-archive.md`（舊版全文 + roadmap）
@@ -226,8 +226,10 @@ app/[locale]/admin/<module>/
    - 原檔改成 re-export 或 thin wrapper（避免一次性大改造成 diff 難 review）
 4. 更新所有 import（優先從「同一層 route 的 `actions.ts`」開始改），避免跨層直接抓舊檔
 5. 若拆分後需要共用 helper：
-  - 優先抽到同一 domain 的 pure module（`lib/modules/<domain>/*.ts`）或 `lib/types/*`
-   - 禁止在多個 IO 檔內複製同一段 query/validation（Single source）
+
+- 優先抽到同一 domain 的 pure module（`lib/modules/<domain>/*.ts`）或 `lib/types/*`
+- 禁止在多個 IO 檔內複製同一段 query/validation（Single source）
+
 6. 驗證（必做）：`npm test` / `npm run type-check` / `npm run lint`
 7. 收尾：回寫 `ARCHITECTURE.md`（若新增了新的 IO 檔命名模式）與本檔 §2 的檢查清單（若需要新增新的 grep）。
 
@@ -281,9 +283,9 @@ app/[locale]/admin/<module>/
 > 本節的 item 編號（尤其是 item 2/3/6/8）已被多處 in-code `@see uiux_refactor.md §4 item ...` 引用；請勿改號。
 > 本檔只保留「當前狀態 + 待修復 / 待落地」的最小資訊；詳細落地記錄請放/參照 `doc/archive/*`。
 
-**狀態（2026-01-14）**
+**狀態（2026-01-21）**
 
-- Open drift items：目前無（若新增 drift，請先補 `Evidence`：rg output + file paths，再拆 PR）
+- Open drift items：0（all archived）
 
 1. **[ARCHIVED ✅] Import/Export：Import rollback / atomicity 與 PRD drift** → `doc/specs/completed/import-export-spec.md`
 2. **[ARCHIVED ✅] Import/Export：CSV 匯出（Products/Coupons/Orders/Members/Comments）** → `doc/specs/completed/import-export-spec.md`
@@ -296,8 +298,10 @@ app/[locale]/admin/<module>/
 9. **[ARCHIVED ✅] Data Preprocessing：動態配置（DB SSOT + Config Editor）** → `doc/specs/completed/data-preprocessing-pipeline-spec.md`
 10. **[ARCHIVED ✅] Admin i18n Toggle：inline branching / legacy translations island** → `doc/archive/2026-01-04-admin-i18n-toggle-step-plan.md`
 11. **[ARCHIVED ✅] Architecture：`lib/modules/*` 模組隔離 drift（移除跨模組 import + 新增 guardrail test）** → `ARCHITECTURE.md`, `tests/architecture-boundaries.test.ts`, `lib/use-cases/**`, `lib/auth/index.ts`, `lib/embeddings/index.ts`
-  
-  ### 4.1 Admin routes must use `actions.ts`（ARCHIVED; keep for stable `@see`）
+12. **[ARCHIVED ✅] SEO：Gallery item canonicalization 改為 `permanentRedirect()`（301/308）** → Fixed in PR-17; guardrail test: `tests/seo-canonical-redirects.test.ts`; see `ARCHITECTURE.md` §3.11
+13. **[ARCHIVED ✅] Hotspots UI：a11y/clean-code（避免固定 id）** → Fixed in PR-18; guardrail test: `tests/hotspot-fallbacklist-id.test.ts`; see `doc/meta/STEP_PLAN.md` PR-18
+
+### 4.1 Admin routes must use `actions.ts`（ARCHIVED; keep for stable `@see`）
 
 - Guardrail enforced by `tests/architecture-boundaries.test.ts`；修復流程請看本檔 §3.6。
 

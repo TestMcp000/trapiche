@@ -20,12 +20,14 @@ interface HotspotPinClientProps {
   y: number;
   /** Whether this pin is currently active/selected */
   isActive: boolean;
-  /** Tab order index for keyboard navigation */
-  index: number;
+  /** 1-based index for display order (used in aria-label) */
+  displayIndex: number;
+  /** Total number of hotspots (for aria-label context) */
+  totalCount?: number;
   /** Callback when pin is activated (click/keyboard) */
   onActivate: (id: string) => void;
-  /** Optional label for screen readers */
-  label?: string;
+  /** Optional media label for screen readers */
+  mediaLabel?: string;
 }
 
 export function HotspotPinClient({
@@ -33,10 +35,15 @@ export function HotspotPinClient({
   x,
   y,
   isActive,
-  index,
+  displayIndex,
+  totalCount,
   onActivate,
-  label = '媒材標記',
+  mediaLabel,
 }: HotspotPinClientProps) {
+  // Build semantic aria-label: "媒材標記 第 X 個，共 N 個：{mediaLabel}"
+  const ariaLabel = totalCount
+    ? `媒材標記 第 ${displayIndex} 個，共 ${totalCount} 個${mediaLabel ? `：${mediaLabel}` : ''}`
+    : `媒材標記 ${displayIndex}${mediaLabel ? `：${mediaLabel}` : ''}`;
   const handleClick = useCallback(() => {
     onActivate(id);
   }, [id, onActivate]);
@@ -63,8 +70,8 @@ export function HotspotPinClient({
       }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={index + 1}
-      aria-label={`${label} ${index + 1}`}
+      tabIndex={0}
+      aria-label={ariaLabel}
       aria-pressed={isActive}
       data-hotspot-id={id}
     >
