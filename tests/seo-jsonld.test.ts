@@ -70,6 +70,6 @@ test('generateHomePageJsonLd emits graph with Organization and WebSite', () => {
   const websiteNode = website as Record<string, unknown>;
   const potentialAction = websiteNode.potentialAction as Record<string, unknown>;
   const target = potentialAction.target as Record<string, unknown>;
-  assert.equal(target.urlTemplate, 'https://example.com/zh/blog?search={search_term_string}');
+  assert.equal(target.urlTemplate, 'https://example.com/zh/blog?q={search_term_string}');
 });
 

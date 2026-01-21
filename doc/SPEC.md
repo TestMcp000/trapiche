@@ -79,7 +79,7 @@
 
 | 路由                               | 說明 |
 | ---------------------------------- | ------------- |
-| `/[locale]/blog`                   | 部落格列表（支援 `?q=<q>&sort=<...>`；legacy `?category=<slug>` 仍可用） |
+| `/[locale]/blog`                   | 部落格列表（支援 `?q=<q>&sort=<...>`；legacy `?category=<slug>` 會 redirect 到 `/[locale]/blog/categories/[slug]`） |
 | `/[locale]/blog/categories/[slug]` | 分類列表（支援 `?q=<q>&sort=<...>`） |
 | `/[locale]/blog/posts/[slug]`      | 文章頁（v2 canonical） |
 | `/[locale]/blog/[category]/[slug]` | legacy（301 → `/[locale]/blog/posts/[slug]`） |
@@ -92,7 +92,7 @@
 ### 實作備註
 
 - Admin posts create/update/delete 已走 server actions（`app/[locale]/admin/(blog)/posts/actions.ts`）；client form 僅負責互動，IO 由 `lib/modules/blog/admin-io.ts`。
-- Public canonical URL 以 `/blog/posts/[slug]` 為準；舊路徑由 `next.config.ts` 做 301（見 `doc/meta/STEP_PLAN.md` PR-6）。
+- Public canonical URL 以 `/blog/posts/[slug]` 為準；v1 legacy path 由 `next.config.ts` 做永久 redirect（v1 → v2 canonical）。
 - 實作入口對照：見 [模組清單](#module-inventory-single-source)。
 
 ---
@@ -118,7 +118,7 @@
 | `/[locale]/gallery`                   | 圖庫列表 |
 | `/[locale]/gallery/categories/[slug]` | 分類列表（v2 canonical） |
 | `/[locale]/gallery/items/[category]/[slug]` | 單一作品頁（v2 canonical） |
-| `/[locale]/gallery/[category]`        | legacy（目前仍可公開；應 301 → `/[locale]/gallery/categories/[slug]`；見 `doc/meta/STEP_PLAN.md` PR-6） |
+| `/[locale]/gallery/[category]`        | legacy（redirect-only → `/[locale]/gallery/categories/[slug]`） |
 | `/[locale]/gallery/[category]/[slug]` | legacy（301 → `/[locale]/gallery/items/[category]/[slug]`） |
 
 ### API 端點
@@ -559,8 +559,10 @@
 
 ### Home UIUX / Navigation
 
-- v2 canonical routes 已存在，但 Blog/Gallery list 仍保留 query-based category 與部分 internal links 仍產出 legacy URLs（造成 redirect chain / 雙軌內容）；修復方案見 `doc/meta/STEP_PLAN.md`（PR-6）。
-- `hamburger_nav` publish flow 已接上 deep validate，但 Blog targets 的 table mapping 與 DB SSoT 不一致（`blog_posts/blog_categories` vs `posts/categories`），會導致 publish fail；修復方案見 `doc/meta/STEP_PLAN.md`（PR-7）。
+- v2 canonical routes/redirects 已大致落地（sitemap/nav/resolver/internal links），但仍有少數非 canonical URL 產出點：comments permalink（Akismet/feedback）與 admin blog preview links；修復方案見 `doc/meta/STEP_PLAN.md`（PR-9, PR-10）。
+- Query-based canonicalization 仍使用 temporary redirect（Next 307），需改為永久 redirect（301/308）並清理 legacy pages；修復方案見 `doc/meta/STEP_PLAN.md`（PR-11）。
+- JSON-LD SearchAction `urlTemplate` 使用 `?search=` 會造成多一次 redirect；修復方案見 `doc/meta/STEP_PLAN.md`（PR-11C）。
+- Comments UI 元件位於 `components/blog/*`，與 domain 邊界不一致；修復方案見 `doc/meta/STEP_PLAN.md`（PR-12）。
 
 ### Data Intelligence（後台）
 

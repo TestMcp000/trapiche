@@ -13,7 +13,7 @@ import SimilarPosts from '@/components/blog/SimilarPosts';
 
 import ArticleJsonLd from '@/components/blog/ArticleJsonLd';
 import Image from 'next/image';
-import ClientCommentSection from '@/components/blog/ClientCommentSection';
+import ClientCommentSection from '@/components/comments/ClientCommentSection';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 

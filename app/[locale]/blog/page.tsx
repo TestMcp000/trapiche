@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getPublicPostsCached, getCategoriesWithCountsCached } from '@/lib/modules/blog/cached';
 import { isBlogEnabledCached } from '@/lib/features/cached';
 import { getMetadataAlternates } from '@/lib/seo';
@@ -46,7 +46,7 @@ export default async function BlogPage({
   // PR-6A: Redirect ?category= to canonical /blog/categories/* path
   if (categorySlug) {
     const canonicalUrl = buildBlogCategoryUrl(locale, categorySlug, { q, sort });
-    redirect(canonicalUrl);
+    permanentRedirect(canonicalUrl);
   }
   
   const t = await getTranslations({ locale, namespace: 'blog' });

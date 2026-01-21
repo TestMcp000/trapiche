@@ -219,13 +219,13 @@ export async function updatePostAction(
     revalidatePath(`/${locale}/blog`);
     revalidatePath('/sitemap.xml');
 
-    // Revalidate old post detail page (if category/slug changed)
-    if (existingPost.category?.slug && existingPost.slug) {
-      revalidatePath(`/${locale}/blog/${existingPost.category.slug}/${existingPost.slug}`);
+    // Revalidate old post detail page (if slug changed)
+    if (existingPost.slug) {
+      revalidatePath(`/${locale}/blog/posts/${existingPost.slug}`);
     }
     // Revalidate new post detail page
-    if (post.category?.slug && post.slug) {
-      revalidatePath(`/${locale}/blog/${post.category.slug}/${post.slug}`);
+    if (post.slug) {
+      revalidatePath(`/${locale}/blog/posts/${post.slug}`);
     }
 
     return actionSuccess(post);

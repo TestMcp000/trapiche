@@ -6,24 +6,30 @@
  *
  * @module lib/modules/comment/permalink-io
  * @see ARCHITECTURE.md §3.4 - IO module splitting
+ * @see ARCHITECTURE.md §3.11 - SEO / URL single source
  */
 
 import 'server-only';
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
-import { SITE_URL } from '@/lib/seo/hreflang';
+import { SITE_URL } from '@/lib/site/site-url';
+import { DEFAULT_LOCALE } from '@/lib/i18n/locales';
+import { buildBlogPostUrl, buildGalleryItemUrl } from '@/lib/seo/url-builders';
 import type { CommentTargetType } from '@/lib/types/comments';
 
 /**
- * Build permalink URL for a comment target
- * Used by API route to construct Akismet permalink
+ * Build permalink URL for a comment target.
+ * Returns v2 canonical absolute URL for Akismet integration.
+ *
+ * @param targetType - 'post' | 'gallery_item'
+ * @param targetId - UUID of the target entity
+ * @returns Absolute canonical URL (e.g., https://example.com/zh/blog/posts/my-post)
  */
 export async function buildPermalink(
   targetType: CommentTargetType,
   targetId: string
 ): Promise<string> {
   const supabase = await createClient();
-  const baseUrl = SITE_URL;
 
   if (targetType === 'post') {
     const { data: post } = await supabase
@@ -32,7 +38,8 @@ export async function buildPermalink(
       .eq('id', targetId)
       .single();
 
-    return `${baseUrl}/blog/${post?.slug || targetId}`;
+    const slug = post?.slug || targetId;
+    return `${SITE_URL}${buildBlogPostUrl(DEFAULT_LOCALE, slug)}`;
   }
 
   if (targetType === 'gallery_item') {
@@ -42,18 +49,20 @@ export async function buildPermalink(
       .eq('id', targetId)
       .single();
 
-    // Handle the joined category - could be object or array depending on Supabase join behavior
+    // Extract category slug from joined data
     const categoryData = item?.gallery_categories;
-    let categorySlug = 'item';
+    let categorySlug = 'uncategorized';
     if (categoryData) {
       if (Array.isArray(categoryData) && categoryData.length > 0) {
-        categorySlug = categoryData[0]?.slug || 'item';
+        categorySlug = categoryData[0]?.slug || 'uncategorized';
       } else if (typeof categoryData === 'object' && 'slug' in categoryData) {
-        categorySlug = (categoryData as { slug: string }).slug || 'item';
+        categorySlug = (categoryData as { slug: string }).slug || 'uncategorized';
       }
     }
-    return `${baseUrl}/gallery/${categorySlug}/${item?.slug || targetId}`;
+
+    const itemSlug = item?.slug || targetId;
+    return `${SITE_URL}${buildGalleryItemUrl(DEFAULT_LOCALE, categorySlug, itemSlug)}`;
   }
 
-  return baseUrl;
+  return SITE_URL;
 }

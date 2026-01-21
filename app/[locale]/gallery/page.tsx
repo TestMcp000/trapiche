@@ -5,7 +5,7 @@
  * Shows all visible gallery items with filtering by category, tag, and search.
  */
 
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { 
@@ -68,7 +68,7 @@ export default async function GalleryPage({ params, searchParams }: PageProps) {
     if (query.sort) redirectParams.set('sort', query.sort);
     const queryString = redirectParams.toString();
     const canonicalUrl = `/${locale}/gallery/categories/${query.category}${queryString ? `?${queryString}` : ''}`;
-    redirect(canonicalUrl);
+    permanentRedirect(canonicalUrl);
   }
   
   // Load initial data

@@ -130,7 +130,7 @@ export default async function PostsPage({
                     <div className="flex justify-end gap-2">
                       {post.visibility === 'public' && (
                         <Link
-                          href={`/${routeLocale}/blog/${post.category?.slug || 'uncategorized'}/${post.slug}`}
+                          href={`/${routeLocale}/blog/posts/${post.slug}`}
                           target="_blank"
                           className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
                           title={t('actions.view')}

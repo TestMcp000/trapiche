@@ -7,7 +7,7 @@
  * This eliminates duplicate content and ensures consistent URLs.
  */
 
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 interface PageProps {
   params: Promise<{ locale: string; category: string }>;
@@ -33,5 +33,5 @@ export default async function GalleryCategoryPage({ params, searchParams }: Page
   
   // PR-6B: Redirect to v2 canonical path
   const canonicalUrl = `/${locale}/gallery/categories/${categorySlug}${queryString ? `?${queryString}` : ''}`;
-  redirect(canonicalUrl);
+  permanentRedirect(canonicalUrl);
 }

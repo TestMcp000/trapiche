@@ -20,7 +20,7 @@ import type { AbstractIntlMessages } from 'next-intl';
 // Lazy load CommentSection to reduce initial bundle size
 // This defers loading of Supabase auth, reCAPTCHA, and comment logic
 const CommentSection = dynamic(
-  () => import('@/components/blog/CommentSection'),
+  () => import('@/components/comments/CommentSection'),
   {
     loading: () => (
       <div className="mt-16 pt-8 border-t border-border-light">

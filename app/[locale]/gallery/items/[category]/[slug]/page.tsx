@@ -22,7 +22,7 @@ import { getLikedGalleryItemIds } from '@/lib/modules/gallery/liked-by-me-io';
 import { ANON_ID_COOKIE_NAME } from '@/lib/utils/anon-id';
 import { hotspotsMarkdownToHtml } from '@/lib/markdown/hotspots';
 import LikeButton from '@/components/reactions/LikeButton';
-import ClientCommentSection from '@/components/blog/ClientCommentSection';
+import ClientCommentSection from '@/components/comments/ClientCommentSection';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SimilarGalleryItems from '@/components/gallery/SimilarGalleryItems';

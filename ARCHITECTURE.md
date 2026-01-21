@@ -89,6 +89,7 @@ doc/           # documentation
 
 - Public UI 與 Admin UI 完全分離。
 - `components/admin/*` 必須是 client component（允許 admin-only dependencies）。
+- Cross-domain shared UI（例如 Comments）：必須放在 `components/comments/*`（避免放在 `components/blog/*` 造成 domain 混淆；修復參考 `doc/meta/STEP_PLAN.md` PR-12）。
 - Theme scope wrappers 放在 `components/theme/*`：
   - `components/theme/ThemeScope.tsx`（server）：套用分頁主題（home/blog/gallery），並提供 `.theme-scope` 背景/字體/濾鏡等一致性。
   - `components/theme/ThemePreviewScope.tsx`（server）：admin preview 專用，接受 themeKey 作為 prop，包含動畫 mount 判斷（用於 layout-level preview）。
@@ -212,6 +213,10 @@ interface ApiErrorResponse {
 - **`SITE_URL` 唯一來源**：`lib/site/site-url.ts` 是全站 URL 的單一真相來源，且是唯一允許讀取 `NEXT_PUBLIC_SITE_URL` 的檔案。
 - **向後相容**：`lib/seo/hreflang.ts` 可 re-export `SITE_URL` 供舊呼叫端使用（但不是 SSoT）。
 - **禁止硬編網域**：所有需要完整 URL 的地方（SEO、Akismet、webhook URL 展示等）必須使用 `SITE_URL`，不得硬編網域字串。
+- **v2 canonical path builders**：Blog/Gallery 的 canonical path 只能由 `lib/seo/url-builders.ts` 與 `lib/site/nav-resolver.ts` 產出；避免在 modules/components 內自行串字（防止 SEO drift）。
+- **Permalink 一致性**：任何「非 page render」用途的 permalink（Akismet、admin feedback、share links 等）也必須使用 v2 canonical（避免 redirect chain；修復參考 `doc/meta/STEP_PLAN.md` PR-9/PR-10）。
+- **Redirect 合約**：canonicalization 必須是永久 redirect（301/308）；在 server component 內使用 `permanentRedirect()`，避免 `redirect()`（307）造成 SEO 漂移（修復參考 `doc/meta/STEP_PLAN.md` PR-11）。
+- **Legacy routes 策略**：若某 legacy URL 已由 `next.config.ts`（或 middleware）提供永久 redirect，則對應的 `app/` legacy page 應直接刪除，避免留下 redirect-only stub 形成死碼/雙來源與 drift（見 `doc/meta/STEP_PLAN.md` PR-11 Step 3）。
 - **JSON-LD siteName**：首頁 JSON-LD 的 `siteName` 必須從 `company_settings.company_name_short` 讀取，不得硬編品牌名。
 - **Akismet 配置**：`lib/spam/akismet-io.ts` 的 `AKISMET_BLOG_URL` 必須 fallback 到 `SITE_URL`，不得使用其他硬編 URL。
 

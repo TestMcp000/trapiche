@@ -11,18 +11,20 @@
 import 'server-only';
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
-import { SITE_URL } from '@/lib/seo/hreflang';
+import { buildPermalink } from '@/lib/modules/comment/permalink-io';
 import type { AkismetCheckParams } from '@/lib/infrastructure/akismet/akismet-io';
+import type { CommentTargetType } from '@/lib/types/comments';
 
 // =============================================================================
 // Feedback Operations
 // =============================================================================
 
 /**
- * Get comment data needed for Akismet feedback
- * Used by POST /api/comments/feedback
+ * Get comment data needed for Akismet feedback.
+ * Used by POST /api/comments/feedback.
  *
- * Returns the comment content + permalink info for reporting spam/ham to Akismet
+ * Returns the comment content + permalink info for reporting spam/ham to Akismet.
+ * Uses buildPermalink() for consistent v2 canonical URL output.
  */
 export async function getCommentForFeedback(
   commentId: string
@@ -47,41 +49,11 @@ export async function getCommentForFeedback(
       ? moderation[0]?.user_email
       : (moderation as { user_email?: string } | null)?.user_email;
 
-    // Build permalink based on target_type
-    let permalink = '';
-
-    if (comment.target_type === 'post') {
-      // Get post slug for permalink
-      const { data: post } = await supabase
-        .from('posts')
-        .select('slug')
-        .eq('id', comment.target_id)
-        .single();
-
-      if (post) {
-        permalink = `${SITE_URL}/blog/${post.slug}`;
-      }
-    } else if (comment.target_type === 'gallery_item') {
-      // Get gallery item and category slugs for permalink
-      const { data: item } = await supabase
-        .from('gallery_items')
-        .select('slug, gallery_categories(slug)')
-        .eq('id', comment.target_id)
-        .single();
-
-      if (item) {
-        const categoryData = item.gallery_categories;
-        let categorySlug = 'item';
-        if (categoryData) {
-          if (Array.isArray(categoryData) && categoryData.length > 0) {
-            categorySlug = categoryData[0]?.slug || 'item';
-          } else if (typeof categoryData === 'object' && 'slug' in categoryData) {
-            categorySlug = (categoryData as { slug: string }).slug || 'item';
-          }
-        }
-        permalink = `${SITE_URL}/gallery/${categorySlug}/${item.slug}`;
-      }
-    }
+    // Build permalink using centralized v2 canonical builder
+    const permalink = await buildPermalink(
+      comment.target_type as CommentTargetType,
+      comment.target_id
+    );
 
     // Prepare Akismet params
     // Note: We don't have the original IP/user-agent, so we use placeholders
@@ -101,3 +73,4 @@ export async function getCommentForFeedback(
     return { success: false, error: 'Failed to get comment' };
   }
 }
+
