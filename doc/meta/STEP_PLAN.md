@@ -1,13 +1,16 @@
-# Step-by-Step Execution Plan — V3（Home UIUX + Gallery Hero/Hotspots + Hamburger Nav v2）
+# Step-by-Step Execution Plan — V4（Drift Hardening：SITE_URL SSoT + Home Event CTA URL + Settings Cleanup）
 
 > 狀態: Active（Drift repair plan；本檔只寫「修復方案/步驟」，不在此直接改程式碼）  
 > 最後更新: 2026-01-21（drift review refresh）  
 > 現況 SSoT（已實作行為）: `doc/SPEC.md`  
-> 目標 PRD（約束/合約）: `doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md`（Implementation Contract）
+> 目標 PRD（約束/合約）:  
+> - Home/Gallery/Hotspots/Hamburger nav：`doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md`（Implementation Contract）  
+> - AI / OpenRouter ops：`doc/runbook/ai-analysis.md`（env &安全邊界）
 > 歷史完成紀錄：
 >
 > - V2 snapshot（PR-9..PR-12）：`doc/archive/2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md`
 > - V3 snapshot（PR-13..PR-16）：`doc/archive/2026-01-21-step-plan-v3-home-uiux-gallery-hero-hotspots-hamburger-nav.md`
+> - V4 snapshot（PR-17..PR-18）：`doc/archive/2026-01-21-step-plan-v4-seo-hotspots-clean.md`
 
 ---
 
@@ -18,6 +21,7 @@
 - 目標 PRD（contract）：`doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md`
 - Security / RBAC / RLS / secrets：`doc/SECURITY.md`
 - Ops / DB / go-live：`doc/RUNBOOK.md`（細節：`doc/runbook/*`）
+- AI / OpenRouter ops：`doc/runbook/ai-analysis.md`
 - 文件分工 / update matrix：`doc/GOVERNANCE.md`
 - Drift tracker + playbooks（stable `@see` index）：`uiux_refactor.md`
 
@@ -28,103 +32,103 @@
 - `npm test`：pass（含 `tests/architecture-boundaries.test.ts`）
 - `npm run type-check`：pass（`tsconfig.typecheck.json`；exclude `uiux/` + `.next/**`）
 - `npm run lint`：pass
-- `npm run build`：若未設 `NEXT_PUBLIC_SITE_URL`，production collect phase 會 fail-fast（設計如此；見 `lib/site/site-url.ts` 與 `doc/runbook/deployment.md`）
+- `npm run build`：需 `.env.local` 至少包含 `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`；production 若缺 `NEXT_PUBLIC_SITE_URL` 會 fail-fast（設計如此；見 `lib/site/site-url.ts` 與 `doc/runbook/deployment.md`）
 
 ---
 
 ## 2) Drift / Clean-code 問題清單（Active）
 
-> 本節只列「尚未修復」的飄移/技術債；已完成項不再保留在本檔（避免干擾後續執行）。
+> 本節只列「尚未修復」的飄移/技術債；已完成項請看 `doc/archive/*` 與 `uiux_refactor.md`（all archived）。
 
-### Drift-SEO-1（COMPLETED ✅）：Gallery item canonical redirect 已改為 `permanentRedirect()`（308）
+### ~~Drift-SEO-2~~（COMPLETED）：`NEXT_PUBLIC_SITE_URL` 單一來源被破壞（OpenRouter module 直接讀 env）
 
-- **Status**: Fixed in PR-17 (2026-01-21)
-- **Fix Summary**:
-  - 程式碼修改：`app/[locale]/gallery/items/[category]/[slug]/page.tsx` 使用 `permanentRedirect()`
-  - Guardrail test：`tests/seo-canonical-redirects.test.ts`
-  - 文件同步：`uiux_refactor.md` §4 item 12, `doc/SPEC.md` Gallery 章節
+> 已修復（PR-19；2026-01-21）。修復內容：
+> - `lib/infrastructure/openrouter/openrouter-chat-io.ts` 改為 import `SITE_URL` from `@/lib/site/site-url`
+> - 新增 guardrail test：`tests/site-url-single-source.test.ts`
+> - 更新 `doc/runbook/ai-analysis.md` §3.3
 
-### Clean-1（COMPLETED ✅）：Hotspot fallback list 改用動態 `useId()` 避免 DOM id collision
+### ~~Drift-Sec-1~~（COMPLETED）：Home「講座邀請」CTA URL 未做 allowlist validation（PRD FR-11.1）
 
-- **Status**: Fixed in PR-18 (2026-01-21)
-- **Fix Summary**:
-  - 程式碼修改：`components/hotspots/HotspotFallbackList.tsx` 使用 React `useId()` hook
-  - Guardrail test：`tests/hotspot-fallbacklist-id.test.ts`
-  - 文件同步：`uiux_refactor.md` §4 item 13, `doc/meta/STEP_PLAN.md` PR-18
+> 已修復（PR-20；2026-01-21）。修復內容：
+> - 新增 `lib/validators/external-url.ts`（集中式 URL validator；single source of truth）
+> - `lib/modules/content/company-settings-io.ts`：write-side enforcement
+> - `components/home/HomePageV2.tsx`：render-side hardening（invalid → 不 render FAB）
+> - 新增 `tests/validators/external-url.test.ts`
+> - `hamburger-nav.ts` / `gallery-hotspots.ts` 改用共用 validator（避免 drift）
+
+### ~~Clean-Settings-1~~（COMPLETED）：`getSetting()` helper 重複出現在多個 pages/components（可維護性）
+
+> 已修復（PR-21；2026-01-21）。修復內容：
+> - 新增 `lib/modules/content/company-settings.ts`：集中式 `getCompanySettingValue()` helper
+> - 替換 4 處重複實作，確保 trim/empty 行為一致
 
 ---
 
 ## 3) Execution Plan（Active；以 PR 為單位；每 PR 可獨立驗收/回退）
 
-### PR-17 — SEO：Gallery item canonicalization 改為永久 redirect（ARCHITECTURE compliance）✅ COMPLETED
+### ~~PR-19~~ — SEO/SSoT：修復 `NEXT_PUBLIC_SITE_URL` 單一來源 drift（OpenRouter）✅
 
-> **Status**: ✅ Completed (2026-01-21)
-
-Goal：當 `slug` 跨分類唯一且 URL 的 `category` segment 錯誤時，canonicalization 必須為永久 redirect（308），避免 SEO drift。
-
-**Implementation Steps：**
-
-1. **Code change** ✅
-   - 檔案：`app/[locale]/gallery/items/[category]/[slug]/page.tsx`
-   - 將 `redirect(...)` 改為 `permanentRedirect(...)`（只改 canonicalization 那條路徑；其他 flow 不變）。
-   - 更新 imports：`import { notFound, permanentRedirect } from 'next/navigation';`（移除 `redirect`）。
-2. **Guardrail test（防回歸）** ✅
-   - 新增 `tests/seo-canonical-redirects.test.ts`：
-     - 讀取 `app/[locale]/gallery/items/[category]/[slug]/page.tsx` 原始碼
-     - assert 不包含獨立 `redirect(` 且包含 `permanentRedirect(`（只針對此檔，避免誤殺其他合理的 temporary redirects）。
-3. **Docs sync** ✅
-   - `uiux_refactor.md`：§4 item 12 標記為 ARCHIVED
-   - `doc/SPEC.md`：Gallery 章節更新「canonical category 修正」註記
-4. **驗收** ✅
-   - `npm test` - pass
-   - `npm run lint` - pass
-   - `npm run type-check` - pass
-
-DoD：
-
-- ✅ canonicalization 使用 `permanentRedirect()`（308），不再出現 307
-- ✅ guardrail test 上線，避免回歸
-- ✅ 文件同步完成（`uiux_refactor.md` + `doc/SPEC.md`）
+> **COMPLETED（2026-01-21）**
+>
+> 修復內容：
+> - `lib/infrastructure/openrouter/openrouter-chat-io.ts`：`getSiteUrl()` 改為 import `SITE_URL` from `@/lib/site/site-url`（不再直接讀 `process.env.NEXT_PUBLIC_SITE_URL`）
+> - 新增 `tests/site-url-single-source.test.ts`：guardrail test 確保 `NEXT_PUBLIC_SITE_URL` 只出現在 `lib/site/site-url.ts`
+> - 更新 `doc/runbook/ai-analysis.md` §3.3：移除 drift 提示，補充 fallback 說明
+>
+> DoD 驗證：
+> - ✅ `grep -rn "process\.env\.NEXT_PUBLIC_SITE_URL" app components lib` 只命中 `lib/site/site-url.ts`
+> - ✅ `npm test` 通過（含新 guardrail test）
+> - ✅ `npm run type-check` 通過
+> - ✅ `npm run lint` 通過
 
 ---
 
-### PR-18 — Hotspots UI：a11y/clean-code（避免固定 id；降低未來 drift 風險）✅ COMPLETED
+### ~~PR-20~~ — Security：Home Event CTA URL allowlist validation（https/mailto only）✅
 
-> **Status**: ✅ Completed (2026-01-21)
+> **COMPLETED（2026-01-21）**
+>
+> 修復內容：
+> - 新增 `lib/validators/external-url.ts`（pure validator）：`validateExternalUrl()`, `validateOptionalExternalUrl()`, `isValidExternalUrl()`
+> - allowlist：`https:`/`mailto:`；reject：`javascript:`/`data:`/`vbscript:`/`file:`/`http:`/protocol-relative
+> - `lib/modules/content/company-settings-io.ts`：`updateCompanySetting()` 增加 URL validation，回傳 `UpdateSettingResult`
+> - `app/[locale]/admin/settings/actions.ts`：處理新 result type，顯示 validation 錯誤
+> - `components/home/HomePageV2.tsx`：render-side hardening，invalid URL → 不 render `FloatingFab` + `console.warn`
+> - `lib/validators/hamburger-nav.ts`：改用 shared `validateExternalUrlCore` 避免 drift
+> - `lib/validators/gallery-hotspots.ts`：改用 shared `validateOptionalExternalUrl` 避免 drift
+> - 新增 `tests/validators/external-url.test.ts`：完整 URL validation 測試
+>
+> DoD 驗證：
+> - ✅ `npm test`（1074 pass）
+> - ✅ `npm run type-check`
+> - ✅ `npm run lint`
+> - ✅ `home_event_cta_url` 不可能被存成 `javascript:`/`data:`（write-side block）
+> - ✅ 即使 DB 內已有不合法值，public Home 不會 render 可執行連結（render-side hardening）
 
-Goal：移除 Hotspot fallback list 的固定 DOM id，避免未來同頁多 overlay 時造成 id collision。
+---
 
-**Implementation Steps：**
+### ~~PR-21~~ — Clean-code：集中 `company_settings` lookup helper（避免 default/fallback drift）✅
 
-1. **Code change** ✅
-   - 檔案：`components/hotspots/HotspotFallbackList.tsx`
-   - 新增 `useId` import：`import { useState, useCallback, useId } from 'react';`
-   - `const listId = useId();`
-   - `aria-controls={listId}`；list 容器 `id={listId}`
-2. **Regression test** ✅
-   - 新增 `tests/hotspot-fallbacklist-id.test.ts`：
-     - assert 必須 import `useId` from React
-     - assert 不再出現 `id="hotspot-fallback-list"` 固定字串
-     - assert 不再出現 `aria-controls="hotspot-fallback-list"` 固定字串
-     - assert 使用動態 id（`id={...}` 和 `aria-controls={...}`）
-3. **Docs sync** ✅
-   - `uiux_refactor.md`：§4 item 13 標記為 ARCHIVED
-   - `doc/meta/STEP_PLAN.md`：本 PR 標記完成
-4. **驗收** ✅
-   - `npm test` - pass (1041 tests)
-   - `npm run lint` - pass
-   - `npm run type-check` - pass
-
-DoD：
-
-- ✅ 不再有固定 `id="hotspot-fallback-list"`
-- ✅ `aria-controls` 與 `id` 一致且可多實例共存（使用 React `useId()` hook）
-- ✅ guardrail test 上線（`tests/hotspot-fallbacklist-id.test.ts`），避免回歸
-- ✅ 測試/型別/靜態檢查皆通過
+> **COMPLETED（2026-01-21）**
+>
+> 修復內容：
+> - 新增 `lib/modules/content/company-settings.ts`（pure; no IO）：`getCompanySettingValue(settings, key, defaultValue?)`
+> - 明確處理：trim、空字串視為無值（回 default）
+> - 替換重複實作：
+>   - `app/[locale]/page.tsx`
+>   - `app/[locale]/about/page.tsx`
+>   - `app/[locale]/contact/page.tsx`
+>   - `components/home/HomePageV2.tsx`
+> - 新增 guardrail test：`tests/company-settings-getter.test.ts`（確保 trim/empty 行為一致）
+>
+> DoD 驗證：
+> - ✅ `npm test`（1082 pass）
+> - ✅ `npm run type-check`
+> - ✅ `npm run lint`
+> - ✅ 所有 `getSetting()` 呼叫改用集中式 `getCompanySettingValue()`
 
 ## 4) 每 PR 驗證清單（不可省略）
 
 - `npm test`
 - `npm run lint`
 - `npm run type-check`
-- `NEXT_PUBLIC_SITE_URL=http://localhost:3000 npm run build`（routes/SEO/redirect 相關 PR 必跑）
+- `npm run build`（routes/SEO/redirect 相關 PR 必跑；先確認 `.env.local` 已設 `NEXT_PUBLIC_SITE_URL` + Supabase public env）

@@ -16,6 +16,7 @@ import {
     isValidUUID,
     isNonEmptyString,
 } from './api-common';
+import { validateOptionalExternalUrl } from './external-url';
 import type { GalleryHotspotInput, GalleryHotspotReorderInput } from '@/lib/types/gallery';
 
 // =============================================================================
@@ -24,7 +25,7 @@ import type { GalleryHotspotInput, GalleryHotspotReorderInput } from '@/lib/type
 
 /**
  * Allowed URL protocols for read_more_url field
- * Only https and mailto are allowed per PRD security requirements
+ * @deprecated Use ALLOWED_URL_PROTOCOLS from external-url.ts
  */
 const ALLOWED_URL_PROTOCOLS = ['https:', 'mailto:'];
 
@@ -57,32 +58,14 @@ export function validateCoordinate(
 
 /**
  * Validate read_more_url field
- * Only https: and mailto: protocols are allowed
+ * Uses shared external-url validator as single source of truth.
  * Returns null if input is null/undefined/empty (optional field)
  */
 export function validateReadMoreUrl(
     url: string | null | undefined
 ): ValidationResult<string | null> {
-    // Optional field - null/undefined/empty is valid
-    if (url === null || url === undefined || url.trim() === '') {
-        return validResult(null);
-    }
-
-    const trimmedUrl = url.trim();
-
-    try {
-        const parsedUrl = new URL(trimmedUrl);
-
-        if (!ALLOWED_URL_PROTOCOLS.includes(parsedUrl.protocol)) {
-            return invalidResult(
-                `read_more_url 僅允許 https: 或 mailto: 協議，收到: ${parsedUrl.protocol}`
-            );
-        }
-
-        return validResult(trimmedUrl);
-    } catch {
-        return invalidResult('read_more_url 格式無效');
-    }
+    // Delegate to shared validator which handles optional fields
+    return validateOptionalExternalUrl(url);
 }
 
 // =============================================================================

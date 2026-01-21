@@ -386,10 +386,10 @@
 - `hamburger_nav` publish/unpublish/update：必須 `revalidateTag('site-content')`。
 - `company_settings`（notice/event CTA/hotspots max）更新：必須 `revalidateTag('company-settings')`。
 
-### E) Canonical / Redirect（寫死；你已拍板：全部 301）
+### E) Canonical / Redirect（寫死；永久 redirect 301/308）
 
 - Public 頁面只承認本 PRD 定義的 v2 canonical URLs（見 `FR-9.5`）。
-- 任何非 canonical URL（包含 query-based category、舊的 path 形態）必須 **301 redirect** 到 canonical，以避免同一內容多網址造成重複與 drift。
+- 任何非 canonical URL（包含 query-based category、舊的 path 形態）必須 **永久 redirect（301/308；Next App Router 的 `permanentRedirect()` = 308）** 到 canonical，以避免同一內容多網址造成重複與 drift。
 
 ---
 
@@ -402,7 +402,9 @@
 - ✅ Hotspot pins a11y：移除正數 `tabIndex`，使用自然 tab order（PR-14）。
 - ✅ Home JSON-LD SSoT 化：`siteName`/描述 fallback chain（PR-15）。
 - ✅ Home data plumbing：single data owner，避免重複 fetch（PR-16）。
-- ⚠️ Drift（SEO contract）：Gallery item canonical category 修正仍使用 `redirect()`（307），待改為 `permanentRedirect()`（308）（`../../../uiux_refactor.md` §4 item 12；修復方案：`../../meta/STEP_PLAN.md` PR-17）。
+- ✅ SEO contract：Gallery item canonical category 修正已使用 `permanentRedirect()`（308）（PR-17；guardrail test：`tests/seo-canonical-redirects.test.ts`）。
+- ✅ Hotspots UI clean-code：fallback list 已改用 React `useId()` 避免固定 DOM id collision（PR-18；guardrail test：`tests/hotspot-fallbacklist-id.test.ts`）。
+- ✅ Security（FR-11.1）：Home「講座邀請」CTA URL allowlist validation 已落地（`https:`/`mailto:`）（PR-20；write-side + render-side hardening；guardrail test：`tests/validators/external-url.test.ts`）。
 
 ---
 

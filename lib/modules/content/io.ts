@@ -67,7 +67,9 @@ export {
   getCompanySettings,
   getCompanySetting,
   updateCompanySetting,
+  type UpdateSettingResult,
 } from './company-settings-io';
+
 
 // =============================================================================
 // History

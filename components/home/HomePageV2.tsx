@@ -18,6 +18,7 @@ import {
   FloatingFab,
 } from "@/components/home";
 import { pickLocaleContent } from "@/lib/i18n/pick-locale";
+import { isValidExternalUrl } from "@/lib/validators/external-url";
 import type { SiteContent, CompanySetting } from "@/lib/types/content";
 import type {
   GalleryItem,
@@ -25,6 +26,7 @@ import type {
   GalleryPin,
 } from "@/lib/types/gallery";
 import type { ResolvedHamburgerNav } from "@/lib/types/hamburger-nav";
+import { getCompanySettingValue } from "@/lib/modules/content/company-settings";
 
 /** Hotspot with rendered HTML (from markdown) */
 export interface HotspotWithHtml extends GalleryHotspotPublic {
@@ -39,15 +41,6 @@ export interface HomePageV2Props {
   resolvedNav: ResolvedHamburgerNav;
   heroPins: GalleryPin[];
   heroHotspots: HotspotWithHtml[];
-}
-
-// Helper to get setting value
-function getSetting(
-  settings: CompanySetting[],
-  key: string,
-  defaultValue = "",
-): string {
-  return settings.find((s) => s.key === key)?.value || defaultValue;
 }
 
 interface HeroContent {
@@ -74,24 +67,33 @@ export function HomePageV2({
   const heroItem: GalleryItem | null = heroPin?.item || null;
 
   // Get marquee notice content
-  const marqueeLabel = getSetting(settings, "home_notice_label_zh", "Notice");
-  const marqueeText = getSetting(
+  const marqueeLabel = getCompanySettingValue(settings, "home_notice_label_zh", "Notice");
+  const marqueeText = getCompanySettingValue(
     settings,
     "home_notice_text_zh",
     "歡迎來到心理師療癒空間",
   );
 
   // Get lecture CTA settings
-  const eventCtaUrl = getSetting(
+  const rawEventCtaUrl = getCompanySettingValue(
     settings,
     "home_event_cta_url",
     "https://forms.google.com",
   );
-  const eventCtaLabel = getSetting(
+  const eventCtaLabel = getCompanySettingValue(
     settings,
     "home_event_cta_label_zh",
     "講座邀請",
   );
+
+  // Render-side hardening: validate URL before passing to FloatingFab
+  // Prevents XSS from legacy invalid URLs in DB
+  const eventCtaUrl = isValidExternalUrl(rawEventCtaUrl) ? rawEventCtaUrl : null;
+  if (!eventCtaUrl && rawEventCtaUrl) {
+    console.warn(
+      `[HomePageV2] Invalid event CTA URL blocked: "${rawEventCtaUrl}". Only https: and mailto: are allowed.`
+    );
+  }
 
   // Get hero content from site_content
   const heroContent = siteContents.find(
@@ -197,13 +199,17 @@ export function HomePageV2({
           </div>
         </section>
 
-        {/* Floating Action Button */}
-        <div className="hidden md:block">
-          <FloatingFab href={eventCtaUrl} label={eventCtaLabel} />
-        </div>
-        <div className="md:hidden">
-          <FloatingFab href={eventCtaUrl} label={eventCtaLabel} isMobile />
-        </div>
+        {/* Floating Action Button - only render if URL is valid */}
+        {eventCtaUrl && (
+          <>
+            <div className="hidden md:block">
+              <FloatingFab href={eventCtaUrl} label={eventCtaLabel} />
+            </div>
+            <div className="md:hidden">
+              <FloatingFab href={eventCtaUrl} label={eventCtaLabel} isMobile />
+            </div>
+          </>
+        )}
 
         {/* Suggested Articles Section */}
         <SuggestSectionClient

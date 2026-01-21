@@ -27,21 +27,21 @@ export async function saveSettingAction(
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       return { success: false, error: '尚未登入' };
     }
-    
+
     const result = await updateCompanySetting(key, value, user.id);
-    
-    if (!result) {
-      return { success: false, error: '儲存失敗' };
+
+    if (!result.success) {
+      return { success: false, error: result.error || '儲存失敗' };
     }
-    
+
     // Revalidate relevant paths
     revalidatePath(`/${locale}/admin/settings`);
     revalidatePath(`/${locale}`); // Home page may use settings
-    
+
     return { success: true };
   } catch (err) {
     console.error('Save setting action error:', err);
@@ -57,7 +57,7 @@ export async function purgeAllCache(): Promise<PurgeCacheResult> {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       return { success: false, error: '尚未登入' };
     }
@@ -84,4 +84,3 @@ export async function purgeAllCache(): Promise<PurgeCacheResult> {
     return { success: false, error: '發生未預期的錯誤' };
   }
 }
-

@@ -1,6 +1,6 @@
 # Admin UI/UX Cleanup Playbook（後台）— Drift Tracker / 修復手冊
 
-> Last Updated: 2026-01-11
+> Last Updated: 2026-01-21
 > Status: **ACTIVE**（維護中：只保留「飄移/未完成」項目；修復流程模板固定保留）  
 > Assumption: 專案尚未上線，DB 可直接 `reset`（遷移成本 ≈0，不保留相容性）。
 > Archive: `doc/archive/2025-12-31-uiux-refactor-archive.md`（舊版全文 + roadmap）
@@ -285,7 +285,7 @@ app/[locale]/admin/<module>/
 
 **狀態（2026-01-21）**
 
-- Open drift items：0（all archived）
+- Open drift items：2
 
 1. **[ARCHIVED ✅] Import/Export：Import rollback / atomicity 與 PRD drift** → `doc/specs/completed/import-export-spec.md`
 2. **[ARCHIVED ✅] Import/Export：CSV 匯出（Products/Coupons/Orders/Members/Comments）** → `doc/specs/completed/import-export-spec.md`
@@ -299,7 +299,9 @@ app/[locale]/admin/<module>/
 10. **[ARCHIVED ✅] Admin i18n Toggle：inline branching / legacy translations island** → `doc/archive/2026-01-04-admin-i18n-toggle-step-plan.md`
 11. **[ARCHIVED ✅] Architecture：`lib/modules/*` 模組隔離 drift（移除跨模組 import + 新增 guardrail test）** → `ARCHITECTURE.md`, `tests/architecture-boundaries.test.ts`, `lib/use-cases/**`, `lib/auth/index.ts`, `lib/embeddings/index.ts`
 12. **[ARCHIVED ✅] SEO：Gallery item canonicalization 改為 `permanentRedirect()`（301/308）** → Fixed in PR-17; guardrail test: `tests/seo-canonical-redirects.test.ts`; see `ARCHITECTURE.md` §3.11
-13. **[ARCHIVED ✅] Hotspots UI：a11y/clean-code（避免固定 id）** → Fixed in PR-18; guardrail test: `tests/hotspot-fallbacklist-id.test.ts`; see `doc/meta/STEP_PLAN.md` PR-18
+13. **[ARCHIVED ✅] Hotspots UI：a11y/clean-code（避免固定 id）** → Fixed in PR-18; guardrail test: `tests/hotspot-fallbacklist-id.test.ts`; see `doc/archive/2026-01-21-step-plan-v4-seo-hotspots-clean.md`
+14. **[ACTIVE] SEO / URL 單一來源：OpenRouter module 直接讀 `NEXT_PUBLIC_SITE_URL`（第二來源 drift）** → 修復方案：`doc/meta/STEP_PLAN.md` PR-19（see `ARCHITECTURE.md` §3.11, `doc/runbook/ai-analysis.md` §3.3）
+15. **[ACTIVE] Security：Home「講座邀請」CTA URL 缺少 allowlist validation（https/mailto only）** → 修復方案：`doc/meta/STEP_PLAN.md` PR-20（PRD FR-11.1）
 
 ### 4.1 Admin routes must use `actions.ts`（ARCHIVED; keep for stable `@see`）
 

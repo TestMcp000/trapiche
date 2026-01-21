@@ -7,18 +7,14 @@ import {
 } from '@/lib/modules/content/cached';
 import { getMetadataAlternates, SITE_URL } from '@/lib/seo';
 import { generateBreadcrumbJsonLd } from '@/lib/seo/jsonld';
-import type { SiteContent, CompanySetting } from '@/lib/types/content';
+import type { SiteContent } from '@/lib/types/content';
+import { getCompanySettingValue } from '@/lib/modules/content/company-settings';
 import { ContactSection } from '@/components/sections';
 
 // Helper to get localized content
 function getContent<T>(content: SiteContent | undefined, _locale: string): T | null {
   if (!content) return null;
   return content.content_zh as T;
-}
-
-// Helper to get setting value
-function getSetting(settings: CompanySetting[], key: string): string {
-  return settings.find(s => s.key === key)?.value || '';
 }
 
 interface ContactContent {
@@ -70,8 +66,8 @@ export default async function ContactPage({
   const contact = getContent<ContactContent>(contentMap.get('contact'), locale);
   
   // Get settings
-  const emailAddress = getSetting(settings, 'email');
-  const githubUrl = getSetting(settings, 'github_url');
+  const emailAddress = getCompanySettingValue(settings, 'email');
+  const githubUrl = getCompanySettingValue(settings, 'github_url');
   
   // JSON-LD breadcrumbs
   const breadcrumbs = [

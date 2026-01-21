@@ -123,7 +123,8 @@ describe('validateReadMoreUrl', () => {
     it('rejects javascript URL', () => {
         const result = validateReadMoreUrl('javascript:alert(1)');
         assert.strictEqual(result.valid, false);
-        assert.ok(result.error?.includes('https:') || result.error?.includes('mailto:'));
+        // Error message from shared validator mentions the dangerous protocol
+        assert.ok(result.error?.includes('javascript:') || result.error?.includes('安全限制'));
     });
 
     it('rejects data URL', () => {

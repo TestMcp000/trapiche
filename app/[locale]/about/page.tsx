@@ -9,17 +9,13 @@ import {
 import { getMetadataAlternates, SITE_URL } from '@/lib/seo';
 import { generateBreadcrumbJsonLd } from '@/lib/seo/jsonld';
 import type { SiteContent, CompanySetting } from '@/lib/types/content';
+import { getCompanySettingValue } from '@/lib/modules/content/company-settings';
 import { AboutSection } from '@/components/sections';
 
 // Helper to get localized content
 function getContent<T>(content: SiteContent | undefined, _locale: string): T | null {
   if (!content) return null;
   return content.content_zh as T;
-}
-
-// Helper to get setting value
-function getSetting(settings: CompanySetting[], key: string): string {
-  return settings.find(s => s.key === key)?.value || '';
 }
 
 interface AboutContent {
@@ -90,10 +86,10 @@ export default async function AboutPage({
   const about = getContent<AboutContent>(contentMap.get('about'), locale);
   
   // Get settings
-  const emailAddress = getSetting(settings, 'email');
-  const domainUrl = getSetting(settings, 'domain');
-  const founderName = getSetting(settings, 'founder_name');
-  const founderGithub = getSetting(settings, 'founder_github');
+  const emailAddress = getCompanySettingValue(settings, 'email');
+  const domainUrl = getCompanySettingValue(settings, 'domain');
+  const founderName = getCompanySettingValue(settings, 'founder_name');
+  const founderGithub = getCompanySettingValue(settings, 'founder_github');
   
   // JSON-LD breadcrumbs
   const breadcrumbs = [

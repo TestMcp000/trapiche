@@ -16,12 +16,8 @@ import {
 import { resolveHamburgerNav } from "@/lib/site/nav-resolver";
 import { hotspotsMarkdownToHtml } from "@/lib/markdown/hotspots";
 import type { SiteContent, CompanySetting } from "@/lib/types/content";
+import { getCompanySettingValue } from "@/lib/modules/content/company-settings";
 import { pickLocaleContent } from "@/lib/i18n/pick-locale";
-
-// Helper to get setting value
-function getSetting(settings: CompanySetting[], key: string): string {
-  return settings.find((s) => s.key === key)?.value || "";
-}
 
 /**
  * Resolve siteName using SSoT fallback chain (ARCHITECTURE.md §3.11):
@@ -36,7 +32,7 @@ async function resolveSiteName(
   locale: string,
 ): Promise<string> {
   // Priority 1: company_settings.company_name_short
-  const companyNameShort = getSetting(settings, "company_name_short");
+  const companyNameShort = getCompanySettingValue(settings, "company_name_short");
   if (companyNameShort) {
     return companyNameShort;
   }
@@ -167,8 +163,8 @@ export default async function HomePage({
   // JSON-LD for SEO (Organization + WebSite + Services + Breadcrumb)
   // ==========================================================================
   const siteUrl = SITE_URL;
-  const emailAddress = getSetting(settings, "email");
-  const githubUrl = getSetting(settings, "github_url");
+  const emailAddress = getCompanySettingValue(settings, "email");
+  const githubUrl = getCompanySettingValue(settings, "github_url");
 
   // Build breadcrumbs for homepage
   const breadcrumbs = [{ name: "首頁", url: `${siteUrl}/${locale}` }];

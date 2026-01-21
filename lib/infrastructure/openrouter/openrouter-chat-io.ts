@@ -12,6 +12,8 @@
  */
 import 'server-only';
 
+import { SITE_URL } from '@/lib/site/site-url';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -119,9 +121,18 @@ function getApiKey(): string {
 
 /**
  * Get site URL for referer header.
+ *
+ * Priority:
+ * 1. process.env.SITE_URL (server-only; OpenRouter header dedicated)
+ * 2. SITE_URL constant from lib/site/site-url.ts (canonical; includes dev fallback)
+ *
+ * NOTE: Do NOT read NEXT_PUBLIC_SITE_URL directly here.
+ * The single source is lib/site/site-url.ts.
+ *
+ * @see ARCHITECTURE.md §3.11 (SITE_URL single source)
  */
 function getSiteUrl(): string {
-    return process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    return process.env.SITE_URL || SITE_URL;
 }
 
 // =============================================================================

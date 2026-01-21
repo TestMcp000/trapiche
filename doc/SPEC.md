@@ -563,6 +563,7 @@
 
 - Canonical constraints: `../ARCHITECTURE.md` §3.11 (SEO / URL 單一來源)
 - Drift guardrails / grep checklist: `../uiux_refactor.md` §2
+- ⚠️ 已知 drift（待修復）：`lib/infrastructure/openrouter/openrouter-chat-io.ts` 直接讀 `process.env.NEXT_PUBLIC_SITE_URL`（違反單一來源；修復方案：`doc/meta/STEP_PLAN.md` PR-19）
 
 ---
 
@@ -575,6 +576,7 @@
 ### Home UIUX / Navigation
 
 - Suggest section 仍為 placeholder（見 Home 章節說明；後續以 `doc/ROADMAP.md` 為準）。
+- ⚠️ Security gap（PRD FR-11.1）：Home「講座邀請」CTA URL（`company_settings.home_event_cta_url`）尚未落地 allowlist validation（`https:`/`mailto:`）；修復方案：`doc/meta/STEP_PLAN.md` PR-20
 
 ### Data Intelligence（後台）
 

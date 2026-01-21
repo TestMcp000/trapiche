@@ -15,6 +15,7 @@ import type {
     NavValidationResult,
 } from '@/lib/types/hamburger-nav';
 import { isValidSlug } from '@/lib/validators/slug';
+import { validateExternalUrl as validateExternalUrlCore } from '@/lib/validators/external-url';
 
 // =============================================================================
 // Constants
@@ -42,13 +43,9 @@ export const ALLOWED_QUERY_KEYS = new Set(['q', 'tag', 'sort', 'page']);
 
 /**
  * Allowed protocols for external URLs
+ * @deprecated Use ALLOWED_URL_PROTOCOLS from external-url.ts
  */
 export const ALLOWED_PROTOCOLS = ['https:', 'mailto:'] as const;
-
-/**
- * Dangerous protocols that must be rejected
- */
-const DANGEROUS_PROTOCOLS = ['javascript:', 'data:', 'vbscript:', 'file:'];
 
 // =============================================================================
 // Low-Level Validators
@@ -108,35 +105,19 @@ function validateQueryParams(
 
 /**
  * Validate external URL protocol
+ * Uses shared external-url validator as single source of truth
  */
-function validateExternalUrl(url: string, path: string): NavValidationError | null {
+function validateExternalUrlNav(url: string, path: string): NavValidationError | null {
     if (!url || typeof url !== 'string') {
         return { path, message: 'URL is required and must be a string' };
     }
 
-    try {
-        const parsed = new URL(url);
-
-        // Check for dangerous protocols
-        for (const proto of DANGEROUS_PROTOCOLS) {
-            if (parsed.protocol === proto) {
-                return { path, message: `Protocol "${proto}" is not allowed` };
-            }
-        }
-
-        // Check allowed protocols
-        const isAllowed = ALLOWED_PROTOCOLS.some(p => parsed.protocol === p);
-        if (!isAllowed) {
-            return {
-                path,
-                message: `Only https: and mailto: protocols are allowed, got "${parsed.protocol}"`,
-            };
-        }
-
-        return null;
-    } catch {
-        return { path, message: `Invalid URL format: "${url}"` };
+    const result = validateExternalUrlCore(url);
+    if (!result.valid) {
+        return { path, message: result.error || 'Invalid URL' };
     }
+
+    return null;
 }
 
 /**
@@ -265,7 +246,7 @@ function validateTarget(target: unknown, path: string): NavValidationError[] {
         }
 
         case 'external': {
-            const urlError = validateExternalUrl(t.url as string, `${path}.url`);
+            const urlError = validateExternalUrlNav(t.url as string, `${path}.url`);
             if (urlError) errors.push(urlError);
             break;
         }

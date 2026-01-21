@@ -211,6 +211,7 @@ interface ApiErrorResponse {
 ### 3.11 SEO / URL 單一來源 (Phase 4 完成)
 
 - **`SITE_URL` 唯一來源**：`lib/site/site-url.ts` 是全站 URL 的單一真相來源，且是唯一允許讀取 `NEXT_PUBLIC_SITE_URL` 的檔案。
+- **Server-only `SITE_URL`（OpenRouter header）**：`process.env.SITE_URL` 僅用於 OpenRouter `HTTP-Referer`（server-only）；若需要 fallback 到 canonical site URL，必須透過 `lib/site/site-url.ts`（import `SITE_URL` constant），不得直接讀 `process.env.NEXT_PUBLIC_SITE_URL`（避免第二來源）。
 - **向後相容**：`lib/seo/hreflang.ts` 可 re-export `SITE_URL` 供舊呼叫端使用（但不是 SSoT）。
 - **禁止硬編網域**：所有需要完整 URL 的地方（SEO、Akismet、webhook URL 展示等）必須使用 `SITE_URL`，不得硬編網域字串。
 - **v2 canonical path builders**：Blog/Gallery 的 canonical path 只能由 `lib/seo/url-builders.ts` 與 `lib/site/nav-resolver.ts` 產出；避免在 modules/components 內自行串字（防止 SEO drift）。
@@ -392,10 +393,10 @@ interface ApiErrorResponse {
   - **Test Alias Resolver**: `scripts/test-alias.cjs` 作為 require hook，將 `@/` imports 映射到 `.test-dist` 目錄
   - **Test Script**: `scripts/test.mjs` 使用 `-r test-alias.cjs` 啟用 alias 解析
 - `npm run lint`
-  - `uiux/` 若為 prototype/獨立專案，必須有清楚邊界：不得讓 root lint 永久紅燈（作法見 `doc/meta/STEP_PLAN.md`）。
+  - `uiux/` 若為 prototype/獨立專案，必須有清楚邊界：不得讓 root lint 永久紅燈（eslint ignores：`eslint.config.mjs` 內含 `uiux/**`）。
 - `npm run type-check`
   - `tsconfig.json` 含 `.next/types/**/*.ts`；type-check 前需確保 `.next/` 不 stale（例如：先跑 `npm run build` 或清掉 `.next/`）。
-  - `uiux/` 若為 prototype/獨立專案，必須避免把缺依賴/缺型別帶進 root type-check（作法見 `doc/meta/STEP_PLAN.md`）。
+  - `uiux/` 若為 prototype/獨立專案，必須避免把缺依賴/缺型別帶進 root type-check（exclude：`tsconfig.typecheck.json` 內含 `uiux`）。
 - `npm run build`（routes/SEO/`.next/types` 相關變更必跑）
 - `npm run dev`
 

@@ -106,6 +106,9 @@ SITE_URL=https://your-domain.com
 ```
 
 > [!NOTE]
+> 若未設定 `SITE_URL`，OpenRouter request header 會 fallback 到 canonical site URL（透過 `lib/site/site-url.ts` 的 `SITE_URL` constant；single source 規則見 `../../ARCHITECTURE.md` §3.11）。
+
+> [!NOTE]
 > OpenRouter（本文件）≠ Supabase Edge Functions（Embeddings / Judge）。  
 > Edge Functions 需要在 Supabase Dashboard 設定 `OPENAI_API_KEY` Secret，請看本文件的 **Database Operations**（上方）。
 
