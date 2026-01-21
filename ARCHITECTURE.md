@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-> Last Updated: 2026-01-14
+> Last Updated: 2026-01-20
 > Status: Enforced
 > Role: Single source of truth for architecture and global constraints.
 
@@ -34,6 +34,9 @@
 - Fonts（system fonts only）: 禁止 runtime 載入外部字體；主題字體切換一律透過 `--theme-font`（系統字體堆疊）在 SSR 階段注入。
 - `lib/` 不放 React hooks；hooks 僅存在於 `hooks/`。
 - Pure modules 僅做純計算 (no fetch/DB/Next/console/browser APIs)。
+- Markdown trust boundaries：
+  - Trusted admin markdown：`lib/markdown/server.ts`（posts / site_content 等管理員內容）。
+  - High-exposure hotspots markdown：`lib/markdown/hotspots.ts`（`gallery_hotspots.description_md`；禁 raw HTML + sanitize + https/mailto links）。
 - Public UI 不得 import `components/admin/*` 或 admin-only dependencies。
 - Feature visibility (blog/gallery) 必須走 `feature_settings` + `lib/features/cached.ts`。
 - Public SSR 讀取必須使用 `cachedQuery` 包裝的 cached modules（例如 `lib/modules/*/cached.ts`、`lib/features/cached.ts`）。
@@ -163,12 +166,18 @@ interface ApiErrorResponse {
 
 | Domain    | IO File                         | 主要功能                                         |
 | --------- | ------------------------------- | ------------------------------------------------ |
-| Gallery   | `lib/modules/gallery/io.ts`     | Gallery items 分頁查詢                           |
+| Gallery   | `lib/modules/gallery/io.ts`     | Gallery items 分頁/查詢（facade；可 re-export 子 IO） |
+| Gallery   | `lib/modules/gallery/gallery-pins-io.ts` | Public pins read（featured/home/hero） |
+| Gallery   | `lib/modules/gallery/gallery-hotspots-io.ts` | Public hotspots read（auto/manual ordering） |
+| Gallery   | `lib/modules/gallery/hotspots-admin-io.ts` | Admin hotspots CRUD/reorder（RLS） |
+| Gallery   | `lib/modules/gallery/pins-admin-io.ts` | Admin pins（featured + hero selection） |
 | Comments  | `lib/modules/comment/io.ts`     | Public comments CRUD、permalink、public settings |
 | Comments  | `lib/modules/comment/admin-io.ts` | Admin settings、blacklist、feedback 操作       |
 | Reactions | `lib/reactions/io.ts`           | Rate limit、toggle、likedByMe 批次查詢           |
 | Reports   | `lib/modules/reports/admin-io.ts`       | 報告列表、建立、狀態更新               |
 | Reports   | `lib/modules/reports/reports-run-io.ts` | 報告執行（links/schema/lighthouse）    |
+| Content   | `lib/modules/content/site-content-io.ts` | `site_content` CRUD/publish（history） |
+| Content   | `lib/modules/content/hamburger-nav-publish-io.ts` | hamburger nav publish deep validate（DB existence） |
 | Landing   | `lib/modules/landing/io.ts`             | Landing sections 讀取                  |
 | Auth      | `lib/auth/index.ts`                     | `isSiteAdmin()`、`isOwner()` 等驗證函式 |
 
@@ -356,9 +365,11 @@ interface ApiErrorResponse {
 
 ## 9. UI 組成與導覽
 
-- Public 頁面必須使用 `components/Header.tsx` + `components/Footer.tsx`。
+- Public 頁面（預設）：使用 `components/Header.tsx` + `components/Footer.tsx`。
+- Home v2（`app/[locale]/page.tsx`）：允許使用 `components/home/*`（`MarqueeNotice` / `HeaderBarV2Client` / `HeroStageClient` 等）+ `components/Footer.tsx`。
 - Admin 頁面僅使用 `app/[locale]/admin/layout.tsx` (AdminSidebar)。
-- Header/Footer 標籤來源：`site_content(section_key='nav')` + `messages/*.json` fallback。
+- Legacy Header/Footer 標籤來源：`site_content(section_key='nav')` + `messages/*.json` fallback。
+- Home v2 hamburger nav IA 來源：`site_content(section_key='hamburger_nav')`（typed targets；resolver 單一真相來源：`lib/site/nav-resolver.ts`；invalid → fallback default）。
 
 ## 10. 資料一致性與安全
 
@@ -367,7 +378,7 @@ interface ApiErrorResponse {
     - 已透過環境變數進入後台
     - DB 操作可能被 RLS 拒絕
     - 需聯繫 Owner 同步角色到 `site_admins` 表格
-- DB 物件必須同時更新 `supabase/02_add/*` 與 `supabase/01_drop/*`。
+- DB 物件必須同時更新 `supabase/02_add/*`、`supabase/01_drop/*`，並 mirror 到 `supabase/COMBINED_*.sql`（以 `scripts/db.mjs` 的 canonical 流程為準）。
 - RLS policy 名稱不可任意變更 (以利審計與追蹤)。
 
 ## 12. 必跑測試
@@ -375,8 +386,12 @@ interface ApiErrorResponse {
 - `npm test` — Node test runner（以輸出為準）
   - **Test Alias Resolver**: `scripts/test-alias.cjs` 作為 require hook，將 `@/` imports 映射到 `.test-dist` 目錄
   - **Test Script**: `scripts/test.mjs` 使用 `-r test-alias.cjs` 啟用 alias 解析
-- `npm run type-check`
 - `npm run lint`
+  - `uiux/` 若為 prototype/獨立專案，必須有清楚邊界：不得讓 root lint 永久紅燈（作法見 `doc/meta/STEP_PLAN.md`）。
+- `npm run type-check`
+  - `tsconfig.json` 含 `.next/types/**/*.ts`；type-check 前需確保 `.next/` 不 stale（例如：先跑 `npm run build` 或清掉 `.next/`）。
+  - `uiux/` 若為 prototype/獨立專案，必須避免把缺依賴/缺型別帶進 root type-check（作法見 `doc/meta/STEP_PLAN.md`）。
+- `npm run build`（routes/SEO/`.next/types` 相關變更必跑）
 - `npm run dev`
 
 ## 13. Documentation (Links only)
@@ -388,6 +403,7 @@ interface ApiErrorResponse {
 - Ops runbook (index; details in `doc/runbook/*`): `doc/RUNBOOK.md`
 - Drift tracker + playbooks + stable `@see` index: `uiux_refactor.md`
 - Single-feature specs index (stable): `doc/specs/README.md`
+- Home UIUX + Gallery Hero/Hotspots PRD（proposed；Implementation Contract）：`doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md`
 
 ---
 

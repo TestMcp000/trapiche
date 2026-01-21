@@ -1,3 +1,9 @@
+/**
+ * Blog Category Page (v2 Canonical)
+ * 
+ * Displays blog posts filtered by category at /blog/categories/[slug]
+ */
+
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { getPublicPostsCached, getCategoriesWithCountsCached } from '@/lib/modules/blog/cached';
@@ -11,28 +17,41 @@ import Footer from '@/components/Footer';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
+interface PageProps {
+  params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ q?: string; sort?: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const { locale, slug: categorySlug } = await params;
   const t = await getTranslations({ locale, namespace: 'blog' });
   
-  // Generate hreflang alternates
-  const alternates = getMetadataAlternates('/blog', locale);
+  // Find category
+  const { categories } = await getCategoriesWithCountsCached();
+  const category = categories.find(c => c.slug === categorySlug);
+  
+  if (!category) {
+    return { title: t('notFound') };
+  }
+  
+  const title = `${category.name_zh} - ${t('title')}`;
+  const description = `瀏覽「${category.name_zh}」分類的所有文章`;
+  
+  // Generate hreflang alternates (v2 canonical)
+  const alternates = getMetadataAlternates(`/blog/categories/${categorySlug}`, locale);
   
   return {
-    title: t('title'),
-    description: t('description'),
+    title,
+    description,
     alternates,
   };
 }
 
-export default async function BlogPage({
+export default async function BlogCategoryPage({
   params,
   searchParams,
-}: {
-  params: Promise<{ locale: string }>;
-  searchParams: Promise<{ category?: string; q?: string; sort?: string }>;
-}) {
-  const { locale } = await params;
+}: PageProps) {
+  const { locale, slug: categorySlug } = await params;
   
   // Check if blog feature is enabled
   const isEnabled = await isBlogEnabledCached();
@@ -40,17 +59,24 @@ export default async function BlogPage({
     notFound();
   }
   
-  const { category: categorySlug, q, sort } = await searchParams;
+  const { q, sort } = await searchParams;
   const t = await getTranslations({ locale, namespace: 'blog' });
   
-  // Pass locale, q (search query), and sort to filter posts
+  // Get categories and find current one
+  const { categories, uncategorizedCount } = await getCategoriesWithCountsCached();
+  const category = categories.find(c => c.slug === categorySlug);
+  
+  if (!category) {
+    notFound();
+  }
+  
+  // Pass locale, search, and sort to filter posts
   const posts = await getPublicPostsCached({ 
     categorySlug, 
     locale, 
     search: q,
     sort: sort as 'newest' | 'oldest' | 'title-asc' | 'title-desc',
   });
-  const { categories, uncategorizedCount } = await getCategoriesWithCountsCached();
 
   // Pre-compute locale-specific date formatting
   const dateLocale = zhTW;
@@ -62,13 +88,22 @@ export default async function BlogPage({
       
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Breadcrumb */}
+          <nav className="mb-4 text-sm text-secondary">
+            <a href={`/${locale}/blog`} className="hover:text-primary transition-colors">
+              {t('title')}
+            </a>
+            <span className="mx-2">/</span>
+            <span className="text-foreground">{category.name_zh}</span>
+          </nav>
+          
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              {t('title')}
+              {category.name_zh}
             </h1>
             <p className="text-lg text-secondary max-w-2xl mx-auto">
-              {t('description')}
+              {`此分類共有 ${posts.length} 篇文章`}
             </p>
           </div>
           
@@ -95,18 +130,14 @@ export default async function BlogPage({
                 <div className="flex flex-wrap justify-center gap-2 mb-6 lg:hidden">
                   <a
                     href={`/${locale}/blog${q ? `?q=${q}` : ''}`}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      !categorySlug
-                        ? 'bg-primary text-white'
-                        : 'bg-surface-raised text-secondary hover:bg-surface-raised-hover hover:text-foreground'
-                    }`}
+                    className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-surface-raised text-secondary hover:bg-surface-raised-hover hover:text-foreground"
                   >
                     {t('allCategories')}
                   </a>
                   {categories.map((cat) => (
                     <a
                       key={cat.id}
-                      href={`/${locale}/blog?category=${cat.slug}${q ? `&q=${q}` : ''}`}
+                      href={`/${locale}/blog/categories/${cat.slug}${q ? `?q=${q}` : ''}`}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                         categorySlug === cat.slug
                           ? 'bg-primary text-white'
@@ -120,15 +151,13 @@ export default async function BlogPage({
               )}
               
               {/* Active filters indicator */}
-              {(q || categorySlug) && (
+              {q && (
                 <div className="text-center lg:text-left mb-6">
                   <p className="text-sm text-secondary">
                     {`找到 ${posts.length} 篇文章`}
-                    {q && (
-                      <span className="ml-2">
-                        {`含「${q}」`}
-                      </span>
-                    )}
+                    <span className="ml-2">
+                      {`含「${q}」`}
+                    </span>
                   </p>
                 </div>
               )}
@@ -147,8 +176,8 @@ export default async function BlogPage({
                       ? format(new Date(post.published_at), 'PPP', { locale: dateLocale })
                       : null;
                     const imageAlt = post.cover_image_alt_zh || title;
-                    const postCategorySlug = post.category?.slug || 'uncategorized';
-                    const postUrl = `/${locale}/blog/${postCategorySlug}/${post.slug}`;
+                    // Use v2 canonical URL for post links
+                    const postUrl = `/${locale}/blog/posts/${post.slug}`;
 
                     return (
                       <BlogCard
@@ -182,4 +211,3 @@ export default async function BlogPage({
     </div>
   );
 }
-

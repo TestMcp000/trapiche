@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.gallery_items (
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gallery_pin_surface') THEN
-    CREATE TYPE public.gallery_pin_surface AS ENUM ('home', 'gallery');
+    CREATE TYPE public.gallery_pin_surface AS ENUM ('home', 'gallery', 'hero');
   END IF;
 END$$;
 
@@ -63,6 +63,10 @@ CREATE INDEX IF NOT EXISTS idx_gallery_items_visible_like_created ON public.gall
 CREATE INDEX IF NOT EXISTS idx_gallery_items_tags_en ON public.gallery_items USING GIN(tags_en);
 CREATE INDEX IF NOT EXISTS idx_gallery_items_tags_zh ON public.gallery_items USING GIN(tags_zh);
 CREATE INDEX IF NOT EXISTS idx_gallery_pins_surface_order ON public.gallery_pins(surface, sort_order);
+
+-- Hero singleton constraint: at most one item can be selected as hero
+CREATE UNIQUE INDEX IF NOT EXISTS idx_gallery_pins_hero_singleton
+  ON public.gallery_pins (surface) WHERE surface = 'hero';
 
 -- RLS
 ALTER TABLE public.gallery_categories ENABLE ROW LEVEL SECURITY;

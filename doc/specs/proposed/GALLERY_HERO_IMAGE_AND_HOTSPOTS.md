@@ -1,14 +1,14 @@
 # Home（UIUX 跟稿）+ Gallery Hero Image + Image Hotspots（圖上 Pin）- Product Requirements Document (PRD)
 
 > **Version**: 0.9  
-> **Last Updated**: 2026-01-20  
+> **Last Updated**: 2026-01-21  
 > **Status**: Draft  
 > **Owner**: Admin / Product  
 > **Parent Document**: (optional) `../../SPEC.md`
 
 本 PRD 聚焦（Phase 1）：
 
-1) **Home 排版照 `uiux/`**（只涵蓋 Home；Gallery list 維持既有 pinterest-like 瀑布流）  
+1) **Home 排版照 Design SSoT：`../../archive/DESIGN_SSOT.md`**（只涵蓋 Home；Gallery list 維持既有 pinterest-like 瀑布流）  
 2) **Home Hero 圖片可由 Gallery 作品中自選**（後台管理員設定）  
 3) **Gallery Item 圖片支援「圖上標記（Hotspots）」**：所有作品皆可選擇是否新增 pin（0..N；可為 0）；管理員可在圖片任意位置新增多個 pin，並可選擇是否填「一句話 preview / 象徵意涵」，且「詳細描述」支援 Markdown；前台（含 Home Hero）可互動呈現
 
@@ -24,24 +24,22 @@
 
 ---
 
-## Design SSoT（UIUX / Figma）
+## Design SSoT（Docs / Figma）
 
+- Design SSoT（最終權威；純文件）：`../../archive/DESIGN_SSOT.md`
 - Figma Site（提供檢視/分享）：https://pond-bulk-99292481.figma.site/
 - Figma Design（原始檔案）：https://www.figma.com/design/HeXn2lGfcxUUk3zhA81heF/Therapist-Content-Website-UI
-- Local UIUX prototype（程式版設計稿）：`uiux/`
-  - Home（含 hero pins + detail card）：`uiux/src/app/pages/home-page.tsx`
-  - Pins（座標採百分比）：`uiux/src/app/components/artwork-stage.tsx`
-  - Detail card（modal/drawer 行為參考）：`uiux/src/app/components/material-detail.tsx`
+- （Optional / Deprecated）Local UIUX prototype：`uiux/`（僅供追溯；不再作為 SSoT，可移除）
 
-> 本 repo 的 `uiux/` 是獨立 Vite prototype（Tailwind v4 + Radix/MUI 等），用來當 UI/排版 SSoT；不代表可直接搬進 Next.js production bundle。
+> 本 repo 的 `uiux/` 是獨立 Vite prototype（Tailwind v4 + Radix/MUI 等），不代表可直接搬進 Next.js production bundle；設計最終權威以 `../../archive/DESIGN_SSOT.md` 為準。
 
 **Route 對照（暫定）**
 
-| Next route（實作） | UIUX 參考 | 用法（本 PRD） |
+| Next route（實作） | Design SSoT 參考 | 用法（本 PRD） |
 | --- | --- | --- |
-| `/[locale]/` | `uiux/src/app/pages/home-page.tsx` | Hero 以「選定 gallery item 圖片」作為主視覺，pins/卡片互動風格對齊 |
-| `/[locale]/gallery/items/[category]/[slug]` | `uiux/src/app/components/artwork-stage.tsx` + `uiux/src/app/components/material-detail.tsx` | 作品主圖疊 hotspots，點擊展開媒材詳情 |
-| `/[locale]/gallery` |（uiux 未提供對應頁） | 需補設計稿，或以現有 masonry/卡片風格延伸 |
+| `/[locale]/` | `../../archive/DESIGN_SSOT.md`（§1–§5） | Hero 以「選定 gallery item 圖片」作為主視覺，hotspots/modal/fallback/fab/suggest 對齊 |
+| `/[locale]/gallery/items/[category]/[slug]` | `../../archive/DESIGN_SSOT.md`（§3） | 作品主圖疊 hotspots，點擊展開媒材詳情 |
+| `/[locale]/gallery` |（Design SSoT 不涵蓋） | 以現有 masonry/卡片風格延伸 |
 
 ---
 
@@ -49,7 +47,7 @@
 
 | Topic | Decision | Why |
 | --- | --- | --- |
-| Design SSoT | `uiux/` 內的設計稿作為排版 SSoT | 避免「設計/實作」各自漂移 |
+| Design SSoT | `../../archive/DESIGN_SSOT.md` 作為排版/互動最終權威 | 避免「設計/實作」各自漂移；且 `uiux/` 可被移除 |
 | Primary locale | Phase 1：zh only（繁中）；schema 可保留 `*_en` 但不強制 | 降低首版成本，避免 UI/內容被 i18n 拖慢 |
 | Home coverage | 「跟稿」只涵蓋 Home；Gallery list 維持既有 pinterest-like 瀑布流 | 避免大改動，保留既有 gallery UX |
 | Hero image source | 以 `gallery_items.id` 指向 Gallery 作品 | 單一來源，重用現有圖片/metadata |
@@ -81,8 +79,8 @@
 
 ### In Scope
 
-- Home：排版/互動跟 `uiux/`（包含 marquee notice、hamburger menu、hero stage、suggest section）
-- Gallery list：維持既有 pinterest-like 瀑布流（不跟 `uiux/` 變更）
+- Home：排版/互動對齊 Design SSoT：`../../archive/DESIGN_SSOT.md`（marquee notice、hamburger menu、hero stage、suggest section、floating FAB）
+- Gallery list：維持既有 pinterest-like 瀑布流（不在 Design SSoT scope）
 - Hero 圖片：後台可從 Gallery 作品選擇/清除；前台 Hero render + fallback 行為
 - Hotspots：DB schema + RLS、後台 CRUD + 拖曳定位、前台互動呈現（含 Home Hero + Gallery detail）+ fallback list
 - Home 個人化推薦：最下方文章卡片以「文章封面」呈現，推薦邏輯對齊 `ANALYTICS_PERSONALIZATION_UMAMI.md`
@@ -116,10 +114,10 @@
 - FR-2.3（Admin：新增 hotspot 的插入規則）：若管理員已做過手動排序，後續新增的 hotspot 一律 append 到最後（不做自動插入）。
 - FR-2.4（Empty state）：同一作品可為 0 個 hotspots；若該作品沒有任何 `is_visible=true` 的 hotspots，前台不得顯示 pins layer，且不得顯示/開啟 fallback list UI。
 - FR-3（Admin：Hero 選擇）：管理員可在後台選擇 0..1 個 Gallery 作品作為 Home Hero 圖，並可清除設定。
-- FR-4（Home：Hero 版型）：Hero 圖片「靠右」且被不規則框（blob mask）包覆（參考 `uiux` + 附圖）；左側保留「清楚的標語」/hero 文案/CTA，且可由後台編輯（沿用 `site_content(section_key='hero')`）。
+- FR-4（Home：Hero 版型）：Hero 圖片「靠右」且被不規則框（blob mask）包覆（參考 `../../archive/DESIGN_SSOT.md` §2）；左側保留「清楚的標語」/hero 文案/CTA，且可由後台編輯（沿用 `site_content(section_key='hero')`）。
 - FR-4.1（Home：Hero 空狀態）：若未選定 hero 圖片：仍顯示左側標語/CTA；右側顯示 placeholder blob（無 pins）。
 - FR-5（Home：Hero hotspots）：Hero render 時同時顯示「該作品的 hotspots」，互動行為如下：
-  - Hover：pin 會原地有互動（縮放/輕微懸浮/顏色加深，至少其一；需與 `uiux` 的 motion 行為一致）
+  - Hover：pin 會原地有互動（縮放/輕微懸浮/顏色加深，至少其一；需與 `../../archive/DESIGN_SSOT.md` §3 的 motion 行為一致）
   - Click/Tap：出現資訊圖卡（modal card）
   - Close：點擊 `X` 或點擊卡片外（backdrop）關閉
 - FR-6（Gallery list）：維持既有 pinterest-like 瀑布流（card/masonry 行為不改）。
@@ -192,7 +190,7 @@
 - FR-9.7（Validation v2）：後台需區分「儲存」與「發布」兩階段驗證（完整寫死見本文 `Implementation Contract`）：
   - 儲存（draft，不查 DB）：JSON schema 合法、`target.type` allowlist、slug 格式、query keys allowlist、external URL 協議 allowlist（`https:`/可選 `mailto:`；拒絕 `javascript:`/`data:`/`http:`）。
   - 發布（public，deep validate 會查 DB）：所有 internal targets 必須指向「存在且可公開」的內容；否則必須阻止發布並顯示可定位錯誤（含 JSON path）。
-- FR-9.8（Hamburger nav seed）：初始內容需與 `uiux/src/app/components/side-nav.tsx` 的 4 組分類與細項名稱一致（zh），並提供可驗收的預設 targets（可由 admin 後台再調整）：
+- FR-9.8（Hamburger nav seed）：初始內容需與 `../../archive/DESIGN_SSOT.md` §6 的 4 組分類與細項名稱一致（zh），並提供可驗收的預設 targets（可由 admin 後台再調整）：
 
 ```json
 {
@@ -243,7 +241,7 @@
   ]
 }
 ```
-- FR-10（Header bar）：移除/不顯示「心理師療癒空間」置中標題 bar（依 `uiux/src/app/components/header-bar.tsx` 調整）。
+- FR-10（Header bar）：移除/不顯示「心理師療癒空間」置中標題 bar（依 `../../archive/DESIGN_SSOT.md` §1.3）。
 - FR-11（講座邀請 CTA）：講座邀請按鈕寬度增加約 1cm 且視覺更接近圓形（保留可點/可識別）。
 - FR-11.1（講座邀請 CTA 連結來源）：`company_settings.home_event_cta_url`（可選：`home_event_cta_label_zh`），且 URL 需通過 allowlist 驗證（至少 `https:` / `mailto:`）。
 - FR-12（Home：文章推薦區）：最下方每一格是「文章封面卡」；推薦結果以 Umami + pgvector 做針對性推薦（fallback：最新/置頂文章）。

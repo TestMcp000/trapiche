@@ -124,7 +124,7 @@ import type { HamburgerNavV2 } from '@/lib/types/hamburger-nav';
 import { parseHamburgerNav } from '@/lib/validators/hamburger-nav';
 
 /**
- * Default hamburger nav seed (matches uiux/src/app/components/side-nav.tsx)
+ * Default hamburger nav seed (matches doc/archive/DESIGN_SSOT.md §6)
  */
 const DEFAULT_HAMBURGER_NAV: HamburgerNavV2 = {
   version: 2,

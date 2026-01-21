@@ -32,12 +32,14 @@ export default function ContentEditorClient({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Array<{ path: string; message: string }>>([]);
 
   const isPublished = initialContent?.is_published ?? false;
 
   const handleSave = async () => {
     setSaving(true);
     setMessage(null);
+    setValidationErrors([]);
 
     try {
       const parsed = JSON.parse(contentJson);
@@ -45,7 +47,16 @@ export default function ContentEditorClient({
       const result = await saveSiteContent(sectionKey, parsed, locale);
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to save');
+        // Check for validation errors
+        if (result.validationErrors && result.validationErrors.length > 0) {
+          setValidationErrors(result.validationErrors);
+        }
+        setMessage({
+          type: 'error',
+          text: result.error || '儲存失敗',
+        });
+        setSaving(false);
+        return;
       }
 
       setMessage({
@@ -68,12 +79,22 @@ export default function ContentEditorClient({
   const handlePublish = async () => {
     setSaving(true);
     setMessage(null);
+    setValidationErrors([]);
 
     try {
       const result = await publishSiteContent(sectionKey, locale);
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to publish');
+        // Check for validation errors
+        if (result.validationErrors && result.validationErrors.length > 0) {
+          setValidationErrors(result.validationErrors);
+        }
+        setMessage({
+          type: 'error',
+          text: result.error || '發布失敗',
+        });
+        setSaving(false);
+        return;
       }
 
       setMessage({
@@ -244,6 +265,27 @@ export default function ContentEditorClient({
           }`}
         >
           {message.text}
+        </div>
+      )}
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
+            驗證錯誤 ({validationErrors.length})
+          </h3>
+          <ul className="space-y-2">
+            {validationErrors.map((err, idx) => (
+              <li key={idx} className="text-sm">
+                <code className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-mono text-xs">
+                  {err.path || '(root)'}
+                </code>
+                <span className="ml-2 text-red-600 dark:text-red-400">
+                  {err.message}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

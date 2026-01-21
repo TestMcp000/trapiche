@@ -106,7 +106,7 @@ const PATHS = {
       drop: ['supabase/01_drop/03_reports.sql'],
     },
     gallery: {
-      add: ['supabase/02_add/04_gallery.sql'],
+      add: ['supabase/02_add/04_gallery.sql', 'supabase/02_add/20_gallery_hotspots.sql'],
       seed: ['supabase/03_seed/05_gallery.sql'],
       drop: ['supabase/01_drop/04_gallery.sql'],
     },

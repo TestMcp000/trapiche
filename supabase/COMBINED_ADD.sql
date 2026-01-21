@@ -817,7 +817,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.reports TO authenticated;
 -- ============================================
 -- ============================================
 -- ADD: Gallery Tables (Pinterest-style)
--- Version: 1.0
+-- Version: 1.1
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS public.gallery_categories (
@@ -859,7 +859,7 @@ CREATE TABLE IF NOT EXISTS public.gallery_items (
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gallery_pin_surface') THEN
-    CREATE TYPE public.gallery_pin_surface AS ENUM ('home', 'gallery');
+    CREATE TYPE public.gallery_pin_surface AS ENUM ('home', 'gallery', 'hero');
   END IF;
 END$$;
 
@@ -880,6 +880,10 @@ CREATE INDEX IF NOT EXISTS idx_gallery_items_visible_like_created ON public.gall
 CREATE INDEX IF NOT EXISTS idx_gallery_items_tags_en ON public.gallery_items USING GIN(tags_en);
 CREATE INDEX IF NOT EXISTS idx_gallery_items_tags_zh ON public.gallery_items USING GIN(tags_zh);
 CREATE INDEX IF NOT EXISTS idx_gallery_pins_surface_order ON public.gallery_pins(surface, sort_order);
+
+-- Hero singleton constraint: at most one item can be selected as hero
+CREATE UNIQUE INDEX IF NOT EXISTS idx_gallery_pins_hero_singleton
+  ON public.gallery_pins (surface) WHERE surface = 'hero';
 
 -- RLS
 ALTER TABLE public.gallery_categories ENABLE ROW LEVEL SECURITY;
@@ -948,6 +952,62 @@ GRANT SELECT ON public.gallery_pins TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.gallery_categories TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.gallery_items TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.gallery_pins TO authenticated;
+
+-- ============================================
+-- ADD: Gallery Hotspots Table
+-- Version: 1.0
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.gallery_hotspots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id UUID NOT NULL REFERENCES public.gallery_items(id) ON DELETE CASCADE,
+  x DOUBLE PRECISION NOT NULL,
+  y DOUBLE PRECISION NOT NULL,
+  media TEXT NOT NULL,
+  preview TEXT NULL,
+  symbolism TEXT NULL,
+  description_md TEXT NOT NULL,
+  read_more_url TEXT NULL,
+  sort_order INTEGER NULL,
+  is_visible BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  CONSTRAINT gallery_hotspots_x_range CHECK (x >= 0 AND x <= 1),
+  CONSTRAINT gallery_hotspots_y_range CHECK (y >= 0 AND y <= 1),
+  CONSTRAINT gallery_hotspots_description_not_empty CHECK (description_md <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_gallery_hotspots_item
+  ON public.gallery_hotspots(item_id);
+
+CREATE INDEX IF NOT EXISTS idx_gallery_hotspots_item_sort
+  ON public.gallery_hotspots(item_id, sort_order);
+
+ALTER TABLE public.gallery_hotspots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read visible gallery hotspots"
+  ON public.gallery_hotspots FOR SELECT
+  TO anon, authenticated
+  USING (
+    is_visible = true
+    AND EXISTS (
+      SELECT 1 FROM public.gallery_items gi
+      WHERE gi.id = item_id AND gi.is_visible = true
+    )
+  );
+
+CREATE POLICY "Admins can manage gallery hotspots"
+  ON public.gallery_hotspots FOR ALL
+  TO authenticated
+  USING (
+    (auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor')
+  )
+  WITH CHECK (
+    (auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor')
+  );
+
+GRANT SELECT ON public.gallery_hotspots TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.gallery_hotspots TO authenticated;
 
 -- ============================================
 -- ADD: Reactions (Anonymous Like)

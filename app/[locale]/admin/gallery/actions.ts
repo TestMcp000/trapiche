@@ -32,6 +32,7 @@ import {
   validateReorderInput,
 } from '@/lib/validators/gallery-hotspots';
 import { isValidUUID } from '@/lib/validators/api-common';
+import { isValidHotspotsMarkdown } from '@/lib/markdown/hotspots';
 import type { GalleryHotspot, GalleryHotspotInput } from '@/lib/types/gallery';
 
 // =============================================================================
@@ -147,6 +148,15 @@ export async function createHotspotAction(
     };
   }
 
+  // Validate markdown safety at save-time
+  const isMarkdownValid = await isValidHotspotsMarkdown(validation.data!.description_md);
+  if (!isMarkdownValid) {
+    return {
+      error: '內容在安全處理後為空',
+      errors: { description_md: '內容在安全處理後為空，請輸入有效的文字內容' },
+    };
+  }
+
   try {
     const result = await createHotspotAdmin(itemId, validation.data!);
 
@@ -195,6 +205,17 @@ export async function updateHotspotAction(
       return {
         error: validation.error || '輸入驗證失敗',
         errors: validation.errors,
+      };
+    }
+  }
+
+  // Validate markdown safety at save-time if description_md is being updated
+  if (input.description_md !== undefined) {
+    const isMarkdownValid = await isValidHotspotsMarkdown(input.description_md);
+    if (!isMarkdownValid) {
+      return {
+        error: '內容在安全處理後為空',
+        errors: { description_md: '內容在安全處理後為空，請輸入有效的文字內容' },
       };
     }
   }

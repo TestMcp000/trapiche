@@ -4,7 +4,7 @@
  * HotspotPinClient - Interactive pin button for gallery hotspots
  *
  * Client component that renders an interactive pin positioned over an image.
- * Aligned with uiux/src/app/components/artwork-stage.tsx design.
+ * Aligned with doc/archive/DESIGN_SSOT.md §3.
  *
  * @see doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md (FR-5, FR-7)
  */

@@ -197,6 +197,12 @@ export function validateReorderInput(
         const invalidIds = obj.ordered_ids.filter((id) => !isValidUUID(id));
         if (invalidIds.length > 0) {
             errors.ordered_ids = `包含無效的 UUID: ${invalidIds.slice(0, 3).join(', ')}${invalidIds.length > 3 ? '...' : ''}`;
+        } else {
+            // Check for duplicates
+            const uniqueIds = new Set(obj.ordered_ids);
+            if (uniqueIds.size !== obj.ordered_ids.length) {
+                errors.ordered_ids = 'ordered_ids 包含重複的 UUID';
+            }
         }
     }
 

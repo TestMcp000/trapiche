@@ -36,7 +36,7 @@ export default function BlogCategorySidebar({
   const buildUrl = (categorySlug?: string) => {
     const params = new URLSearchParams();
     if (categorySlug) params.set('category', categorySlug);
-    if (searchQuery) params.set('search', searchQuery);
+    if (searchQuery) params.set('q', searchQuery);
     const query = params.toString();
     return `/${locale}/blog${query ? `?${query}` : ''}`;
   };
@@ -124,4 +124,3 @@ export default function BlogCategorySidebar({
     </aside>
   );
 }
-

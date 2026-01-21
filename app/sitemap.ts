@@ -20,13 +20,13 @@ const STATIC_PAGES = [
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const sitemapEntries: MetadataRoute.Sitemap = [];
-  
+
   // Check if features are enabled
   const [blogEnabled, galleryEnabled] = await Promise.all([
     isBlogEnabledCached(),
     isGalleryEnabledCached(),
   ]);
-  
+
   // Filter static pages based on feature status
   const activeStaticPages = STATIC_PAGES.filter(page => {
     if (page === '/blog' && !blogEnabled) {
@@ -37,7 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
     return true;
   });
-  
+
   // Add static pages with language alternates
   for (const page of activeStaticPages) {
     sitemapEntries.push({
@@ -47,15 +47,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: page === '' ? 1.0 : 0.8,
     });
   }
-  
+
   // Add blog posts with language alternates
   try {
     const posts = await getPublicPostsForSitemapCached();
-    
+
     for (const post of posts) {
-      const blogPath = `/blog/${post.categorySlug}/${post.slug}`;
+      // v2 canonical URL: /blog/posts/[slug]
+      const blogPath = `/blog/posts/${post.slug}`;
       const lastModified = new Date(post.updatedAt);
-      
+
       // Only add Chinese version if post has Chinese content
       if (post.hasChinese) {
         sitemapEntries.push({
@@ -69,14 +70,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch (error) {
     console.error('Error generating sitemap for blog posts:', error);
   }
-  
+
   // Add gallery items with language alternates (if gallery is enabled)
   if (galleryEnabled) {
     try {
       const galleryItems = await getVisibleGalleryItemsForSitemapCached();
-      
+
       for (const item of galleryItems) {
-        const galleryPath = `/gallery/${item.categorySlug}/${item.itemSlug}`;
+        // v2 canonical URL: /gallery/items/[category]/[slug]
+        const galleryPath = `/gallery/items/${item.categorySlug}/${item.itemSlug}`;
         const lastModified = new Date(item.updatedAt);
 
         sitemapEntries.push({
@@ -90,7 +92,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       console.error('Error generating sitemap for gallery items:', error);
     }
   }
-  
+
   return sitemapEntries;
 }
 

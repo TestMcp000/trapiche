@@ -17,6 +17,7 @@ import 'server-only';
 
 import { createAnonClient } from '@/lib/infrastructure/supabase/anon';
 import type { GalleryHotspotPublic } from '@/lib/types/gallery';
+import { sortHotspots } from './hotspots-sort';
 
 /**
  * Get visible hotspots for a gallery item
@@ -57,27 +58,8 @@ export async function getHotspotsByItemId(
         return [];
     }
 
-    // Determine ordering mode: auto vs manual
-    // Auto mode: ALL sort_order are NULL
-    // Manual mode: ALL sort_order are NOT NULL
-    const hasManualOrder = hotspots.every((h) => h.sort_order !== null);
-
-    // Sort based on mode
-    const sorted = [...hotspots].sort((a, b) => {
-        if (hasManualOrder) {
-            // Manual mode: sort by sort_order, then created_at
-            const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0);
-            if (orderDiff !== 0) return orderDiff;
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        } else {
-            // Auto mode: sort by y, then x, then created_at
-            const yDiff = a.y - b.y;
-            if (Math.abs(yDiff) > 0.001) return yDiff;
-            const xDiff = a.x - b.x;
-            if (Math.abs(xDiff) > 0.001) return xDiff;
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        }
-    });
+    // Sort using shared pure function
+    const sorted = sortHotspots(hotspots);
 
     // Map to public DTO (exclude sort_order and created_at)
     return sorted.map((h) => ({

@@ -12,7 +12,7 @@
     "docs:generate-indexes": "node scripts/generate-doc-indexes.mjs",
     "docs:check-indexes": "node scripts/generate-doc-indexes.mjs --check",
     "lint:md-links": "node scripts/check-markdown-links.mjs",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc -p tsconfig.typecheck.json --noEmit",
     "test": "node scripts/test.mjs",
     "db": "node scripts/db.mjs",
     "db:add": "node scripts/db.mjs add",

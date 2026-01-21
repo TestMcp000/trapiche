@@ -358,4 +358,13 @@ describe('validateReorderInput', () => {
         assert.ok(result.errors?.ordered_ids?.includes('bad1'));
         assert.ok(result.errors?.ordered_ids?.includes('...'));
     });
+
+    it('rejects ordered_ids with duplicate UUIDs', () => {
+        const result = validateReorderInput({
+            item_id: validUUID1,
+            ordered_ids: [validUUID2, validUUID3, validUUID2], // validUUID2 is duplicated
+        });
+        assert.strictEqual(result.valid, false);
+        assert.ok(result.errors?.ordered_ids?.includes('重複'));
+    });
 });

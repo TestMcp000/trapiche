@@ -19,6 +19,7 @@ import 'server-only';
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
 import type { GalleryHotspot, GalleryHotspotInput } from '@/lib/types/gallery';
+import { sortHotspots } from './hotspots-sort';
 
 // =============================================================================
 // Types
@@ -63,23 +64,8 @@ export async function getAdminHotspotsByItemId(
         return [];
     }
 
-    // Determine ordering mode
-    const hasManualOrder = hotspots.every((h) => h.sort_order !== null);
-
-    // Sort based on mode
-    return [...hotspots].sort((a, b) => {
-        if (hasManualOrder) {
-            const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0);
-            if (orderDiff !== 0) return orderDiff;
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        } else {
-            const yDiff = a.y - b.y;
-            if (Math.abs(yDiff) > 0.001) return yDiff;
-            const xDiff = a.x - b.x;
-            if (Math.abs(xDiff) > 0.001) return xDiff;
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        }
-    });
+    // Sort using shared pure function
+    return sortHotspots(hotspots);
 }
 
 /**
@@ -249,8 +235,21 @@ export async function reorderHotspotsAdmin(
     }
 
     const existingIds = new Set(existing.map((h) => h.id));
-    const invalidIds = orderedIds.filter((id) => !existingIds.has(id));
+    const orderedSet = new Set(orderedIds);
 
+    // Validate completeness: orderedIds must contain exactly all existing IDs
+    // Check for duplicates (orderedIds.length !== orderedSet.size)
+    if (orderedIds.length !== orderedSet.size) {
+        return { success: false, error: '排序清單包含重複的標記點 ID' };
+    }
+
+    // Check for missing IDs
+    if (orderedSet.size !== existingIds.size) {
+        return { success: false, error: '排序清單必須包含所有標記點' };
+    }
+
+    // Check for invalid IDs (not in existing)
+    const invalidIds = orderedIds.filter((id) => !existingIds.has(id));
     if (invalidIds.length > 0) {
         return { success: false, error: `無效的標記點 ID: ${invalidIds.slice(0, 3).join(', ')}` };
     }

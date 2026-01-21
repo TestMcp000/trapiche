@@ -17,6 +17,7 @@
 
 ## 目錄
 
+- [Home（UIUX v2）](#home-uiux-v2)
 - [部落格系統](#blog-system)
 - [圖庫](#gallery)
 - [留言](#comments)
@@ -32,6 +33,34 @@
 - [SEO](#seo)
 - [已知缺口（連到 Roadmap）](#known-gaps-roadmap-links)
 - [模組清單（單一真相來源）](#module-inventory-single-source)
+
+---
+
+<a id="home-uiux-v2"></a>
+## Home（UIUX v2）
+
+### 功能
+
+- Marquee notice（來源：`company_settings`）
+- HeaderBar v2（hamburger menu；來源：`site_content(section_key='hamburger_nav')`）
+- Hero stage（右側可疊 pins）：
+  - 文案/CTA：`site_content(section_key='hero')`
+  - Hero artwork：`gallery_pins(surface='hero')` 選 0..1 個作品
+  - Hotspots：同作品的 `gallery_hotspots`（public read；render 時 server-side markdown → html）
+- Suggest section：目前為 placeholder（尚未接 blog/個人化）
+- SEO：Home JSON-LD 由 `app/[locale]/page.tsx` 產生
+
+### 路由
+
+| 路由       | 說明 |
+| ---------- | ---- |
+| `/[locale]` | Home（v2 layout） |
+
+### 實作備註
+
+- 實作入口：`app/[locale]/page.tsx` → `components/home/HomePageV2.tsx`
+- Hamburger nav fetch/parse：`lib/modules/content/cached.ts#getHamburgerNavCached`（invalid → fallback default）
+- Hotspots markdown 安全邊界：`lib/markdown/hotspots.ts`（server-only; 禁 raw HTML + sanitize + https/mailto links）
 
 ---
 
@@ -75,6 +104,9 @@
 - 圖片裁切與上傳
 - 分類篩選
 - 排序選項
+- Featured pins（surface=`home`/`gallery`）
+- Home Hero（surface=`hero`；全站最多 1）
+- Hotspots（作品主圖 pins overlay + modal + mobile/無障礙 fallback list；Home Hero 與作品頁共用）
 
 ### 路由
 
@@ -100,10 +132,33 @@
 
 - `gallery_categories`：圖庫分類
 - `gallery_items`：圖庫作品
+- `gallery_pins`：Featured pins + Home Hero（`surface`）
+- `gallery_hotspots`：作品圖上 pins（含 `description_md` 與排序欄位）
 
 ### 實作備註
 
 - 實作入口對照：見 [模組清單](#module-inventory-single-source)。
+- Gallery item hotspots render：`app/[locale]/gallery/[category]/[slug]/page.tsx`（server fetch + server markdown render + client overlay）
+- Home Hero pins render：`components/home/HomePageV2.tsx`（讀 `gallery_pins(surface='hero')` + hotspots）
+
+### Hero / Hotspots（Home + Gallery）
+
+- Hero selection（0..1）：
+  - 資料：`gallery_pins(surface='hero')`
+  - Admin UI：`/[locale]/admin/gallery/[id]` 的「設為首頁主視覺 / 取消主視覺」
+- Hotspots（0..N / per item）：
+  - 資料：`gallery_hotspots`（`x/y` normalized `0..1`；`is_visible`）
+  - Admin UI：`/[locale]/admin/gallery/[id]`（圖上點選新增、pin 編輯、清單拖曳排序、顯示/隱藏）
+  - Public UI：作品頁與 Home Hero 疊 pins；點 pin 開 modal card；mobile 提供 fallback list
+- Ordering semantics（per `item_id`）：
+  - Auto mode：該作品所有 `sort_order` 皆為 `NULL`；讀取順序為 `y ASC → x ASC → created_at ASC`
+  - Manual mode：該作品所有 `sort_order` 皆為非 `NULL`；讀取順序為 `sort_order ASC → created_at ASC`
+  - 新增 hotspot：auto mode → `sort_order=NULL`；manual mode → append（`max(sort_order)+1`）
+- Markdown 安全邊界：
+  - hotspots 的 `description_md` 一律走 `lib/markdown/hotspots.ts`（server-only；禁 raw HTML + sanitize；links 只允許 https/mailto）
+- Cache / revalidation：
+  - Public reads：`lib/modules/gallery/cached.ts`（tag=`gallery`）
+  - Admin mutations：`revalidateTag('gallery')`（並視需要補 `revalidatePath()`）
 
 ---
 
@@ -345,6 +400,7 @@
 | 路由                        | 說明 |
 | --------------------------- | ------------------------- |
 | `/admin/gallery`            | 圖庫作品 |
+| `/admin/gallery/[id]`       | 作品詳情（Hotspots editor + Hero toggle） |
 | `/admin/gallery/categories` | 圖庫分類 |
 | `/admin/gallery/featured`   | Featured items 管理 |
 
@@ -376,10 +432,13 @@
 
 ### 內容來源（Public Navigation / Landing）
 
-- Header nav labels：`site_content(section_key='nav')`（fallback：`messages/*`）
+- Header nav labels（Legacy Header）：`site_content(section_key='nav')`（fallback：`messages/*`）
+- Hamburger nav（Home v2 HeaderBar）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：built-in default）
 - Footer copy：`site_content(section_key='footer')`（fallback：`messages/*`）
 - Company short name：`site_content(section_key='company')`（fallback：`messages/*`）
-- Landing page ordering/visibility：`landing_sections` table（`lib/modules/landing/*`；由 `app/[locale]/page.tsx` render）
+- Home v2 hero copy：`site_content(section_key='hero')`
+- Home v2 marquee / event CTA / hotspots max：`company_settings`（key/value）
+- Landing sections（CMS 仍可管理；legacy layout/anchors 用途）：`landing_sections` table（`lib/modules/landing/*`；目前 Home v2 不直接 render）
   - Preset sections（`hero/about/services/platforms/product_design/portfolio/contact`）：主內容來自其他資料來源（`site_content`, `services`, `portfolio_items`, `gallery`）
   - Custom sections（`custom_1...custom_10`）：內容存於 `landing_sections.content_en/zh`
 
@@ -493,6 +552,19 @@
 
 > 目的：避免把「未完成/刻意 gated」敘述散落在各 feature 章節，造成讀者誤以為本文件描述的是「全功能已完成」狀態。
 
+### Home UIUX / Navigation
+
+- Hamburger nav v2 的 resolver/contract 與現行 Blog/Gallery 路由仍有漂移（v2 canonical URLs 尚未全量落地）。
+- `hamburger_nav` publish deep validation（存在且可公開）尚未接到 admin publish flow（見 `doc/meta/STEP_PLAN.md`）。
+
+### Gallery Hero/Hotspots（DB scripts sync）
+
+- Repo 的 Supabase scripts 尚未同步 `gallery_pins(surface='hero')` 與 `gallery_hotspots` 的 schema/RLS/grants（見 `doc/meta/STEP_PLAN.md`）。
+
+### CI gates
+
+- `npm run type-check` / `npm run lint` 目前為紅燈（原因與修復方案見 `doc/meta/STEP_PLAN.md`）。
+
 ### Data Intelligence（後台）
 
 - Data Intelligence Platform：
@@ -539,11 +611,13 @@
 ### Cross-cutting（跨領域 / 共用）
 
 - SEO: `lib/seo/hreflang.ts`, `lib/seo/jsonld.ts`, `lib/site/site-url.ts`
+- Navigation v2: `lib/site/nav-resolver.ts`, `lib/types/hamburger-nav.ts`, `lib/validators/hamburger-nav.ts`
 - Analytics: `lib/analytics/pageviews-io.ts`, `lib/validators/page-views.ts`, `lib/types/page-views.ts`
 - i18n: `lib/i18n/locales.ts`, `messages/*.json`
 - Spam: `lib/spam/io.ts`, `lib/spam/engine.ts`（pure）
 - Auth (RBAC helpers): `lib/auth/index.ts`（server-only）
 - Embeddings facade (non-module import surface): `lib/embeddings/index.ts`（server-only）
+- Hotspots markdown: `lib/markdown/hotspots.ts`（server-only）
 - Cross-domain use cases: `lib/use-cases/**`
 
 ---

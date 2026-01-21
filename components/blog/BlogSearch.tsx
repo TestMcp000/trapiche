@@ -13,7 +13,7 @@ export default function BlogSearch({ placeholder, locale }: BlogSearchProps) {
   const searchParams = useSearchParams();
   
   // URL is the source of truth; read current values
-  const urlSearch = searchParams.get('search') || '';
+  const urlSearch = searchParams.get('q') || '';
   const urlSort = searchParams.get('sort') || 'newest';
   
   const [search, setSearch] = useState(urlSearch);
@@ -51,7 +51,7 @@ export default function BlogSearch({ placeholder, locale }: BlogSearchProps) {
     if (search === urlSearch) return;
     
     const timer = setTimeout(() => {
-      updateParams({ search });
+      updateParams({ q: search });
     }, 300);
     
     return () => clearTimeout(timer);

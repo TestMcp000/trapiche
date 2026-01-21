@@ -11,6 +11,7 @@ const eslintConfig = [
       ".test-dist/**",
       "out/**",
       "build/**",
+      "uiux/**",
       "next-env.d.ts",
     ],
   },

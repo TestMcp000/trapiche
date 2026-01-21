@@ -58,7 +58,7 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Redirect old/legacy paths to new routes
+  // Redirect old/legacy paths to new routes (v1 → v2 canonical)
   async redirects() {
     return [
       // Handle /index.html → /
@@ -73,6 +73,33 @@ const nextConfig: NextConfig = {
         destination: '/:locale',
         permanent: true,
       },
+      // =================================================================
+      // Blog v1 → v2 Canonical Redirects (301 Permanent)
+      // =================================================================
+      // Blog post: /blog/[category]/[slug] → /blog/posts/[slug]
+      {
+        source: '/:locale(zh)/blog/:category/:slug',
+        destination: '/:locale/blog/posts/:slug',
+        permanent: true,
+      },
+      // Blog search query: search → q (unified)
+      {
+        source: '/:locale(zh)/blog',
+        has: [{ type: 'query', key: 'search' }],
+        destination: '/:locale/blog?q=:search',
+        permanent: true,
+      },
+      // =================================================================
+      // Gallery v1 → v2 Canonical Redirects (301 Permanent)
+      // =================================================================
+      // Gallery item: /gallery/[category]/[slug] → /gallery/items/[category]/[slug]
+      {
+        source: '/:locale(zh)/gallery/:category/:slug',
+        destination: '/:locale/gallery/items/:category/:slug',
+        permanent: true,
+      },
+      // NOTE: Gallery category redirect is handled by middleware to avoid
+      // conflicts with /gallery/items/* and /gallery/categories/* paths
     ];
   },
 
