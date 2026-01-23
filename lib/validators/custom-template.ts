@@ -6,7 +6,7 @@
  *
  * @module lib/validators/custom-template
  * @see lib/types/ai-analysis.ts - CreateCustomTemplateRequest, UpdateCustomTemplateRequest
- * @see doc/meta/STEP_PLAN.md - PR-2
+ * @see doc/specs/completed/ai-analysis-spec.md (custom templates contract)
  */
 
 import {

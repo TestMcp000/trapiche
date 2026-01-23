@@ -4,7 +4,8 @@
  * Displays the main gallery grid at /gallery
  * with filtering, sorting, and infinite scroll support.
  *
- * @see STEP_PLAN.md PR-32
+ * @see doc/SPEC.md #gallery (Gallery routes + legacy redirects)
+ * @see ARCHITECTURE.md §3.11 (v2 canonical path builders)
  */
 
 import { notFound, permanentRedirect } from "next/navigation";

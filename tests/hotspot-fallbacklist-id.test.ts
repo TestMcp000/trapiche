@@ -5,7 +5,7 @@
  * instead of hardcoded DOM id, preventing id collision when multiple instances exist.
  *
  * @see ARCHITECTURE.md §2 (Non-negotiable constraints)
- * @see doc/meta/STEP_PLAN.md PR-18 (Hotspots UI a11y/clean-code)
+ * @see doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md (Hotspots UI a11y)
  */
 
 import { describe, it } from 'node:test';

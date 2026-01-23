@@ -4,7 +4,7 @@
  * PR-6C: Regression tests to verify canonical URL patterns are correct.
  * These tests prevent reintroduction of non-canonical internal links.
  * 
- * @see STEP_PLAN.md PR-6 (v2 canonical enforcement)
+ * @see ARCHITECTURE.md §3.11 (v2 canonical path builders)
  */
 
 import { describe, it } from 'node:test';

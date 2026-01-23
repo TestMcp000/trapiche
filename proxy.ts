@@ -6,14 +6,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  
+
   // Skip HTTPS redirect for localhost and health checks
   const host = request.headers.get('host') || '';
   const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
   const isHealthCheck = pathname === '/api/health' || pathname === '/_health';
-  
+
   // HTTPS redirect for production (non-localhost) environments
   const proto = request.headers.get('x-forwarded-proto');
   if (proto === 'http' && !isLocalhost && !isHealthCheck) {
@@ -40,30 +40,30 @@ export async function middleware(request: NextRequest) {
   if (looksLikeLocalePrefix && !isValidLocale(localeCandidate)) {
     return await updateSession(request);
   }
-  
+
   // Skip i18n middleware for auth and api routes (including locale-prefixed auth routes)
   if (
-    pathname.startsWith('/auth') || 
+    pathname.startsWith('/auth') ||
     pathname.startsWith('/api') ||
     pathname.match(/^\/zh\/auth/)
   ) {
     return await updateSession(request);
   }
 
-  
+
   // Update Supabase session
   const response = await updateSession(request);
-  
+
   // Apply i18n middleware
   const intlResponse = intlMiddleware(request);
-  
+
   // Merge cookies from Supabase session update
   if (response.cookies) {
     response.cookies.getAll().forEach((cookie) => {
-      intlResponse.cookies.set(cookie.name, cookie.value);
+      intlResponse.cookies.set(cookie);
     });
   }
-  
+
   return intlResponse;
 }
 

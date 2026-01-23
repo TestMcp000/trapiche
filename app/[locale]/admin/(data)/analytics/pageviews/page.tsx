@@ -10,7 +10,7 @@
  *
  * @see lib/analytics/pageviews-admin-io.ts
  * @see lib/validators/page-views-admin.ts
- * @see doc/meta/STEP_PLAN.md - PR-3
+ * @see doc/specs/completed/page-views-analytics-spec.md (dashboard contract)
  */
 import { redirect } from 'next/navigation';
 import Link from 'next/link';

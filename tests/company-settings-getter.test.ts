@@ -5,7 +5,7 @@
  * Ensures consistent behavior for trim, empty-string, and default value handling.
  *
  * @see lib/modules/content/company-settings.ts
- * @see STEP_PLAN.md PR-21
+ * @see doc/archive/2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md (PR-21)
  */
 
 import { describe, it } from 'node:test';

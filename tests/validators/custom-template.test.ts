@@ -4,7 +4,7 @@
  * Tests for lib/validators/custom-template.ts
  *
  * @see lib/validators/custom-template.ts
- * @see doc/meta/STEP_PLAN.md - PR-2
+ * @see doc/specs/completed/ai-analysis-spec.md (custom templates contract)
  */
 
 import assert from 'node:assert/strict';

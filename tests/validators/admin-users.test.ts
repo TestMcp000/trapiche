@@ -4,7 +4,7 @@
  * Tests for lib/validators/admin-users.ts
  *
  * @see lib/validators/admin-users.ts
- * @see doc/meta/STEP_PLAN.md - PR-1
+ * @see doc/SPEC.md #users-admin (query contract)
  */
 
 import assert from 'node:assert/strict';

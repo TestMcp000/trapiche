@@ -4,7 +4,7 @@
  * Tests for lib/validators/page-views-admin.ts
  *
  * @see lib/validators/page-views-admin.ts
- * @see doc/meta/STEP_PLAN.md - PR-3
+ * @see doc/specs/completed/page-views-analytics-spec.md (query contract)
  */
 
 import assert from 'node:assert/strict';

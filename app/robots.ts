@@ -7,8 +7,8 @@
  * - Allow all public pages (default)
  * - Disallow /admin/* paths (SEO isolation for admin routes)
  *
- * @see doc/SPEC.md (SEO)
- * @see doc/meta/STEP_PLAN.md (PR-1)
+ * @see doc/SPEC.md #seo
+ * @see ARCHITECTURE.md §3.11 (SEO/URL single source)
  */
 import type { MetadataRoute } from 'next';
 

@@ -6,7 +6,7 @@
  *
  * @module lib/validators/page-views-admin
  * @see ARCHITECTURE.md §3.6 - Runtime Validators
- * @see doc/meta/STEP_PLAN.md - PR-3 Query Contract
+ * @see doc/specs/completed/page-views-analytics-spec.md (query contract)
  */
 
 import { type ValidationResult, validResult } from './api-common';

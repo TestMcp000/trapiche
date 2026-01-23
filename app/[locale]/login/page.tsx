@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/infrastructure/supabase/client';
 import { useRouter } from 'next/navigation';
+import { DEFAULT_LOCALE, isValidLocale, type Locale } from '@/lib/i18n/locales';
 import {
   POST_AUTH_REDIRECT_COOKIE,
   POST_AUTH_REDIRECT_MAX_AGE_SECONDS,
@@ -13,14 +14,17 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ params }: LoginPageProps) {
-  const [locale, setLocale] = useState('en');
+  const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
   
   useEffect(() => {
-    params.then(p => setLocale(p.locale));
+    params.then((p) => {
+      const nextLocale = p.locale?.toLowerCase() ?? '';
+      setLocale(isValidLocale(nextLocale) ? nextLocale : DEFAULT_LOCALE);
+    });
   }, [params]);
   
   // Check if already logged in
@@ -38,8 +42,10 @@ export default function LoginPage({ params }: LoginPageProps) {
     setLoading(true);
     setError(null);
 
-    const localeFromPath =
-      window.location.pathname.match(/^\/(en|zh)(?:\/|$)/)?.[1] || locale;
+    const localeFromPath = (() => {
+      const candidate = window.location.pathname.match(/^\/([a-z]{2})(?:\/|$)/)?.[1];
+      return candidate && isValidLocale(candidate) ? candidate : locale;
+    })();
     const nextPath = `/${localeFromPath}/admin`;
     const encodedNext = encodeURIComponent(nextPath);
     const secure = window.location.protocol === 'https:' ? '; Secure' : '';

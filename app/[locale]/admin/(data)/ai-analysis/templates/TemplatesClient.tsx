@@ -7,7 +7,7 @@
  * Owner can CRUD, Editor views enabled templates read-only.
  *
  * @see app/[locale]/admin/(data)/ai-analysis/templates/page.tsx
- * @see doc/meta/STEP_PLAN.md - PR-2A
+ * @see doc/specs/completed/ai-analysis-spec.md (templates contract)
  */
 
 import { useState, useTransition } from 'react';

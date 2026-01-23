@@ -118,7 +118,7 @@ test('Client/server boundaries are consistent', () => {
 
   const files = [
     ...roots.flatMap((p) => listSourceFiles(p)),
-    path.join(repoRoot, 'middleware.ts'),
+    path.join(repoRoot, 'proxy.ts'),
     path.join(repoRoot, 'next.config.ts'),
   ].filter((p) => fs.existsSync(p));
 
@@ -769,4 +769,123 @@ test('Server actions in app/ do not contain direct Supabase queries', () => {
   }
 
   assert.deepEqual(errors, []);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IO Module Size Constraints (ARCHITECTURE.md §3.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const IO_MODULE_MAX_LINES = 300;
+const IO_MODULE_MAX_EXPORTED_FUNCTIONS = 12;
+const IO_MODULE_MAX_DIRECT_EXPORTS_FOR_FACADE = 3;
+
+function isIoModule(fileName: string): boolean {
+  return /(?:^io\.ts$|.*-io\.ts$)/.test(fileName);
+}
+
+interface ExportCounts {
+  direct: number;
+  reExport: number;
+  total: number;
+}
+
+function countExportedFunctions(source: string): ExportCounts {
+  const code = stripComments(source);
+  let direct = 0;
+  let reExport = 0;
+
+  // Pattern 1: export function / export async function
+  const directExportMatches = code.match(/\bexport\s+(?:async\s+)?function\s+\w+/g);
+  if (directExportMatches) {
+    direct += directExportMatches.length;
+  }
+
+  // Pattern 2: export const funcName = (...) => / export const funcName = function
+  const constFunctionMatches = code.match(
+    /\bexport\s+const\s+\w+\s*=\s*(?:async\s+)?(?:\([^)]*\)\s*=>|function\s*\()/g
+  );
+  if (constFunctionMatches) {
+    direct += constFunctionMatches.length;
+  }
+
+  // Pattern 3: Named re-exports from other modules
+  const reExportBlocks = code.matchAll(/\bexport\s*\{([^}]+)\}\s*from\s*['"][^'"]+['"]/g);
+  for (const match of reExportBlocks) {
+    const names = match[1].split(',');
+    // Filter out type-only exports
+    const nonTypeNames = names.filter((n) => !n.trim().startsWith('type '));
+    reExport += nonTypeNames.length;
+  }
+
+  return { direct, reExport, total: direct + reExport };
+}
+
+function isThinFacade(exports: ExportCounts, lines: number): boolean {
+  // A thin facade: primarily re-exports with few direct definitions
+  // Per ARCHITECTURE.md §3.4: "拆分後允許保留一個薄的 aggregator"
+  return (
+    exports.direct <= IO_MODULE_MAX_DIRECT_EXPORTS_FOR_FACADE &&
+    exports.reExport > 0 &&
+    lines <= IO_MODULE_MAX_LINES
+  );
+}
+
+function collectIoModules(dirPath: string): string[] {
+  if (!fs.existsSync(dirPath)) {
+    return [];
+  }
+
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      if (['node_modules', '.next', '.git', '.test-dist'].includes(entry.name)) {
+        continue;
+      }
+      files.push(...collectIoModules(fullPath));
+      continue;
+    }
+
+    if (entry.isFile() && isIoModule(entry.name)) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+test('IO modules stay within size/export constraints (ARCHITECTURE.md §3.4)', () => {
+  const libDir = path.join(repoRoot, 'lib');
+  const ioModules = collectIoModules(libDir);
+
+  const violations: string[] = [];
+
+  for (const filePath of ioModules) {
+    const source = fs.readFileSync(filePath, 'utf8');
+    const rel = toPosixPath(path.relative(repoRoot, filePath));
+    const lines = source.split(/\r?\n/).length;
+    const exports = countExportedFunctions(source);
+    const isFacade = isThinFacade(exports, lines);
+
+    // Check line count constraint
+    if (lines > IO_MODULE_MAX_LINES) {
+      violations.push(`${rel}: ${lines} lines > ${IO_MODULE_MAX_LINES}`);
+    }
+
+    // Check export count constraint (facades are exempt)
+    if (!isFacade && exports.total > IO_MODULE_MAX_EXPORTED_FUNCTIONS) {
+      violations.push(
+        `${rel}: ${exports.total} exported functions > ${IO_MODULE_MAX_EXPORTED_FUNCTIONS} (direct: ${exports.direct}, not a facade)`
+      );
+    }
+  }
+
+  assert.deepEqual(
+    violations,
+    [],
+    `IO module size violations found:\n${violations.join('\n')}`
+  );
 });

@@ -7,7 +7,7 @@
  * RBAC: Owner can CRUD, Editor is read-only.
  *
  * @see lib/modules/ai-analysis/analysis-templates-io.ts
- * @see doc/meta/STEP_PLAN.md - PR-2A
+ * @see doc/specs/completed/ai-analysis-spec.md (templates contract)
  */
 
 import { revalidatePath } from 'next/cache';

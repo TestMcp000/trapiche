@@ -1,3 +1,12 @@
+﻿# 2026-01-23 - Step Plan V13（IO Module Split + Guardrails）(Archive)
+
+> Date: 2026-01-23  
+> Status: COMPLETE ✅ (Archived snapshot; active plan lives in `../meta/STEP_PLAN.md`)  
+> Scope: IO module size drift prevention + splitting oversized IO modules  
+> Implemented behavior (SSoT): `../SPEC.md`  
+> Constraints: `../../ARCHITECTURE.md`
+
+## Archived Snapshot（verbatim）
 # Step-by-Step Execution Plan — V13（Active: IO Module Split + Guardrails）
 
 > 狀態: Active（Drift/clean-code repair plan；本檔只寫「修復方案/步驟」，不在此直接改程式碼）  

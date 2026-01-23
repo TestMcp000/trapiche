@@ -1,6 +1,6 @@
 # 開發 Roadmap
 
-> 最後更新: 2026-01-22  
+> 最後更新: 2026-01-23  
 > 狀態: Active  
 > 範圍: **只寫 what/why/status + links**（不放 step-by-step、不放 SQL/commands、不放 code maps）
 
@@ -60,12 +60,6 @@
 - **原因**: 更安全的迭代（避免直接動 prod）
 - **連結**: `runbook/database-ops.md`
 
-### Users 後台：搜尋 / 分頁
-
-- **狀態**: Pending
-- **原因**: 使用者數量成長後可用性/性能會明顯下降（目前一次載入全部 users）。決策：`q` 支援 `short_id`（僅 `^C\\d+$` 精準查詢）；`pageSize` 預設 50（allowlist：20/50/100）
-- **連結**: `SPEC.md#users-admin`（已知限制）、`meta/STEP_PLAN.md`（可拆 PR 的詳細 steps）
-
 ---
 
 ## Tracking Items（追蹤項目）
@@ -90,6 +84,7 @@
 
 - AI Analysis：Custom Templates 後台 UI（Owner CRUD + selection）— Implemented → `SPEC.md#known-gaps-roadmap-links`, `specs/completed/ai-analysis-spec.md`
 - Analytics：Dashboard UI（Page Views）— Implemented → `SPEC.md#known-gaps-roadmap-links`, `specs/completed/page-views-analytics-spec.md`
+- Users 後台：搜尋 / 分頁（`?q=` + `?page=`/`?pageSize=` + short_id 精準查詢）— Implemented → `SPEC.md#users-admin`
 - See [archive/README.md](archive/README.md)
 
 ---

@@ -6,7 +6,7 @@
  *
  * @module lib/validators/admin-users
  * @see ARCHITECTURE.md §3.6 - Runtime Validators
- * @see doc/meta/STEP_PLAN.md - PR-1 Query Contract
+ * @see doc/SPEC.md #users-admin (query contract/allowlist)
  */
 
 import { type ValidationResult, validResult } from './api-common';

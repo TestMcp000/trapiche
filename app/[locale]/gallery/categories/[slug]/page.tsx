@@ -4,7 +4,8 @@
  * Displays gallery items filtered by category at /gallery/categories/[slug]
  * with infinite scroll and sorting support.
  *
- * @see STEP_PLAN.md PR-32
+ * @see doc/SPEC.md #gallery (Gallery routes + legacy redirects)
+ * @see ARCHITECTURE.md §3.11 (v2 canonical path builders)
  */
 
 import { notFound } from "next/navigation";

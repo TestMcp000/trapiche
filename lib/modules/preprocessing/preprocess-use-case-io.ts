@@ -8,26 +8,19 @@
  */
 import 'server-only';
 
-import pLimit from 'p-limit';
 import type { EmbeddingTargetType } from '@/lib/types/embedding';
 import { getConfigForType } from './config-io';
 import { preprocessAndFilter } from './preprocess-pure';
+import { compareChunksForIdempotency, type ChunkHashPair } from './idempotency';
+import { generateEmbeddingsBatch } from './embedding-batch-io';
 import {
   deleteStaleChunks,
-  generateEmbedding,
   getExistingEmbeddingsForIdempotency,
   getTargetContent,
   hashContent,
   updateQueueItemStatus,
   updateQueueItemWithToken,
 } from '@/lib/embeddings';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Configuration
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Concurrent embedding generation limit (@see doc/specs/completed/embedding-queue-dispatcher-worker-spec.md) */
-const EMBEDDING_CONCURRENCY = parseInt(process.env.EMBEDDING_WORKER_CHUNK_CONCURRENCY ?? '2', 10);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -51,48 +44,6 @@ export interface PreprocessUseCaseOutput {
   error?: string;
   /** True if processing was skipped due to idempotency check */
   skippedIdempotent?: boolean;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Idempotency Check (@see doc/specs/completed/embedding-queue-dispatcher-worker-spec.md)
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface ChunkHashPair {
-  text: string;
-  hash: string;
-}
-
-/**
- * Check if existing embeddings match new chunks exactly.
- * Returns true if no re-embedding is needed.
- */
-async function checkIdempotency(
-  targetType: EmbeddingTargetType,
-  targetId: string,
-  newChunks: ChunkHashPair[]
-): Promise<boolean> {
-  const existing = await getExistingEmbeddingsForIdempotency(targetType, targetId);
-
-  // Different chunk count → needs re-embedding
-  if (existing.length !== newChunks.length) {
-    return false;
-  }
-
-  // Check if all hashes match and quality is passed
-  for (let i = 0; i < newChunks.length; i++) {
-    const existingChunk = existing.find((e) => e.chunkIndex === i);
-    if (!existingChunk) {
-      return false;
-    }
-    if (existingChunk.contentHash !== newChunks[i].hash) {
-      return false;
-    }
-    if (existingChunk.qualityStatus !== 'passed') {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -232,7 +183,8 @@ export async function runPreprocessUseCase(
       hash: hashContent(chunk.text),
     }));
 
-    const isIdempotent = await checkIdempotency(targetType, targetId, chunkHashes);
+    const existingEmbeddings = await getExistingEmbeddingsForIdempotency(targetType, targetId);
+    const isIdempotent = compareChunksForIdempotency(existingEmbeddings, chunkHashes);
 
     if (isIdempotent) {
       await completeItem('completed', undefined, { skipped_reason: 'idempotent' });
@@ -253,43 +205,8 @@ export async function runPreprocessUseCase(
     }
 
     // Step 6: Generate embeddings with concurrency limit
-    const limit = pLimit(EMBEDDING_CONCURRENCY);
-    const results: Array<{ success: boolean; index: number; error?: string }> = [];
-
-    const embeddingPromises = chunks.map((chunk, i) =>
-      limit(async () => {
-        const embeddingResult = await generateEmbedding({
-          content: chunk.text,
-          targetType,
-          targetId,
-          chunkIndex: i,
-          chunkTotal: chunks.length,
-        });
-
-        if (embeddingResult.success) {
-          return { success: true, index: i };
-        } else {
-          console.error(
-            `${logPrefix} Failed to generate embedding for ${targetType}/${targetId} chunk ${i}:`,
-            embeddingResult.error
-          );
-          return { success: false, index: i, error: embeddingResult.error };
-        }
-      })
-    );
-
-    const settledResults = await Promise.allSettled(embeddingPromises);
-
-    for (const result of settledResults) {
-      if (result.status === 'fulfilled') {
-        results.push(result.value);
-      } else {
-        results.push({ success: false, index: -1, error: result.reason?.message ?? 'Unknown' });
-      }
-    }
-
-    const successCount = results.filter((r) => r.success).length;
-    const lastError = results.find((r) => !r.success)?.error;
+    const batchResult = await generateEmbeddingsBatch(chunks, targetType, targetId, logPrefix);
+    const { successCount, lastError } = batchResult;
 
     // Step 7: Update queue status based on results
     const durationMs = Date.now() - startTime;

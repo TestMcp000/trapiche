@@ -305,6 +305,7 @@ app/[locale]/admin/<module>/
 16. **[ARCHIVED ✅] Perf/Scalability：`cachedQuery` cache version memoization** → Fixed in PR-31; guardrail test: `tests/cache-version-memoization.test.ts`; see `lib/system/cache-io.ts`
 17. **[ARCHIVED ✅] Build/Availability：Gallery routes 空 module 導致 `npm run build` 失敗** → 修復完成（PR-32: 2026-01-22）
 18. **[ARCHIVED ✅] SEO：Blog internal links 未全面改用 URL builders** → 修復完成（Gallery: PR-30; Blog: PR-33: 2026-01-23）
+19. **[ARCHIVED ✅] Architecture：IO module bloat（>300 lines；需拆分避免維護/測試風險）** → `doc/archive/2026-01-23-step-plan-v13-io-module-split-guardrails.md`
 
 ### 4.1 Admin routes must use `actions.ts`（ARCHIVED; keep for stable `@see`）
 

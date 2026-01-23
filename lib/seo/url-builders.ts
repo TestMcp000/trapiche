@@ -5,7 +5,8 @@
  * All public-facing internal links should use these builders
  * to ensure consistency and prevent SEO drift.
  *
- * @see STEP_PLAN.md PR-6 (v2 canonical enforcement)
+ * @see ARCHITECTURE.md §3.11 (SEO/URL single source; v2 canonical path builders)
+ * @see doc/SPEC.md #seo
  */
 
 // =============================================================================

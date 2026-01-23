@@ -4,7 +4,7 @@
  * Redirects legacy /gallery/[category] to canonical /gallery/categories/[slug]
  * Uses permanentRedirect (308) to preserve SEO value.
  *
- * @see STEP_PLAN.md PR-32
+ * @see doc/SPEC.md #gallery (Gallery routes + legacy redirects)
  * @see ARCHITECTURE.md §3.11 (v2 canonical path builders)
  */
 

@@ -1,7 +1,7 @@
 # 功能規格（已實作行為 / SSoT）
 
 > 已落地功能與技術細節（Single Source of Truth）  
-> 最後更新: 2026-01-22  
+> 最後更新: 2026-01-23  
 > 狀態: Active
 
 本文件描述「**已實作**」的行為與其技術細節（以本檔為準）。
@@ -20,6 +20,7 @@
 ## 目錄
 
 - [Home（UIUX v2）](#home-uiux-v2)
+- [網站頁面（About/Services/Platforms/Portfolio/Contact/Privacy/Login）](#site-pages)
 - [部落格系統](#blog-system)
 - [圖庫](#gallery)
 - [留言](#comments)
@@ -68,6 +69,30 @@
 - Hamburger nav fetch/parse：`lib/modules/content/cached.ts#getHamburgerNavCached`（invalid → fallback default）
 - Hotspots markdown 安全邊界：`lib/markdown/hotspots.ts`（server-only; 禁 raw HTML + sanitize + https/mailto links）
 - External URL allowlist（single source）：`lib/validators/external-url.ts`
+
+---
+
+<a id="site-pages"></a>
+
+## 網站頁面（About/Services/Platforms/Portfolio/Contact/Privacy/Login）
+
+### 路由
+
+| 路由 | 說明 | 主要資料來源 |
+| --- | --- | --- |
+| `/[locale]/about` | 關於頁 | `site_content(section_key='about')` + `company_settings` |
+| `/[locale]/services` | 服務頁 | `services`（visible） |
+| `/[locale]/platforms` | 技術平台頁 | `site_content(section_key='platforms')` |
+| `/[locale]/portfolio` | 作品集 | `portfolio_items`（visible） |
+| `/[locale]/contact` | 聯絡頁 | `site_content(section_key='contact')` + `company_settings` |
+| `/[locale]/privacy` | 隱私權政策 | 目前為靜態內容（inline HTML） |
+| `/[locale]/login` | Admin Login（Google OAuth） | Client-side Supabase OAuth（redirect → `/auth/callback`） |
+
+### 實作備註
+
+- DB reads 皆走 cached modules（避免 public SSR DB 壓力）：`lib/modules/content/cached.ts`
+- SEO breadcrumbs（JSON-LD）：各頁 `app/[locale]/*/page.tsx` 產生
+- OAuth callback handler：`app/auth/callback/route.ts`（exchange code → redirect；redirect target 經 `qn_post_auth_redirect` cookie + `sanitizeNextPath` 保護）
 
 ---
 
@@ -597,8 +622,7 @@
 
 ### Security / Hardening（已知風險；修復追蹤：`meta/STEP_PLAN.md`）
 
-- ~~P0 Build/Availability：Gallery list/category/legacy routes 的 page modules 目前為空，導致 `npm run build` 失敗~~ → ✅ 已修復（PR-32：2026-01-22）
-- SEO drift：Blog/Gallery internal links 未全面使用 `lib/seo/url-builders.ts`（避免 SEO drift）→ `meta/STEP_PLAN.md`（PR-30, PR-33）
+- （目前無 active security/hardening drift；若發現新風險，請先依 `uiux_refactor.md` §2/§4 建立 claim，再把可拆 PR 的落地 steps 寫入 `meta/STEP_PLAN.md`。）
 
 ---
 
@@ -621,6 +645,7 @@
 | Content   | `lib/modules/content/io.ts` | `lib/modules/content/cached.ts` | —                                 | —                        |
 | Landing   | `lib/modules/landing/io.ts` | `lib/modules/landing/cached.ts` | `lib/modules/landing/admin-io.ts` | —                        |
 | Features  | `lib/features/io.ts`        | `lib/features/cached.ts`        | `lib/features/admin-io.ts`        | —                        |
+| Reports   | —                           | —                               | `lib/modules/reports/admin-io.ts` | `lib/types/reports.ts`   |
 
 ### Data Intelligence 模組（後台）
 

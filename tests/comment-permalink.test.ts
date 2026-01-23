@@ -5,7 +5,7 @@
  * Since buildPermalink() is server-only with DB access, we test the URL pattern
  * validation indirectly via url-builders integration.
  *
- * @see STEP_PLAN.md PR-9 (Comments/Akismet permalink v2 canonical)
+ * @see ARCHITECTURE.md §3.11 (v2 canonical path builders)
  * @see seo-canonical-links.test.ts (URL builders unit tests)
  */
 

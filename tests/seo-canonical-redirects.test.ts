@@ -5,7 +5,7 @@
  * not redirect (307), as required by ARCHITECTURE.md §3.11.
  *
  * @see ARCHITECTURE.md §3.11 (SEO / URL 單一來源)
- * @see doc/meta/STEP_PLAN.md PR-17 (Gallery item canonicalization)
+ * @see doc/archive/2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md (PR-17)
  */
 
 import { describe, it } from 'node:test';
