@@ -552,6 +552,7 @@
 - Pipeline contracts: `specs/completed/data-preprocessing-pipeline-spec.md`
 - Queue dispatcher/worker contracts: `specs/completed/embedding-queue-dispatcher-worker-spec.md`
 - Ops enablement / cron verification: `runbook/embeddings-preprocessing.md`
+- Security（OpenAI cost hardening）: Supabase Edge Functions（`generate-embedding`, `judge-preprocessing`）為 **service_role-only**（拒絕 anon/authenticated JWT；避免公開 anon key 觸發 OpenAI cost / DB pollution）；見 `../ARCHITECTURE.md`（Data Intelligence）與 `SECURITY.md`
 - 實作入口對照：見 [模組清單](#module-inventory-single-source)
 
 ---

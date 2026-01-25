@@ -278,6 +278,10 @@ interface ApiErrorResponse {
   - OpenRouter key：環境變數（server-only `lib/infrastructure/openrouter/**` 讀取）
   - Gemini key：環境變數（server-only `lib/infrastructure/gemini/**` 讀取；建議 `GEMINI_API_KEY`）
 - Next.js admin UI 只能「觸發 job/查詢狀態」，不得直接呼叫 OpenAI/OpenRouter SDK
+- **Supabase Edge Functions（OpenAI cost hardening）必須 service_role-only**：
+  - `supabase/functions/generate-embedding/*` 與 `supabase/functions/judge-preprocessing/*` 必須拒絕 `anon` / `authenticated` JWT（避免任何人用公開 anon key 觸發 OpenAI cost、或透過 function 內部 service role 寫入污染資料）。
+  - Next.js server-only 呼叫端必須使用 `createAdminClient().functions.invoke(...)`；不得使用 anon key 直接 `fetch ${SUPABASE_URL}/functions/v1/*`。
+  - Supabase Edge Functions 必須保持 JWT verification enabled（若關閉，role 判斷將失去意義）。
 
 **Guardrails（已落地；新增 module/deps 時需擴充）**
 

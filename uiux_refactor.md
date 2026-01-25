@@ -306,8 +306,9 @@ app/[locale]/admin/<module>/
 17. **[ARCHIVED ✅] Build/Availability：Gallery routes 空 module 導致 `npm run build` 失敗** → 修復完成（PR-32: 2026-01-22）
 18. **[ARCHIVED ✅] SEO：Blog internal links 未全面改用 URL builders** → 修復完成（Gallery: PR-30; Blog: PR-33: 2026-01-23）
 19. **[ARCHIVED ✅] Architecture：IO module bloat（>300 lines；需拆分避免維護/測試風險）** → `doc/archive/2026-01-23-step-plan-v13-io-module-split-guardrails.md`
-
-### 4.1 Admin routes must use `actions.ts`（ARCHIVED; keep for stable `@see`）
+20. **[ARCHIVED ✅] Security：Supabase Edge Functions（OpenAI）service_role-only（cost hardening）** → `doc/archive/2026-01-23-step-plan-v14-edge-functions-auth-hardening.md`
+ 
+ ### 4.1 Admin routes must use `actions.ts`（ARCHIVED; keep for stable `@see`）
 
 - Guardrail enforced by `tests/architecture-boundaries.test.ts`；修復流程請看本檔 §3.6。
 

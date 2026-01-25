@@ -13,6 +13,8 @@ Template: `TEMPLATE.md`
 | File | Date | Status | Title |
 | --- | --- | --- | --- |
 | [DESIGN_SSOT.md](DESIGN_SSOT.md) | 2026-01-21 | Active（Design SSoT / 最終權威） | Design SSoT（最終權威）— Home UIUX v2 + Gallery Hero/Hotspots + Hamburger Nav v2 |
+| [2026-01-23-step-plan-v14-edge-functions-auth-hardening.md](2026-01-23-step-plan-v14-edge-functions-auth-hardening.md) | 2026-01-23 | ARCHIVED / COMPLETE | 2026-01-23 - Step Plan V14（Edge Functions Auth Hardening）(Archive) |
+| [2026-01-23-step-plan-v13-io-module-split-guardrails.md](2026-01-23-step-plan-v13-io-module-split-guardrails.md) | 2026-01-23 | COMPLETE ✅ (Archived snapshot; active plan lives in `../meta/STEP_PLAN.md`) | 2026-01-23 - Step Plan V13（IO Module Split + Guardrails）(Archive) |
 | [2026-01-23-step-plan-v12-doc-code-hygiene-proxy.md](2026-01-23-step-plan-v12-doc-code-hygiene-proxy.md) | 2026-01-23 | COMPLETE ✅ (Archived snapshot; active plan lives in `../meta/STEP_PLAN.md`) | 2026-01-23 - Step Plan V12（Doc/Code Hygiene + Proxy Migration）(Archive) |
 | [2026-01-23-step-plan-v11-build-seo-url-builders.md](2026-01-23-step-plan-v11-build-seo-url-builders.md) | 2026-01-23 | COMPLETE ✅ (Archived snapshot; active plan lives in ../meta/STEP_PLAN.md) | 2026-01-23 - Step Plan V11（Build + SEO URL Builders）(Archive) |
 | [2026-01-22-step-plan-v9-pr-29-api-feature-gate-cached.md](2026-01-22-step-plan-v9-pr-29-api-feature-gate-cached.md) | 2026-01-22 | COMPLETE ✅ (Archived snapshot; active plan lives in `../meta/STEP_PLAN.md`) | 2026-01-22 - Step Plan V9（Perf）— PR-29（Archive） |

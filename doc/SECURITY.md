@@ -112,6 +112,12 @@
   - Gemini SDK / API access：只允許在 `lib/infrastructure/gemini/**`（server-only）
   - OpenRouter API access：只允許在 `lib/infrastructure/openrouter/**`（server-only）
   - OpenAI SDK：只允許在 `supabase/functions/**`（Edge Functions；與 Next.js runtime 隔離）
+- **Supabase Edge Functions（OpenAI cost hardening）必須 service_role-only**：
+  - 目的：避免任何人用公開的 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 直接呼叫 `supabase/functions/*` 觸發 OpenAI cost，或透過 function 內部 service role 寫入污染資料。
+  - 規則：
+    - `supabase/functions/generate-embedding/*` 與 `supabase/functions/judge-preprocessing/*` 必須拒絕 `anon` / `authenticated` JWT。
+    - Next.js server-only 呼叫端必須使用 `SUPABASE_SERVICE_ROLE_KEY`（例如 `createAdminClient().functions.invoke(...)`），不得以 anon key 直連 `/functions/v1/*`。
+    - Supabase Edge Functions 請保持 JWT verification enabled（若關閉，role 判斷將失去意義）。
 
 ---
 

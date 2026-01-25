@@ -27,6 +27,8 @@ This runbook explains how to enable the **Embeddings + Preprocessing pipeline** 
 - [ ] Edge Functions deployed:
   - `supabase/functions/generate-embedding/`
   - `supabase/functions/judge-preprocessing/`
+- [ ] Edge Functions access is hardened (service_role-only):
+  - `generate-embedding` / `judge-preprocessing` must reject `anon` / `authenticated` JWT (prevents public anon key abuse / OpenAI cost spike)
 - [ ] Vercel env vars configured:
   - Required: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`
   - Required for scheduling: `CRON_SECRET`, `WORKER_SECRET`
@@ -80,6 +82,11 @@ Used by:
 
 - `supabase/functions/generate-embedding/` (embeddings API)
 - `supabase/functions/judge-preprocessing/` (LLM-as-a-Judge)
+
+Notes:
+
+- Keep Supabase Edge Functions **JWT verification enabled** (default).
+- In this repo, these two functions are **service_role-only** (cost hardening). Calls using the public anon key must return 401.
 
 ### 3.2 App Runtime Secrets (Vercel / Server-only)
 
@@ -174,6 +181,7 @@ order by target_type;
 
 - Confirm `CRON_SECRET` (cron endpoints) / `WORKER_SECRET` (worker endpoint) are set and match headers.
 - For QStash: ensure signing keys are configured and the request includes `Upstash-Signature`.
+- If calling Supabase Edge Functions directly: ensure you use a **service_role** token (do not use anon/authenticated JWT).
 
 ### No embeddings generated
 

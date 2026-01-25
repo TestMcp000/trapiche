@@ -56,6 +56,42 @@ interface OpenAIChatResponse {
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const JUDGE_MODEL = 'gpt-4o-mini';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Authentication (Cost hardening)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function decodeBase64Url(input: string): string {
+  const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
+  const padLength = (4 - (base64.length % 4)) % 4;
+  const padded = base64 + '='.repeat(padLength);
+  return atob(padded);
+}
+
+function extractJwtToken(req: Request): string | null {
+  const authHeader = req.headers.get('authorization');
+  if (authHeader) {
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (match) return match[1];
+  }
+
+  const apiKey = req.headers.get('apikey') ?? req.headers.get('x-api-key');
+  return apiKey ?? null;
+}
+
+function getJwtRole(token: string): string | null {
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
+
+  try {
+    const payloadJson = decodeBase64Url(parts[1]);
+    const payload = JSON.parse(payloadJson) as Record<string, unknown>;
+    const role = payload['role'];
+    return typeof role === 'string' ? role : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Coherence evaluation prompt.
  * @see DATA_PREPROCESSING.md §5.3
@@ -142,6 +178,14 @@ serve(async (req: Request): Promise<Response> => {
   // Only accept POST
   if (req.method !== 'POST') {
     return jsonResponse({ success: false, error: 'Method not allowed' }, 405);
+  }
+
+  // Cost hardening: Require service_role token (reject anon/authenticated).
+  // Rationale: anon key is public; without this, anyone can trigger OpenAI calls.
+  const token = extractJwtToken(req);
+  const role = token ? getJwtRole(token) : null;
+  if (role !== 'service_role') {
+    return jsonResponse({ success: false, error: 'Unauthorized' }, 401);
   }
 
   try {

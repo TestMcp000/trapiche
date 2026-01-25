@@ -45,7 +45,7 @@
 
 - Canonical drift tracker：`uiux_refactor.md` §4（in-code `@see` 會引用；不要改號）
 - 現況：無 active drift（以 `uiux_refactor.md` §4 的狀態為準）
-- 最近歸檔：IO module bloat guardrails（`uiux_refactor.md` §4 item 19；snapshot：`doc/archive/2026-01-23-step-plan-v13-io-module-split-guardrails.md`）
+- 最近歸檔：Edge Functions auth hardening（`uiux_refactor.md` §4 item 20；snapshot：`doc/archive/2026-01-23-step-plan-v14-edge-functions-auth-hardening.md`）
 - Build note：`npm run build` 需先設定 `.env.local`（至少 `NEXT_PUBLIC_SITE_URL`；見 `README.md` 與 `doc/runbook/e2e-acceptance.md`）
 - 若你只想看結論：看 `uiux_refactor.md` §4 每個 item 的狀態（ACTIVE/ARCHIVED/COMPLETE）
 - 現況：以 `uiux_refactor.md` §4 為準；落地 steps 以 `doc/meta/STEP_PLAN.md` 為準

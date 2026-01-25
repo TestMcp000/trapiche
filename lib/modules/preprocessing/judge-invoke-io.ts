@@ -7,6 +7,7 @@
  */
 import 'server-only';
 
+import { createAdminClient } from '@/lib/infrastructure/supabase/admin';
 import type { JudgeRequest, JudgeResult, QualifiedChunk, EnrichmentContext } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,34 +35,25 @@ const MIN_CONTENT_FOR_SAMPLING = 50;
  * @returns Judge result with score, standalone flag, and reason
  */
 export async function judgeChunk(request: JudgeRequest): Promise<JudgeResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('[judgeChunk] Supabase URL or Anon Key not configured');
-    return { success: false, error: 'Supabase not configured' };
-  }
-
   try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/judge-preprocessing`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${supabaseAnonKey}`,
-      },
-      body: JSON.stringify(request),
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase.functions.invoke('judge-preprocessing', {
+      body: request,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[judgeChunk] Edge Function error:', response.status, errorText);
-      return { success: false, error: `Edge Function error: ${response.status}` };
+    if (error) {
+      console.error('[judgeChunk] Edge Function error:', error);
+      return { success: false, error: error.message || 'Edge Function invocation failed' };
     }
 
-    const result: JudgeResult = await response.json();
-    return result;
+    if (!data) {
+      return { success: false, error: 'Empty response from Edge Function' };
+    }
+
+    return data as JudgeResult;
   } catch (error) {
-    console.error('[judgeChunk] Network error:', error);
+    console.error('[judgeChunk] Unexpected error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Network error',
