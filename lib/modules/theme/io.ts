@@ -29,15 +29,13 @@ export async function getSiteConfig(): Promise<SiteConfigRow | null> {
       .from('site_config')
       .select('*')
       .eq('id', 1)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
-      // PGRST116: Row not found (expected if table is empty or id=1 doesn't exist)
       // PGRST106: Table does not exist (migration not applied)
       // Other errors: RLS denial, network issues, etc.
-      if (error.code !== 'PGRST116') {
-        console.warn('[getSiteConfig] Error reading site_config:', error.message);
-      }
+      console.warn('[getSiteConfig] Error reading site_config:', error.message);
       return null;
     }
 

@@ -2,16 +2,13 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { NextIntlClientProvider, useTranslations } from 'next-intl';
-import type { AbstractIntlMessages } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import AdminSignOutButton from '@/components/admin/common/AdminSignOutButton';
 
 interface AdminSidebarProps {
   /** Route locale from URL path — used for hrefs and UI */
   locale: string;
   userEmail: string;
-  /** Scoped messages for admin namespace */
-  messages: AbstractIntlMessages;
 }
 
 interface NavItem {
@@ -31,7 +28,7 @@ type NavEntry = NavItem | NavDivider;
 
 /**
  * Inner component that uses i18n hooks.
- * Must be wrapped by NextIntlClientProvider.
+ * Must be rendered under a NextIntlClientProvider.
  */
 function AdminSidebarContent({
   locale,
@@ -422,14 +419,6 @@ function AdminSidebarContent({
 export default function AdminSidebar({
   locale,
   userEmail,
-  messages,
 }: AdminSidebarProps) {
-  return (
-    <NextIntlClientProvider messages={messages} locale={locale}>
-      <AdminSidebarContent
-        locale={locale}
-        userEmail={userEmail}
-      />
-    </NextIntlClientProvider>
-  );
+  return <AdminSidebarContent locale={locale} userEmail={userEmail} />;
 }

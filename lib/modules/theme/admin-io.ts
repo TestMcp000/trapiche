@@ -28,7 +28,8 @@ export async function getSiteConfigAdmin(): Promise<SiteConfigRow | null> {
       .from('site_config')
       .select('*')
       .eq('id', 1)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       console.error('[getSiteConfigAdmin] Error:', error.message);
@@ -76,7 +77,8 @@ export async function updateSiteConfig(
         .from('site_config')
         .select('page_themes')
         .eq('id', 1)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       updatePayload.page_themes = {
         ...(current?.page_themes ?? {}),
@@ -91,7 +93,8 @@ export async function updateSiteConfig(
         .from('site_config')
         .select('theme_overrides')
         .eq('id', 1)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       const existingOverrides = (current?.theme_overrides ?? {}) as Record<
         string,
