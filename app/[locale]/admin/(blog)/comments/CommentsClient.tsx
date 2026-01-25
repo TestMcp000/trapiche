@@ -64,7 +64,7 @@ type CommentStatus = 'all' | 'approved' | 'pending' | 'spam';
 /** Wrapper that provides NextIntlClientProvider for admin translations */
 export default function CommentsClient(props: CommentsClientProps) {
   return (
-    <NextIntlClientProvider messages={props.messages}>
+    <NextIntlClientProvider locale={props.routeLocale} messages={props.messages}>
       <CommentsClientContent {...props} />
     </NextIntlClientProvider>
   );

@@ -57,7 +57,7 @@ interface Props {
 
 export default function GalleryItemDetailClient(props: Props) {
   return (
-    <NextIntlClientProvider messages={props.messages}>
+    <NextIntlClientProvider locale={props.locale} messages={props.messages}>
       <GalleryItemDetailContent {...props} />
     </NextIntlClientProvider>
   );

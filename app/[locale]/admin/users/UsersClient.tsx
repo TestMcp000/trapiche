@@ -342,7 +342,7 @@ export default function UsersClient({
   pagination,
 }: UsersClientProps) {
   return (
-    <NextIntlClientProvider messages={messages}>
+    <NextIntlClientProvider locale={routeLocale} messages={messages}>
       <UsersClientContent
         initialUsers={initialUsers}
         routeLocale={routeLocale}

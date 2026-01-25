@@ -32,7 +32,7 @@ interface GalleryClientProps {
 /** Wrapper that provides NextIntlClientProvider for admin translations */
 export default function GalleryClient(props: GalleryClientProps) {
   return (
-    <NextIntlClientProvider messages={props.messages}>
+    <NextIntlClientProvider locale={props.routeLocale} messages={props.messages}>
       <GalleryClientContent {...props} />
     </NextIntlClientProvider>
   );

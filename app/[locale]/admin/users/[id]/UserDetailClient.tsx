@@ -97,7 +97,7 @@ export default function UserDetailClient({
   messages,
 }: UserDetailClientProps) {
   return (
-    <NextIntlClientProvider messages={messages}>
+    <NextIntlClientProvider locale={routeLocale} messages={messages}>
       <UserDetailClientContent
         userDetail={userDetail}
         routeLocale={routeLocale}

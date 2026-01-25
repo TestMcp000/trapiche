@@ -46,7 +46,7 @@ interface PostFormProps {
 /** Wrapper that provides NextIntlClientProvider for admin translations */
 export default function PostForm(props: PostFormProps) {
   return (
-    <NextIntlClientProvider messages={props.messages}>
+    <NextIntlClientProvider locale={props.routeLocale} messages={props.messages}>
       <PostFormContent {...props} />
     </NextIntlClientProvider>
   );

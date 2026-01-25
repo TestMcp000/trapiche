@@ -47,7 +47,7 @@ interface FormData {
 /** Wrapper that provides NextIntlClientProvider for admin translations */
 export default function CategoriesClient(props: CategoriesClientProps) {
   return (
-    <NextIntlClientProvider messages={props.messages}>
+    <NextIntlClientProvider locale={props.routeLocale} messages={props.messages}>
       <CategoriesClientContent {...props} />
     </NextIntlClientProvider>
   );

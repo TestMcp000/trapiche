@@ -22,7 +22,7 @@ interface AdminPostsFilterProps {
 /** Wrapper that provides NextIntlClientProvider for admin translations */
 export default function AdminPostsFilter(props: AdminPostsFilterProps) {
   return (
-    <NextIntlClientProvider messages={props.messages}>
+    <NextIntlClientProvider locale={props.routeLocale} messages={props.messages}>
       <AdminPostsFilterContent {...props} />
     </NextIntlClientProvider>
   );
