@@ -546,6 +546,21 @@ function GalleryClientContent({
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => router.push(`/${routeLocale}/admin/gallery/${item.id}`)}
+                          className="p-2 text-gray-500 hover:text-indigo-600 transition-colors"
+                          title="Hotspots / 主視覺"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 21s-6-4.35-6-10a6 6 0 0 1 12 0c0 5.65-6 10-6 10z"
+                            />
+                            <circle cx="12" cy="11" r="2.5" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={() => handleEdit(item)}
                           className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
                           title="編輯"

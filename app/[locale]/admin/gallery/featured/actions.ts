@@ -88,7 +88,7 @@ export async function saveFeaturedPinOrder(
   orderedPinIds: string[],
   locale: string
 ): Promise<{ success: boolean; error?: string }> {
-  const result = await saveFeaturedPinOrderAdmin(orderedPinIds);
+  const result = await saveFeaturedPinOrderAdmin(surface, orderedPinIds);
 
   if ('error' in result) {
     return { success: false, error: result.error };

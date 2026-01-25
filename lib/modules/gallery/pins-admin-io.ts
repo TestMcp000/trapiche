@@ -148,14 +148,52 @@ export async function removeFeaturedPinAdmin(
 }
 
 export async function saveFeaturedPinOrderAdmin(
+  surface: GalleryPinSurface,
   orderedPinIds: string[]
 ): Promise<{ success: true } | { error: string }> {
   const supabase = await createClient();
 
-  // Batch update sort_order using upsert
-  const updates = orderedPinIds.map((id, i) => ({ id, sort_order: i }));
+  // Fetch existing pins for this surface to prevent accidental inserts via upsert.
+  const { data: existingPins, error: readError } = await supabase
+    .from('gallery_pins')
+    .select('id, item_id')
+    .eq('surface', surface);
 
-  const { error } = await supabase.from('gallery_pins').upsert(updates, { onConflict: 'id' });
+  if (readError) {
+    console.error('Error fetching existing pins:', readError);
+    return { error: readError.message };
+  }
+
+  const pins = existingPins || [];
+  const existingIds = new Set(pins.map((p) => p.id));
+  const orderedSet = new Set(orderedPinIds);
+
+  if (orderedPinIds.length !== orderedSet.size) {
+    return { error: '排序清單包含重複的置頂項目 ID' };
+  }
+
+  if (orderedSet.size !== existingIds.size) {
+    return { error: '排序清單必須包含此分頁的所有置頂項目' };
+  }
+
+  const invalidIds = orderedPinIds.filter((id) => !existingIds.has(id));
+  if (invalidIds.length > 0) {
+    return {
+      error: `無效的置頂項目 ID: ${invalidIds.slice(0, 3).join(', ')}${invalidIds.length > 3 ? '...' : ''}`,
+    };
+  }
+
+  const itemIdByPinId = new Map(pins.map((p) => [p.id, p.item_id]));
+  const updates = orderedPinIds.map((id, i) => ({
+    id,
+    surface,
+    item_id: itemIdByPinId.get(id),
+    sort_order: i,
+  }));
+
+  const { error } = await supabase
+    .from('gallery_pins')
+    .upsert(updates, { onConflict: 'id' });
 
   if (error) {
     return { error: error.message };
