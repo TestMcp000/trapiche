@@ -100,6 +100,15 @@
 
 Troubleshooting (historical): `../archive/2025-12-24-oauth-troubleshooting.md`
 
+Troubleshooting (common):
+- If the redirect ends up on `/<locale>/login?error=no_code#error=server_error...Unable+to+exchange+external+code...`:
+  - This is **Supabase failing to exchange the Google authorization code** (provider-side), not an app-side `exchangeCodeForSession()` bug.
+  - Check Supabase Dashboard → Authentication → Providers → Google: Client ID/Secret are correct (re-copy the Client Secret if rotated).
+  - Check Google Cloud Console → OAuth client (Web application):
+    - Authorized redirect URI is exactly `https://<project-ref>.supabase.co/auth/v1/callback` (no typo / no trailing slash).
+    - OAuth consent screen is configured and the signing-in account is allowed (Testing → test users, or Published).
+  - Inspect Supabase Auth logs to see the underlying reason (e.g. `invalid_grant`, `unauthorized_client`).
+
 ## 4. Vercel Deploy（必做）
 
 1. Import the repo into Vercel (Next.js).

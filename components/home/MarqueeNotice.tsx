@@ -19,8 +19,6 @@ interface MarqueeNoticeProps {
 }
 
 export function MarqueeNotice({ label, text }: MarqueeNoticeProps) {
-  const [isPaused, setIsPaused] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [animationDuration, setAnimationDuration] = useState(30);
 
@@ -38,10 +36,7 @@ export function MarqueeNotice({ label, text }: MarqueeNoticeProps) {
   return (
     <div className="w-full overflow-hidden bg-[#EEEBE3] border-b border-[#E5E1D9]">
       <div 
-        ref={containerRef}
-        className="flex items-center h-10 px-4 md:px-8"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
+        className="marquee-notice flex items-center h-10 px-4 md:px-8"
       >
         {/* Fixed Notice Label */}
         <div className="shrink-0 mr-4">
@@ -54,10 +49,9 @@ export function MarqueeNotice({ label, text }: MarqueeNoticeProps) {
         <div className="flex-1 overflow-hidden relative">
           <div
             ref={contentRef}
-            className="inline-flex whitespace-nowrap text-sm text-[#4A4A4A]"
+            className="marquee-content inline-flex whitespace-nowrap text-sm text-[#4A4A4A]"
             style={{
               animation: `marquee ${animationDuration}s linear infinite`,
-              animationPlayState: isPaused ? 'paused' : 'running',
             }}
           >
             {/* Repeat content for seamless loop */}
@@ -69,6 +63,10 @@ export function MarqueeNotice({ label, text }: MarqueeNoticeProps) {
       </div>
 
       <style jsx>{`
+        .marquee-notice:hover .marquee-content {
+          animation-play-state: paused;
+        }
+
         @keyframes marquee {
           0% {
             transform: translateX(0);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/infrastructure/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DEFAULT_LOCALE, isValidLocale, type Locale } from '@/lib/i18n/locales';
 import {
   POST_AUTH_REDIRECT_COOKIE,
@@ -18,8 +18,46 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, '');
+    const hashParams = new URLSearchParams(hash);
+    const oauthError = hashParams.get('error');
+    const oauthErrorCode = hashParams.get('error_code');
+    const oauthErrorDescription = hashParams.get('error_description');
+
+    if (oauthError || oauthErrorDescription) {
+      const sanitizeDetails = (input: string) => {
+        let decoded = input;
+        try {
+          decoded = decodeURIComponent(decoded);
+        } catch {
+          // Ignore decode errors
+        }
+        return decoded.replace(/(external code:)\s*.*/i, '$1 <redacted>');
+      };
+
+      const message = [
+        'OAuth sign-in failed.',
+        oauthErrorCode ? `Code: ${oauthErrorCode}.` : null,
+        oauthErrorDescription ? `Details: ${sanitizeDetails(oauthErrorDescription)}` : null,
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      const url = new URL(window.location.href);
+      if (!url.searchParams.get('error')) {
+        url.searchParams.set('error', message);
+      }
+      url.hash = '';
+      router.replace(`${url.pathname}?${url.searchParams.toString()}`);
+    }
+  }, [router]);
+
+  const urlError = searchParams.get('error');
+
   useEffect(() => {
     params.then((p) => {
       const nextLocale = p.locale?.toLowerCase() ?? '';
@@ -80,9 +118,9 @@ export default function LoginPage({ params }: LoginPageProps) {
           </div>
           
           {/* Error Message */}
-          {error && (
+          {(error || urlError) && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>
             </div>
           )}
           
