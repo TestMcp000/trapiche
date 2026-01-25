@@ -1,7 +1,7 @@
 # Design SSoT（最終權威）— Home UIUX v2 + Gallery Hero/Hotspots + Hamburger Nav v2
 
 > **Status**: Active（Design SSoT / 最終權威）  
-> **Last Updated**: 2026-01-21  
+> **Last Updated**: 2026-01-25  
 > **Scope**: Home（UIUX v2）/ Gallery Hero Image / Image Hotspots / Hamburger Nav v2（IA + motion）  
 > **Contract**: `doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md`（PRD/Implementation Contract）  
 > **Implemented SSoT**: `doc/SPEC.md`（已落地行為；若與本檔衝突，以本文為設計最終權威、並在 `doc/meta/STEP_PLAN.md` 建 drift 修復）  
@@ -101,7 +101,7 @@
   - ESC
   - 點右上角 close
 - 可及性：
-  - pin 可 tab（順序使用 index + 1）
+  - pin 可 tab（使用自然 tab order；避免正數 tabIndex；aria-label 提供序號）
   - modal 需 focus trap、開啟時將焦點放到 close，關閉後回復先前焦點
 
 ### 3.3 Mobile/無障礙 fallback（List）

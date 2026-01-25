@@ -17,7 +17,40 @@ import 'server-only';
 
 import { createAnonClient } from '@/lib/infrastructure/supabase/anon';
 import type { GalleryHotspotPublic } from '@/lib/types/gallery';
+import { validateOptionalExternalUrl } from '@/lib/validators/external-url';
 import { sortHotspots } from './hotspots-sort';
+
+/**
+ * Convert a raw hotspot row into a public-safe DTO.
+ *
+ * Security hardening:
+ * - read_more_url is treated as untrusted input and is validated against the
+ *   external URL allowlist (https/mailto). Invalid URLs are dropped.
+ */
+export function toGalleryHotspotPublic(row: {
+    id: string;
+    x: number;
+    y: number;
+    media: string;
+    preview: string | null;
+    symbolism: string | null;
+    description_md: string;
+    read_more_url: string | null;
+}): GalleryHotspotPublic {
+    const urlResult = validateOptionalExternalUrl(row.read_more_url);
+    const safeReadMoreUrl = urlResult.valid ? (urlResult.data ?? null) : null;
+
+    return {
+        id: row.id,
+        x: row.x,
+        y: row.y,
+        media: row.media,
+        preview: row.preview,
+        symbolism: row.symbolism,
+        description_md: row.description_md,
+        read_more_url: safeReadMoreUrl,
+    };
+}
 
 /**
  * Get visible hotspots for a gallery item
@@ -61,15 +94,6 @@ export async function getHotspotsByItemId(
     // Sort using shared pure function
     const sorted = sortHotspots(hotspots);
 
-    // Map to public DTO (exclude sort_order and created_at)
-    return sorted.map((h) => ({
-        id: h.id,
-        x: h.x,
-        y: h.y,
-        media: h.media,
-        preview: h.preview,
-        symbolism: h.symbolism,
-        description_md: h.description_md,
-        read_more_url: h.read_more_url,
-    }));
+    // Map to public DTO (exclude sort_order/created_at; sanitize external URLs)
+    return sorted.map((h) => toGalleryHotspotPublic(h));
 }

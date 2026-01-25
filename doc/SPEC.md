@@ -197,6 +197,8 @@
   - 新增 hotspot：auto mode → `sort_order=NULL`；manual mode → append（`max(sort_order)+1`）
 - Markdown 安全邊界：
   - hotspots 的 `description_md` 一律走 `lib/markdown/hotspots.ts`（server-only；禁 raw HTML + sanitize；links 只允許 https/mailto）
+- External URL allowlist（render-side hardening）：
+  - hotspots 的 `read_more_url` 視為不可信輸入；public DTO 轉換會用 `lib/validators/external-url.ts` 過濾（invalid → `null`；實作：`lib/modules/gallery/gallery-hotspots-io.ts#toGalleryHotspotPublic`）
 - Cache / revalidation：
   - Public reads：`lib/modules/gallery/cached.ts`（tag=`gallery`）
   - Admin mutations：`revalidateTag('gallery')`（並視需要補 `revalidatePath()`）

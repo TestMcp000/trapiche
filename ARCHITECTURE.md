@@ -38,6 +38,7 @@
   - Trusted admin markdown：`lib/markdown/server.ts`（posts / site_content 等管理員內容）。
   - High-exposure hotspots markdown：`lib/markdown/hotspots.ts`（`gallery_hotspots.description_md`；禁 raw HTML + sanitize + https/mailto links）。
   - Untrusted markdown（LLM output / share links / 非 admin 來源）：**必須**使用 `lib/markdown/untrusted.ts`（禁 raw HTML + sanitize + https/mailto links）。
+- External URL allowlist（https/mailto only）：任何來自 DB/JSON 的 external `href` 必須使用 `lib/validators/external-url.ts` 做 write-side + render-side hardening（例：`company_settings.home_event_cta_url`, `gallery_hotspots.read_more_url`, `hamburger_nav` external targets）。
 - Public UI 不得 import `components/admin/*` 或 admin-only dependencies。
 - Feature visibility (blog/gallery) 必須走 `feature_settings` + `lib/features/cached.ts`。
 - Public SSR 讀取必須使用 `cachedQuery` 包裝的 cached modules（例如 `lib/modules/*/cached.ts`、`lib/features/cached.ts`）。

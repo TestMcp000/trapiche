@@ -267,6 +267,37 @@ app/[locale]/admin/<module>/
    - 必填：`SUPABASE_SERVICE_ROLE_KEY`
    - 若啟用 AI Analysis 排程：`CRON_SECRET` + `OPENROUTER_API_KEY`
 
+### 3.10 External URLs：write-side + render-side hardening（https/mailto）
+
+> 目標：避免 DB/JSON 內的 URL（尤其是 `href`）成為 XSS / open-redirect / policy drift 的入口。  
+> Single source of truth: `lib/validators/external-url.ts`（`https:`/`mailto:` allowlist）。
+
+**觸發條件（任一即需修復）**
+
+1. Public/Client render 直接使用 untrusted URL：
+   - `href={...}` / `window.open(...)` / `location.href = ...` 的來源直接來自 DB（`company_settings` / `gallery_hotspots.read_more_url` / `site_content` JSON）但沒有經 allowlist 驗證
+2. Write-side 有驗證但 render-side 無 hardening（只要存在 legacy/手動改 DB 的可能性，就視為風險）
+
+**修復步驟（照順序做；避免模糊）**
+
+1. 找出所有 URL 欄位的 render 點（先列出 evidence paths）：
+   - `rg -n "\\bhref=\\{|window\\.open\\(" app components lib`
+   - `rg -n "read_more_url|home_event_cta_url|external" app components lib`
+2. 把「URL allowlist」收斂到同一個 validator：
+   - Required: `validateExternalUrl()`
+   - Optional: `validateOptionalExternalUrl()`
+   - Render-side quick check: `isValidExternalUrl()`
+3. Public 資料邊界先硬化（**優先在 server-only IO/DTO 層做 sanitize**，讓 client 永遠拿不到危險 URL）：
+   - Example（Hotspots）：在 `lib/modules/gallery/gallery-hotspots-io.ts` 的 public DTO 轉換（`toGalleryHotspotPublic()`）把 `read_more_url` 用 `validateOptionalExternalUrl()` 過濾；invalid 一律回 `null`。
+4. Client component 再補一層防呆（可選但建議，尤其是 `window.open`）：
+   - 任何 `window.open(href)` 前，先用 `isValidExternalUrl(href)` guard；invalid → 不開啟並提示（或不 render）。
+5. Guardrail tests（必做；避免回歸）：
+   - Hotspots：新增/維護 `tests/modules/gallery-hotspots-public-dto.test.ts`（invalid protocol 必須被 drop）
+   - 通用 validator：`tests/validators/external-url.test.ts`（https/mailto allowlist；reject `javascript:`/`data:`/`//`）
+6. 驗證（必做）：
+   - `npm test`, `npm run type-check`, `npm run lint`
+   - 重跑觸發條件 grep，確認已無「未經驗證就 render URL」的新命中
+
 ---
 
 **Canonical references (avoid duplication)**
@@ -283,7 +314,7 @@ app/[locale]/admin/<module>/
 > 本節的 item 編號（尤其是 item 2/3/6/8）已被多處 in-code `@see uiux_refactor.md §4 item ...` 引用；請勿改號。
 > 本檔只保留「當前狀態 + 待修復 / 待落地」的最小資訊；詳細落地記錄請放/參照 `doc/archive/*`。
 
-**狀態（2026-01-23）**
+**狀態（2026-01-25）**
 
 - Open drift items：0
 
@@ -307,6 +338,7 @@ app/[locale]/admin/<module>/
 18. **[ARCHIVED ✅] SEO：Blog internal links 未全面改用 URL builders** → 修復完成（Gallery: PR-30; Blog: PR-33: 2026-01-23）
 19. **[ARCHIVED ✅] Architecture：IO module bloat（>300 lines；需拆分避免維護/測試風險）** → `doc/archive/2026-01-23-step-plan-v13-io-module-split-guardrails.md`
 20. **[ARCHIVED ✅] Security：Supabase Edge Functions（OpenAI）service_role-only（cost hardening）** → `doc/archive/2026-01-23-step-plan-v14-edge-functions-auth-hardening.md`
+21. **[ARCHIVED ✅] Security：Hotspots `read_more_url` render-side allowlist hardening** → Fixed (2026-01-25); public DTO sanitize: `lib/modules/gallery/gallery-hotspots-io.ts`; guardrail test: `tests/modules/gallery-hotspots-public-dto.test.ts`
  
  ### 4.1 Admin routes must use `actions.ts`（ARCHIVED; keep for stable `@see`）
 

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -48,20 +48,23 @@ function AdminSidebarContent({
   const tCommon = useTranslations("admin.common");
   const tButtons = useTranslations("admin.buttons");
 
-  // Collapsed state for groups
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // Collapsed state for groups (persisted)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") {
+      return {};
+    }
 
-  // Load collapsed state from localStorage on mount
-  useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        setCollapsed(JSON.parse(stored));
+        return JSON.parse(stored) as Record<string, boolean>;
       }
     } catch {
       // Ignore localStorage errors
     }
-  }, []);
+
+    return {};
+  });
 
   // Save collapsed state to localStorage
   const toggleGroup = (groupKey: string) => {
@@ -524,7 +527,7 @@ function AdminSidebarContent({
       {/* Navigation */}
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-1">
-          {navItems.map((item, index) => {
+          {navItems.map((item) => {
             // Handle collapsible group
             if ("groupKey" in item) {
               const group = item as NavGroup;
