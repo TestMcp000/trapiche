@@ -29,8 +29,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const alternates = getMetadataAlternates('/platforms', locale);
   
-  const title = '技術平台｜Quantum Nexus LNK';
-  const description = '了解我們使用的現代技術平台和工具';
+  const title = '講座／活動';
+  const description = '查看近期活動與相關資訊';
 
   return {
     title,

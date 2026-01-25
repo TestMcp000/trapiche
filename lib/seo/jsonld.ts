@@ -21,6 +21,8 @@ export interface ArticleJsonLdInput {
   image?: string;
   url: string;
   locale: string;
+  publisherName?: string;
+  publisherUrl?: string;
 }
 
 export interface BreadcrumbItem {
@@ -32,6 +34,14 @@ export interface BreadcrumbItem {
  * Generate BlogPosting JSON-LD for an article
  */
 export function generateArticleJsonLd(input: ArticleJsonLdInput): object {
+  const defaultPublisherName = (() => {
+    try {
+      return new URL(SITE_URL).hostname;
+    } catch {
+      return SITE_URL;
+    }
+  })();
+
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -46,8 +56,8 @@ export function generateArticleJsonLd(input: ArticleJsonLdInput): object {
     inLanguage: 'zh-Hant',
     publisher: {
       '@type': 'Organization',
-      name: 'Quantum Nexus LNK',
-      url: SITE_URL,
+      name: input.publisherName || defaultPublisherName,
+      url: input.publisherUrl || SITE_URL,
     },
   };
 
@@ -89,10 +99,18 @@ export function generateBreadcrumbJsonLd(items: BreadcrumbItem[]): object {
  * Generate WebSite JSON-LD (for homepage)
  */
 export function generateWebSiteJsonLd(): object {
+  const defaultSiteName = (() => {
+    try {
+      return new URL(SITE_URL).hostname;
+    } catch {
+      return SITE_URL;
+    }
+  })();
+
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Quantum Nexus LNK',
+    name: defaultSiteName,
     url: SITE_URL,
     inLanguage: ['zh-Hant'],
     potentialAction: {

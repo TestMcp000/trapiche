@@ -1,7 +1,7 @@
 # 功能規格（已實作行為 / SSoT）
 
 > 已落地功能與技術細節（Single Source of Truth）  
-> 最後更新: 2026-01-23  
+> 最後更新: 2026-01-25  
 > 狀態: Active
 
 本文件描述「**已實作**」的行為與其技術細節（以本檔為準）。
@@ -54,7 +54,7 @@
 - 講座邀請 CTA（Floating FAB）：
   - 來源：`company_settings.home_event_cta_url`（可選：`home_event_cta_label_zh`）
   - URL allowlist：只允許 `https:`/`mailto:`（write-side + render-side hardening；invalid → 不 render）
-- Suggest section：目前為 placeholder（尚未接 blog/個人化）
+- Suggest section：顯示最新 4 篇 public posts（`getPublicPostsCached({ limit: 4, sort: 'newest' })`；由 `app/[locale]/page.tsx` 單一資料擁有者抓取並傳入 `components/home/HomePageV2.tsx`）
 - SEO：Home JSON-LD 由 `app/[locale]/page.tsx` 產生
 
 ### 路由
@@ -93,6 +93,7 @@
 - DB reads 皆走 cached modules（避免 public SSR DB 壓力）：`lib/modules/content/cached.ts`
 - SEO breadcrumbs（JSON-LD）：各頁 `app/[locale]/*/page.tsx` 產生
 - OAuth callback handler：`app/auth/callback/route.ts`（exchange code → redirect；redirect target 經 `qn_post_auth_redirect` cookie + `sanitizeNextPath` 保護）
+- Next proxy entrypoint：`proxy.ts`（Supabase `updateSession()` + next-intl routing；另包含 `?code=` 回到 Site URL 時的 `/auth/callback` fallback redirect）
 
 ---
 

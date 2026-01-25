@@ -3,83 +3,24 @@ import { getTranslations } from "next-intl/server";
 import { getMetadataAlternates, SITE_URL } from "@/lib/seo";
 import { generateHomePageJsonLd } from "@/lib/seo/jsonld";
 import { HomePageV2, type HotspotWithHtml } from "@/components/home";
+import { pickLocaleContent } from "@/lib/i18n/pick-locale";
 import {
   getPublishedSiteContentCached,
   getVisibleServicesCached,
   getCompanySettingsCached,
   getHamburgerNavCached,
 } from "@/lib/modules/content/cached";
+import { getPublicPostsCached } from "@/lib/modules/blog/cached";
 import {
   getVisibleGalleryPinsCached,
   getHotspotsByItemIdCached,
 } from "@/lib/modules/gallery/cached";
 import { resolveHamburgerNav } from "@/lib/site/nav-resolver";
 import { hotspotsMarkdownToHtml } from "@/lib/markdown/hotspots";
-import type { SiteContent, CompanySetting } from "@/lib/types/content";
+import type { SiteContent } from "@/lib/types/content";
 import { getCompanySettingValue } from "@/lib/modules/content/company-settings";
-import { pickLocaleContent } from "@/lib/i18n/pick-locale";
-
-/**
- * Resolve siteName using SSoT fallback chain (ARCHITECTURE.md §3.11):
- * 1. company_settings.company_name_short
- * 2. site_content(section_key='metadata') title
- * 3. next-intl metadata.title
- * No hardcoded brand strings allowed.
- */
-async function resolveSiteName(
-  settings: CompanySetting[],
-  siteContent: SiteContent[],
-  locale: string,
-): Promise<string> {
-  // Priority 1: company_settings.company_name_short
-  const companyNameShort = getCompanySettingValue(settings, "company_name_short");
-  if (companyNameShort) {
-    return companyNameShort;
-  }
-
-  // Priority 2: site_content(section_key='metadata') title
-  const metadataContent = siteContent.find((c) => c.section_key === "metadata");
-  if (metadataContent) {
-    const content = pickLocaleContent<{ title: string }>(
-      metadataContent,
-      locale,
-    );
-    if (content?.title) {
-      return content.title;
-    }
-  }
-
-  // Priority 3: next-intl metadata.title (i18n fallback)
-  const t = await getTranslations({ locale, namespace: "metadata" });
-  return t("title");
-}
-
-/**
- * Resolve site description using SSoT fallback chain:
- * 1. site_content(section_key='metadata') description
- * 2. next-intl metadata.description
- * No hardcoded strings allowed.
- */
-async function resolveSiteDescription(
-  siteContent: SiteContent[],
-  locale: string,
-): Promise<string> {
-  // Priority 1: site_content(section_key='metadata') description
-  const metadataContent = siteContent.find((c) => c.section_key === "metadata");
-  if (metadataContent) {
-    const content = pickLocaleContent<{ description: string }>(
-      metadataContent,
-      locale,
-    );
-    if (content?.description) {
-      return content.description;
-    }
-  }
-
-  // Priority 2: next-intl metadata.description (i18n fallback)
-  const t = await getTranslations({ locale, namespace: "metadata" });
-  return t("description");
-}
+import { resolveSiteDescription, resolveSiteName } from "@/lib/site/site-metadata";
+import type { PostSummary } from "@/lib/types/blog";
 
 export async function generateMetadata({
   params,
@@ -131,13 +72,15 @@ export default async function HomePage({
   // Single data owner: fetch ALL data needed for Home (SEO + UI) in parallel
   // @see ARCHITECTURE.md §3.0 (single data owner pattern)
   // ==========================================================================
-  const [settings, services, siteContent, hamburgerNav, heroPins] =
+  const [settings, services, siteContent, hamburgerNav, heroPins, tMeta, suggestedPosts] =
     await Promise.all([
       getCompanySettingsCached(),
       getVisibleServicesCached(),
       getPublishedSiteContentCached(),
       getHamburgerNavCached(),
       getVisibleGalleryPinsCached("hero"),
+      getTranslations({ locale, namespace: "metadata" }),
+      getPublicPostsCached({ limit: 4, locale, sort: "newest" }),
     ]);
 
   // Resolve hamburger nav to render-ready format
@@ -170,10 +113,17 @@ export default async function HomePage({
   const breadcrumbs = [{ name: "首頁", url: `${siteUrl}/${locale}` }];
 
   // Resolve siteName and description using SSoT fallback chain
-  const [siteName, description] = await Promise.all([
-    resolveSiteName(settings, siteContent, locale),
-    resolveSiteDescription(siteContent, locale),
-  ]);
+  const siteName = resolveSiteName({
+    settings,
+    siteContent,
+    locale,
+    fallbackTitle: tMeta("title"),
+  });
+  const description = resolveSiteDescription({
+    siteContent,
+    locale,
+    fallbackDescription: tMeta("description"),
+  });
 
   const jsonLd = generateHomePageJsonLd({
     siteName,
@@ -203,6 +153,7 @@ export default async function HomePage({
         resolvedNav={resolvedNav}
         heroPins={heroPins}
         heroHotspots={heroHotspots}
+        suggestedPosts={suggestedPosts as PostSummary[]}
       />
     </>
   );

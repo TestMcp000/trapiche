@@ -48,8 +48,17 @@ ON CONFLICT (type, value) DO NOTHING;
 -- PART 3: 新增管理員 (Site Admins)
 -- ============================================
 -- 
--- ⚠️ 重要: 請將下方替換為您的管理員 email
--- 不新增管理員將無法進入後台!
+-- ⚠️ 重要:
+-- - 請勿在 seed 檔案中提交真實 email（避免資安/隱私風險）。
+-- - 請在 owner/editor 使用者「先登入一次」建立 auth.users 後，手動新增 RBAC：
+--
+--   insert into public.site_admins (email, role)
+--   values ('you@example.com', 'owner')
+--   on conflict (email) do update
+--   set role = excluded.role,
+--       updated_at = timezone('utc', now());
+--
+-- - 然後該使用者登出再登入一次（刷新 JWT claims）。
 --
 -- 角色說明 (Role Description):
 -- - owner: 最高權限，可管理所有內容與設定
@@ -57,14 +66,7 @@ ON CONFLICT (type, value) DO NOTHING;
 --
 -- ============================================
 
-INSERT INTO public.site_admins (email, role) VALUES
-  -- Owners: 最高權限管理員
-  ('leanderkuo0815@gmail.com', 'owner'),
-  ('quantumnexuslnk@gmail.com', 'owner'),
-  ('lijenkuo085@gmail.com', 'owner'),
-  -- Editors: 編輯權限管理員
-  ('majorkang1291@gmail.com', 'editor')
-ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role;
+-- Intentionally no default admins here.
 
 
 -- ============================================

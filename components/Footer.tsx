@@ -31,7 +31,7 @@ function FallbackFooter({ locale = 'zh' }: { locale?: string }) {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-center md:text-left">
             <p className="text-sm font-medium text-foreground">
-              Quantum Nexus LNK
+              網站
             </p>
             <p className="text-xs mt-2">
               © {currentYear} 版權所有

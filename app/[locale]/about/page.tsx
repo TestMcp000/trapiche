@@ -38,8 +38,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const alternates = getMetadataAlternates('/about', locale);
   
-  const title = '關於我們｜Quantum Nexus LNK';
-  const description = '了解 Quantum Nexus LNK 的願景、使命與創辦人';
+  const title = '關於我們';
+  const description = '了解本站的介紹與理念';
 
   return {
     title,

@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const alternates = getMetadataAlternates('/privacy', locale);
 
   return {
-    title: '隱私權政策｜Quantum Nexus LNK',
+    title: '隱私權政策',
     description: '了解我們如何收集、使用和保護您的個人資料。',
     alternates,
   };

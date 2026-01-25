@@ -68,9 +68,12 @@ test('Home page.tsx uses resolveSiteName helper for SSoT compliance', () => {
         'page.tsx should use resolveSiteName helper for SSoT fallback chain'
     );
 
-    // Verify the SSoT fallback chain comment exists (documentation requirement)
+    // Verify the SSoT fallback chain is documented in the helper (documentation requirement)
+    const helperPath = join(process.cwd(), 'lib', 'site', 'site-metadata.ts');
+    const helperContent = readFileSync(helperPath, 'utf-8');
+
     assert.ok(
-        pageContent.includes('company_settings.company_name_short'),
+        helperContent.includes('company_settings.company_name_short'),
         'resolveSiteName should document company_settings as priority 1'
     );
 });

@@ -27,6 +27,7 @@ import type {
 } from "@/lib/types/gallery";
 import type { ResolvedHamburgerNav } from "@/lib/types/hamburger-nav";
 import { getCompanySettingValue } from "@/lib/modules/content/company-settings";
+import type { PostSummary } from "@/lib/types/blog";
 
 /** Hotspot with rendered HTML (from markdown) */
 export interface HotspotWithHtml extends GalleryHotspotPublic {
@@ -41,6 +42,7 @@ export interface HomePageV2Props {
   resolvedNav: ResolvedHamburgerNav;
   heroPins: GalleryPin[];
   heroHotspots: HotspotWithHtml[];
+  suggestedPosts: PostSummary[];
 }
 
 interface HeroContent {
@@ -61,6 +63,7 @@ export function HomePageV2({
   resolvedNav,
   heroPins,
   heroHotspots,
+  suggestedPosts,
 }: HomePageV2Props) {
   // Get hero item (first pin with surface='hero')
   const heroPin = heroPins.length > 0 ? heroPins[0] : null;
@@ -105,38 +108,13 @@ export function HomePageV2({
     cta: "瞭解更多",
   };
 
-  // Get suggest articles (placeholder - would fetch from blog in production)
-  // For now using mock data matching uiux design
-  const suggestArticles = [
-    {
-      id: "1",
-      slug: "anxiety-body-signals",
-      title: "焦慮來時，身體在說什麼？",
-      shape: ARTICLE_SHAPES[0],
-      accentColor: ARTICLE_COLORS[0],
-    },
-    {
-      id: "2",
-      slug: "building-boundaries",
-      title: "建立界線：溫柔但清楚的練習",
-      shape: ARTICLE_SHAPES[1],
-      accentColor: ARTICLE_COLORS[1],
-    },
-    {
-      id: "3",
-      slug: "self-care-methods",
-      title: "自我照顧的 3 個小方法",
-      shape: ARTICLE_SHAPES[2],
-      accentColor: ARTICLE_COLORS[2],
-    },
-    {
-      id: "4",
-      slug: "relationship-safety",
-      title: "關係裡的安全感如何長出來？",
-      shape: ARTICLE_SHAPES[3],
-      accentColor: ARTICLE_COLORS[3],
-    },
-  ];
+  const suggestArticles = (suggestedPosts || []).map((post, index) => ({
+    id: post.id,
+    slug: post.slug,
+    title: post.title_zh || post.title_en || "（無標題）",
+    shape: ARTICLE_SHAPES[index % ARTICLE_SHAPES.length],
+    accentColor: ARTICLE_COLORS[index % ARTICLE_COLORS.length],
+  }));
 
   return (
     <div className="min-h-screen bg-[#F5F2EA]">

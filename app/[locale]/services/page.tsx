@@ -14,8 +14,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const alternates = getMetadataAlternates('/services', locale);
   
-  const title = '我們的服務｜Quantum Nexus LNK';
-  const description = '探索我們提供的全端開發、雲端基礎設施和 AI 整合服務';
+  const title = '服務方式';
+  const description = '了解本站提供的服務內容與合作方式';
 
   return {
     title,

@@ -35,8 +35,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const alternates = getMetadataAlternates('/contact', locale);
   
-  const title = '聯絡我們｜Quantum Nexus LNK';
-  const description = '與 Quantum Nexus LNK 團隊取得聯繫，討論您的專案需求';
+  const title = '聯絡我們';
+  const description = '透過聯絡方式與我們取得聯繫';
 
   return {
     title,

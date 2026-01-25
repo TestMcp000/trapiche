@@ -1,23 +1,23 @@
 {
   "metadata": {
-    "title": "Quantum Nexus LNK | 量子啟發數位解決方案",
-    "description": "打造連接社群與尖端數位服務的科技平台。從團購到緊急資源協調，我們在 Vercel 和 Supabase 上提供完整解決方案。"
+    "title": "心理師療癒空間 | 藝術療癒與身心照顧",
+    "description": "以藝術療癒與心理衛教為核心，分享可實作的情緒照顧方法，陪你在日常中慢慢找回穩定。"
   },
   "nav": {
-    "about": "關於我們",
-    "services": "服務項目",
-    "platforms": "技術平台",
-    "product_design": "產品設計",
-    "portfolio": "作品展示",
-    "contact": "聯絡我們",
-    "blog": "部落格",
-    "gallery": "畫廊",
-    "shop": "商城",
+    "about": "心理師介紹",
+    "services": "服務方式",
+    "platforms": "講座／活動",
+    "product_design": "資源整理",
+    "portfolio": "精選內容",
+    "contact": "聯絡表單",
+    "blog": "文章",
+    "gallery": "作品集",
+    "shop": "資源",
     "privacy": "隱私權政策"
   },
   "blog": {
     "title": "部落格",
-    "description": "關於技術與開發的思考、教學和見解。",
+    "description": "關於情緒照顧與身心健康的文章與練習。",
     "allCategories": "全部",
     "noPosts": "目前沒有文章。",
     "backToBlog": "返回部落格",
@@ -39,21 +39,21 @@
     "blog": "部落格"
   },
   "hero": {
-    "eyebrow": "量子啟發數位工作室",
-    "title": "以有目的的科技，擴展社群驅動的創新。",
-    "lead": "我們設計、建構並營運以使用者為核心的數位體驗，連結人群、擴大集體行動，並開啟下一個智慧服務時代。",
-    "cta": "開始對話",
-    "secondaryCta": "探索我們的開源專案",
-    "cardTitle": "社群影響力循環",
-    "cardItem1": "傾聽真實世界的需求",
-    "cardItem2": "使用 Supabase 快速原型開發",
-    "cardItem3": "在 Vercel 上全球部署",
-    "cardItem4": "以量子啟發洞察擴展規模"
+    "eyebrow": "藝術療癒與心理衛教",
+    "title": "在日常裡練習安定，讓情緒有被理解的出口。",
+    "lead": "用溫柔但可實作的方法，陪你看見焦慮、壓力與關係裡的需要，慢慢找回自己的節奏。",
+    "cta": "開始閱讀",
+    "secondaryCta": "查看近期講座",
+    "cardTitle": "你可以從這裡開始",
+    "cardItem1": "情緒照顧：辨識與安撫",
+    "cardItem2": "焦慮壓力：身體訊號與調節",
+    "cardItem3": "睡眠議題：建立睡前儀式",
+    "cardItem4": "關係界線：溫柔但清楚"
   },
   "about": {
     "title": "我們的使命",
-    "paragraph1": "Quantum Nexus LNK 有限責任公司打造科技平台，將複雜的社群挑戰轉化為可行的解決方案。從團購生態系統到緊急資源協調，我們的工作將人們與他們需要的工具連結起來，讓社群蓬勃發展。",
-    "paragraph2": "我們結合以人為本的設計與量子啟發演算法，發掘模式、優化決策，並創造可衡量的影響。",
+    "paragraph1": "本網站以身心健康與情緒照顧為主題，透過文章、講座與創作練習，提供可落地的陪伴與支持。",
+    "paragraph2": "我們相信療癒不是一次完成，而是一段可以被理解、被練習、被溫柔對待的旅程。",
     "snapshot": "公司簡介",
     "founder": "創辦人",
     "email": "電子郵件",
@@ -63,66 +63,66 @@
   },
   "services": {
     "title": "我們的建構項目",
-    "service1Title": "全端網頁開發",
-    "service1Desc": "使用 Vue、React 和 Next.js 為中小型企業打造響應式、可擴展的網站和網頁應用程式。部署於 Vercel、Supabase 和 Firestore，提供優化的效能與使用者體驗。",
-    "service2Title": "雲端基礎設施與部署",
-    "service2Desc": "使用 Docker 容器化應用程式，託管於 Google Cloud Platform (GCP)。從個人專案到具有複雜權限控制的緊急救援系統，確保可靠、安全且可擴展的部署。",
-    "service3Title": "AI 與大型語言模型整合",
-    "service3Desc": "精進大型語言模型（LLM）的微調、部署和整合能力，無論是本地或正式環境。打造智慧系統，提升決策品質和自動化水準。"
+    "service1Title": "心理衛教文章",
+    "service1Desc": "以生活化的語言整理情緒照顧、焦慮壓力、睡眠與關係界線等主題，提供可練習的小方法。",
+    "service2Title": "講座／工作坊",
+    "service2Desc": "不定期舉辦講座與藝術療癒工作坊，透過體驗式練習，讓方法更容易帶回日常。",
+    "service3Title": "合作邀請",
+    "service3Desc": "歡迎企業、學校或社群單位合作內訓／講座，主題可依需求共同規劃。"
   },
   "platforms": {
-    "title": "技術棧與基礎設施",
-    "paragraph1": "我們運用現代雲端平台與框架：Vercel、Supabase、Firestore 和 Google Cloud Platform。專精於 Vue、React 和 Next.js，提供快速、可擴展且易於維護的解決方案。",
-    "paragraph2": "使用 Docker 容器化確保一致的部署。從簡單的著陸頁到具有進階權限控制的緊急協調系統，我們以可靠性和安全性為核心進行開發。",
-    "cardTitle": "核心技術",
-    "item1": "前端：Vue、React、Next.js 搭配 TypeScript",
-    "item2": "後端：Supabase、Firestore、GCP 服務",
-    "item3": "DevOps：Docker、GCP 部署、CI/CD 流程",
-    "item4": "新興技術：LLM 微調、本地 AI 部署"
+    "title": "講座／活動",
+    "paragraph1": "此頁面可用於呈現近期講座／活動資訊、報名連結與合作邀請。",
+    "paragraph2": "內容將由後台管理並可依活動更新。",
+    "cardTitle": "近期活動",
+    "item1": "主題：情緒的顏色（藝術療癒工作坊）",
+    "item2": "主題：界線練習（關係與自我照顧）",
+    "item3": "主題：睡眠儀式（安定與復原）",
+    "item4": "合作：企業內訓／校園講座"
   },
   "portfolio": {
     "title": "精選作品",
-    "intro": "打造有影響力的解決方案，解決社群和個人面臨的真實挑戰。",
+    "intro": "整理一些可延伸閱讀的精選內容與資源。",
     "submange": {
-      "title": "Submange",
-      "desc": "訂閱管理和團購平台，將集體採購轉化為無縫體驗。"
+      "title": "情緒照顧",
+      "desc": "從辨識到安撫，建立屬於自己的情緒急救箱。"
     },
     "costcoGroup": {
-      "title": "好市多分購平台",
-      "desc": "促進協作購物體驗，讓社群共同享受大宗採購的優惠。"
+      "title": "焦慮壓力",
+      "desc": "理解身體訊號，練習可落地的調節方法。"
     },
     "emergencyTW": {
-      "title": "台灣救災資源整合平台",
-      "desc": "全面的災害救援協調平台，具備進階權限控制，部署於 GCP 以確保可靠的緊急應變。"
+      "title": "睡眠議題",
+      "desc": "建立睡前儀式，讓身體慢慢回到安全與放鬆。"
     },
     "teletherapy": {
-      "title": "視訊心理諮商整合平台",
-      "desc": "視訊諮商平台，搭載 AI 驅動的個案資訊整理、諮商師專欄及督導媒合功能。為心理健康專業人員提供智慧工具。"
+      "title": "關係界線",
+      "desc": "溫柔但清楚的界線練習，照顧自己也尊重彼此。"
     },
     "adhdCompanion": {
-      "title": "ADHD 任務夥伴",
-      "desc": "遊戲化任務管理 App，使用 AI 分解複雜任務、追蹤進度，並透過養成虛擬寵物系統獎勵完成度。"
+      "title": "自我照顧",
+      "desc": "把照顧自己變成日常，不用等到撐不住才開始。"
     },
     "visit": "了解更多",
     "inDevelopment": "開發中"
   },
   "contact": {
-    "title": "讓我們一起建構",
-    "paragraph": "準備啟動您的下一個數位計畫了嗎？我們與創辦人、公民領袖和創新者合作，設計可跨裝置與市場擴展的解決方案。",
+    "title": "聯絡我們",
+    "paragraph": "若你有合作邀請、講座需求或想分享你的狀況，歡迎與我們聯繫。",
     "email": "電子郵件",
     "github": "GitHub",
     "ctaTitle": "保持聯繫",
-    "ctaText": "我們正在培育量子啟發技術、集體智慧和社群工具的策略夥伴關係。聯繫我們共同創建試點計畫或加速轉型。",
-    "ctaButton": "安排探索會議"
+    "ctaText": "請留下你的需求與方便的聯絡方式，我們會在工作日回覆。",
+    "ctaButton": "送出訊息"
   },
   "footer": {
-    "tagline": "打造賦能社群的量子啟發解決方案。",
-    "companyName": "Quantum Nexus LNK 有限責任公司",
+    "tagline": "陪你慢慢好起來。",
+    "companyName": "心理師療癒空間",
     "rights": "保留所有權利。"
   },
   "company": {
-    "name": "Quantum Nexus LNK Limited Liability Co.",
-    "nameShort": "Quantum Nexus LNK"
+    "name": "心理師療癒空間",
+    "nameShort": "心理師療癒空間"
   },
   "comments": {
     "title": "留言",
@@ -360,7 +360,7 @@
         "label": "字體堆疊",
         "usePreset": "使用主題預設",
         "customValue": "目前為自訂值（不在白名單）",
-        "preview": "字體預覽：量子科技 / Quantum Nexus",
+        "preview": "字體預覽：溫柔手寫 / Gentle",
         "bodySample": "這是一段內文測試，包含英文 ABCD 以及數字 1234。",
         "customWarning": "目前資料庫中的 --theme-font 不在白名單內。請選擇一個白名單字體取代，或改回主題預設。",
         "currentGlobal": "目前全域主題：",

@@ -13,6 +13,14 @@ import { SITE_URL } from '@/lib/seo/hreflang';
 const AKISMET_API_KEY = process.env.AKISMET_API_KEY;
 const AKISMET_BLOG_URL = process.env.AKISMET_BLOG_URL || SITE_URL;
 
+const AKISMET_USER_AGENT = (() => {
+  try {
+    return `${new URL(SITE_URL).hostname}/1.0 | Akismet/1.0`;
+  } catch {
+    return `site/1.0 | Akismet/1.0`;
+  }
+})();
+
 export interface AkismetCheckParams {
   user_ip: string;
   user_agent: string;
@@ -79,7 +87,7 @@ export async function checkSpam(params: AkismetCheckParams): Promise<AkismetResu
         method: 'POST',
         headers: { 
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'QuantumNexusLNK/1.0 | Akismet/1.0'
+          'User-Agent': AKISMET_USER_AGENT,
         },
         body: new URLSearchParams({
           blog: AKISMET_BLOG_URL,
@@ -126,7 +134,7 @@ export async function reportSpam(params: AkismetCheckParams): Promise<boolean> {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'QuantumNexusLNK/1.0 | Akismet/1.0'
+          'User-Agent': AKISMET_USER_AGENT,
         },
         body: new URLSearchParams({
           blog: AKISMET_BLOG_URL,
@@ -162,7 +170,7 @@ export async function reportHam(params: AkismetCheckParams): Promise<boolean> {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'QuantumNexusLNK/1.0 | Akismet/1.0'
+          'User-Agent': AKISMET_USER_AGENT,
         },
         body: new URLSearchParams({
           blog: AKISMET_BLOG_URL,

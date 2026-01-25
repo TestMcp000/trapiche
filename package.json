@@ -1,9 +1,9 @@
 {
-  "name": "quantum-nexus-lnk",
+  "name": "trapiche",
   "version": "0.1.0",
   "private": true,
-  "description": "Quantum Nexus LNK - Corporate website (zh-Hant)",
-  "author": "Leander Kuo <QuantumNexusLNK@gmail.com>",
+  "description": "Healing Space website (zh-Hant)",
+  "author": "Site Owner",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

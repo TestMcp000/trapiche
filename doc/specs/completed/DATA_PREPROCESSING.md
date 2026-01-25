@@ -3,7 +3,7 @@
 > **Version**: 1.3  
 > **Last Updated**: 2026-01-03  
 > **Status**: Implemented - Reviewed (Phase 5.5–6.5 shipped; Phase 7+ tracked in `doc/ROADMAP.md`)  
-> **Owner**: Site Owner (Quantum Nexus LNK LLC)  
+> **Owner**: Site Owner  
 > **Parent Document**: [DATA_INTELLIGENCE.md](./DATA_INTELLIGENCE.md) Module C Extension  
 > **Alias**: Data Refinery Pipeline（數據煉製管線）
 

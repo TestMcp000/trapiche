@@ -14,8 +14,8 @@ export async function generateMetadata({
   const { locale } = await params;
   const alternates = getMetadataAlternates('/portfolio', locale);
   
-  const title = '精選作品｜Quantum Nexus LNK';
-  const description = '瀏覽我們的精選作品和專案案例';
+  const title = '精選內容';
+  const description = '瀏覽本站精選內容';
 
   return {
     title,

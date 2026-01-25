@@ -17,6 +17,7 @@ test('generateArticleJsonLd emits BlogPosting with expected fields', () => {
     image: 'https://example.com/image.png',
     url: 'https://example.com/post',
     locale: 'zh',
+    publisherName: 'Example Site',
   }) as Record<string, unknown>;
 
   assert.equal(jsonLd['@type'], 'BlogPosting');
@@ -25,7 +26,7 @@ test('generateArticleJsonLd emits BlogPosting with expected fields', () => {
 
   const publisher = jsonLd.publisher as Record<string, unknown>;
   assert.equal(publisher['@type'], 'Organization');
-  assert.equal(publisher.name, 'Quantum Nexus LNK');
+  assert.equal(publisher.name, 'Example Site');
   assert.equal(publisher.url, SITE_URL);
 });
 
@@ -44,7 +45,7 @@ test('generateBreadcrumbJsonLd positions items starting from 1', () => {
 
 test('generateHomePageJsonLd emits graph with Organization and WebSite', () => {
   const jsonLd = generateHomePageJsonLd({
-    siteName: 'Quantum Nexus LNK',
+    siteName: 'Example Site',
     siteUrl: 'https://example.com',
     email: 'hello@example.com',
     githubUrl: 'https://github.com/example',

@@ -9,6 +9,8 @@ interface ArticleJsonLdProps {
   image?: string;
   url: string;
   locale: string;
+  publisherName?: string;
+  publisherUrl?: string;
 }
 
 /**
@@ -24,6 +26,8 @@ export default function ArticleJsonLd({
   image,
   url,
   locale,
+  publisherName,
+  publisherUrl,
 }: ArticleJsonLdProps) {
   const jsonLd = generateArticleJsonLd({
     title,
@@ -34,6 +38,8 @@ export default function ArticleJsonLd({
     image,
     url,
     locale,
+    publisherName,
+    publisherUrl,
   });
   
   return (

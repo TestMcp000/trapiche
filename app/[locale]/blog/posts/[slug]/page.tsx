@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getTranslations, getMessages } from 'next-intl/server';
 import { getPostBySlugWithCategoryCached, getRelatedPostsCached, getAuthorInfo } from '@/lib/modules/blog/cached';
+import { getCompanySettingsCached, getPublishedSiteContentCached } from '@/lib/modules/content/cached';
 import { getMetadataAlternates, getCanonicalUrl } from '@/lib/seo';
 import { buildBlogListUrl, buildBlogCategoryUrl } from '@/lib/seo/url-builders';
 import { calculateReadingTimeMinutes } from '@/lib/utils/reading-time';
@@ -17,6 +18,7 @@ import Image from 'next/image';
 import ClientCommentSection from '@/components/comments/ClientCommentSection';
 import { format } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
+import { resolveSiteName } from '@/lib/site/site-metadata';
 
 interface PageProps {
   params: Promise<{ 
@@ -61,13 +63,26 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function BlogPostPage({ params }: PageProps) {
   const { locale, slug } = await params;
-  const post = await getPostBySlugWithCategoryCached(slug);
-  const t = await getTranslations({ locale, namespace: 'blog' });
-  const tBreadcrumb = await getTranslations({ locale, namespace: 'breadcrumb' });
+
+  const [post, t, tBreadcrumb, tMeta, siteContent, settings] = await Promise.all([
+    getPostBySlugWithCategoryCached(slug),
+    getTranslations({ locale, namespace: 'blog' }),
+    getTranslations({ locale, namespace: 'breadcrumb' }),
+    getTranslations({ locale, namespace: 'metadata' }),
+    getPublishedSiteContentCached(),
+    getCompanySettingsCached(),
+  ]);
   
   if (!post) {
     notFound();
   }
+
+  const siteName = resolveSiteName({
+    settings,
+    siteContent,
+    locale,
+    fallbackTitle: tMeta('title'),
+  });
   
   const actualCategorySlug = post.category?.slug || 'uncategorized';
   
@@ -121,9 +136,10 @@ export default async function BlogPostPage({ params }: PageProps) {
         title={title}
         description={excerpt || undefined}
         author={{ 
-          name: author?.name || 'Quantum Nexus LNK',
+          name: author?.name || siteName,
           url: author?.email ? `mailto:${author.email}` : undefined,
         }}
+        publisherName={siteName}
         datePublished={post.published_at || post.created_at}
         dateModified={post.updated_at}
         image={coverImage || undefined}

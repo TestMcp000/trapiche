@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-> Last Updated: 2026-01-23
+> Last Updated: 2026-01-25
 > Status: Enforced
 > Role: Single source of truth for architecture and global constraints.
 
@@ -220,7 +220,7 @@ interface ApiErrorResponse {
 - **Redirect 合約**：canonicalization 必須是永久 redirect（301/308）；在 server component 內使用 `permanentRedirect()`，避免 `redirect()`（307）造成 SEO 漂移（修復紀錄：`doc/archive/2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md`（PR-11）；若發現違規，記錄於 `uiux_refactor.md` §4）。
 - **Legacy routes 策略**：若某 legacy URL 已由 `next.config.ts`（或 `proxy.ts`/middleware）提供永久 redirect，則對應的 `app/` legacy page 應直接刪除，避免留下 redirect-only stub 形成死碼/雙來源與 drift（見 `doc/archive/2026-01-21-step-plan-v2-home-uiux-gallery-hotspots-hamburger-nav.md`（PR-11））。
 - **JSON-LD siteName**：首頁 JSON-LD 的 `siteName` 必須從 `company_settings.company_name_short` 讀取，不得硬編品牌名。
-- **Akismet 配置**：`lib/spam/akismet-io.ts` 的 `AKISMET_BLOG_URL` 必須 fallback 到 `SITE_URL`，不得使用其他硬編 URL。
+- **Akismet 配置**：`lib/infrastructure/akismet/akismet-io.ts` 的 `AKISMET_BLOG_URL` 必須 fallback 到 `SITE_URL`，不得使用其他硬編 URL。
 
 ### 3.12 Comments API Sensitive Data Protection (Phase 5 完成)
 

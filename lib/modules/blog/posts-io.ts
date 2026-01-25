@@ -208,12 +208,10 @@ export async function getAuthorInfo(_authorId: string): Promise<{
   name: string;
   email?: string;
 } | null> {
-  // For now, we use a default author name since we can't easily query auth.users
-  // The admin who publishes is assumed to be the site owner
-  // This can be extended later with a dedicated authors table
+  // We can't query auth.users from anon context.
+  // Keep this non-identifying and move to a dedicated authors table if needed.
   return {
-    name: 'Leander Kuo',
-    email: 'hello@quantumnexus.link',
+    name: '網站管理者',
   };
 }
 

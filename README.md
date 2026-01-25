@@ -1,6 +1,6 @@
-# Quantum Nexus LNK Website
+# Healing Space Website
 
-Modern corporate website (zh-Hant) built with Next.js (App Router) + Supabase.
+Modern website (zh-Hant) built with Next.js (App Router) + Supabase.
 
 ---
 
@@ -184,12 +184,7 @@ npm run analyze     # Bundle analyzer build
 
 ## Contact
 
-| Item    | Info                                    |
-| ------- | --------------------------------------- |
-| Company | Quantum Nexus LNK Limited Liability Co. |
-| Email   | QuantumNexusLNK@gmail.com               |
-| Website | http://quantumnexuslnk.com/             |
-| GitHub  | https://github.com/LeanderKuo           |
+- Production-facing contact info should come from DB `company_settings` (e.g. `email`) and `NEXT_PUBLIC_SITE_URL`.
 
 ---
 

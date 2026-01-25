@@ -35,7 +35,7 @@ function FallbackHeader({ locale = 'zh' }: { locale?: string }) {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-border/10 shadow-soft">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href={`/${locale}`} className="text-xl font-bold text-foreground">
-          Quantum Nexus
+          網站
         </Link>
         <div className="hidden md:flex items-center gap-6">
           <Link href={`/${locale}#about`} className="text-secondary hover:text-foreground transition-colors">關於我們</Link>
