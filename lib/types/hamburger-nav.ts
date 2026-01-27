@@ -19,9 +19,15 @@ export type NavTargetType =
     | 'blog_index'
     | 'blog_category'
     | 'blog_post'
+    | 'blog_group'
+    | 'blog_topic'
+    | 'blog_tag'
     | 'gallery_index'
     | 'gallery_category'
     | 'gallery_item'
+    | 'events_index'
+    | 'event_detail'
+    | 'faq_index'
     | 'page'
     | 'anchor'
     | 'external';
@@ -63,6 +69,38 @@ export interface NavTargetBlogCategory {
 export interface NavTargetBlogPost {
     type: 'blog_post';
     postSlug: string;
+}
+
+/**
+ * Blog group target (taxonomy v2)
+ */
+export interface NavTargetBlogGroup {
+    type: 'blog_group';
+    groupSlug: string;
+    q?: string;
+    sort?: string;
+    page?: string;
+}
+
+/**
+ * Blog topic target (taxonomy v2 - maps to /blog/categories/[slug])
+ */
+export interface NavTargetBlogTopic {
+    type: 'blog_topic';
+    topicSlug: string;
+    q?: string;
+    sort?: string;
+    page?: string;
+}
+
+/**
+ * Blog tag target (taxonomy v2)
+ */
+export interface NavTargetBlogTag {
+    type: 'blog_tag';
+    tagSlug: string;
+    sort?: string;
+    page?: string;
 }
 
 /**
@@ -123,15 +161,47 @@ export interface NavTargetExternal {
 }
 
 /**
+ * Events index target
+ */
+export interface NavTargetEventsIndex {
+    type: 'events_index';
+    eventType?: string;
+    q?: string;
+    sort?: string;
+    page?: string;
+}
+
+/**
+ * Event detail target
+ */
+export interface NavTargetEventDetail {
+    type: 'event_detail';
+    eventSlug: string;
+}
+
+/**
+ * FAQ index target
+ */
+export interface NavTargetFAQIndex {
+    type: 'faq_index';
+}
+
+/**
  * Union of all nav target types
  */
 export type NavTarget =
     | NavTargetBlogIndex
     | NavTargetBlogCategory
     | NavTargetBlogPost
+    | NavTargetBlogGroup
+    | NavTargetBlogTopic
+    | NavTargetBlogTag
     | NavTargetGalleryIndex
     | NavTargetGalleryCategory
     | NavTargetGalleryItem
+    | NavTargetEventsIndex
+    | NavTargetEventDetail
+    | NavTargetFAQIndex
     | NavTargetPage
     | NavTargetAnchor
     | NavTargetExternal;

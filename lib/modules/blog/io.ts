@@ -20,6 +20,13 @@ export {
   getPublicPostsForSitemap,
 } from '@/lib/modules/blog/posts-io';
 
+// Re-export taxonomy v2 post queries (split per ARCHITECTURE.md §3.4)
+export {
+  getPublicPostsByGroup,
+  getPublicPostsByTopic,
+  getPublicPostsByTag,
+} from '@/lib/modules/blog/posts-taxonomy-io';
+
 // Re-export category operations
 export {
   getCategories,

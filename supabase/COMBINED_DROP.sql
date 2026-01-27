@@ -1,7 +1,229 @@
 -- ============================================
+-- DROP: FAQs
+-- ============================================
+--
+-- Version: 1.0
+-- Last Updated: 2026-01-27
+--
+-- @see doc/meta/STEP_PLAN.md (PR-38)
+--
+-- ============================================
+
+
+-- ============================================
+-- Drop Policies
+-- ============================================
+
+DROP POLICY IF EXISTS "Anyone can read visible faqs" ON public.faqs;
+DROP POLICY IF EXISTS "Admins can manage faqs" ON public.faqs;
+
+
+-- ============================================
+-- Drop Indexes
+-- ============================================
+
+DROP INDEX IF EXISTS idx_faqs_sort_order;
+DROP INDEX IF EXISTS idx_faqs_visible;
+
+
+-- ============================================
+-- Drop Tables
+-- ============================================
+
+DROP TABLE IF EXISTS public.faqs CASCADE;
+
+
+-- ============================================
+-- 完成 DONE (FAQs Drop)
+-- ============================================
+
+
+-- ============================================
+-- DROP: Contact Messages
+-- ============================================
+--
+-- Version: 1.0
+-- Last Updated: 2026-01-27
+--
+-- @see doc/meta/STEP_PLAN.md (PR-38)
+--
+-- ============================================
+
+
+-- ============================================
+-- Drop Policies
+-- ============================================
+
+DROP POLICY IF EXISTS "Anyone can submit contact messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Admins can manage contact messages" ON public.contact_messages;
+
+
+-- ============================================
+-- Drop Indexes
+-- ============================================
+
+DROP INDEX IF EXISTS idx_contact_messages_created_at;
+DROP INDEX IF EXISTS idx_contact_messages_is_read;
+DROP INDEX IF EXISTS idx_contact_messages_is_archived;
+
+
+-- ============================================
+-- Drop Tables
+-- ============================================
+
+DROP TABLE IF EXISTS public.contact_messages CASCADE;
+
+
+-- ============================================
+-- 完成 DONE (Contact Messages Drop)
+-- ============================================
+
+
+-- ============================================
+-- DROP: Events (event_types + events)
+-- ============================================
+--
+-- Version: 1.0
+-- Last Updated: 2026-01-27
+--
+-- @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C1–C3)
+-- @see doc/meta/STEP_PLAN.md (PR-36)
+--
+-- ============================================
+
+
+-- ============================================
+-- DROP Policies First (must drop before tables)
+-- ============================================
+
+-- event_types policies
+DROP POLICY IF EXISTS "Anyone can read visible event types" ON public.event_types;
+DROP POLICY IF EXISTS "Admins can manage event types" ON public.event_types;
+
+-- events policies
+DROP POLICY IF EXISTS "Anyone can read public events" ON public.events;
+DROP POLICY IF EXISTS "Admins can manage events" ON public.events;
+
+
+-- ============================================
+-- DROP Indexes
+-- ============================================
+
+-- event_types indexes
+DROP INDEX IF EXISTS public.idx_event_types_slug;
+DROP INDEX IF EXISTS public.idx_event_types_sort_order;
+DROP INDEX IF EXISTS public.idx_event_types_visible;
+
+-- events indexes
+DROP INDEX IF EXISTS public.idx_events_slug;
+DROP INDEX IF EXISTS public.idx_events_type_id;
+DROP INDEX IF EXISTS public.idx_events_visibility;
+DROP INDEX IF EXISTS public.idx_events_start_at;
+DROP INDEX IF EXISTS public.idx_events_published_at;
+
+
+-- ============================================
+-- DROP Tables (order matters: events first, then event_types)
+-- ============================================
+
+DROP TABLE IF EXISTS public.events CASCADE;
+DROP TABLE IF EXISTS public.event_types CASCADE;
+
+
+-- ============================================
+-- 完成 DONE (Events)
+-- ============================================
+-- ============================================
+-- DROP: Blog Taxonomy v2 (Groups/Topics/Tags)
+-- ============================================
+--
+-- Version: 1.0
+-- Last Updated: 2026-01-27
+--
+-- @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-B1–B5)
+-- @see doc/meta/STEP_PLAN.md (PR-33)
+--
+-- ============================================
+
+
+-- ============================================
+-- DROP Policies First (must drop before tables)
+-- ============================================
+
+-- blog_groups policies
+DROP POLICY IF EXISTS "Anyone can read visible blog groups" ON public.blog_groups;
+DROP POLICY IF EXISTS "Admins can manage blog groups" ON public.blog_groups;
+
+-- blog_topics policies
+DROP POLICY IF EXISTS "Anyone can read visible blog topics" ON public.blog_topics;
+DROP POLICY IF EXISTS "Admins can manage blog topics" ON public.blog_topics;
+
+-- blog_tags policies
+DROP POLICY IF EXISTS "Anyone can read blog tags" ON public.blog_tags;
+DROP POLICY IF EXISTS "Admins can manage blog tags" ON public.blog_tags;
+
+-- post_topics policies
+DROP POLICY IF EXISTS "Anyone can read post topics" ON public.post_topics;
+DROP POLICY IF EXISTS "Admins can manage post topics" ON public.post_topics;
+
+-- post_tags policies
+DROP POLICY IF EXISTS "Anyone can read post tags" ON public.post_tags;
+DROP POLICY IF EXISTS "Admins can manage post tags" ON public.post_tags;
+
+
+-- ============================================
+-- DROP Indexes
+-- ============================================
+
+-- blog_groups indexes
+DROP INDEX IF EXISTS public.idx_blog_groups_slug;
+DROP INDEX IF EXISTS public.idx_blog_groups_sort_order;
+DROP INDEX IF EXISTS public.idx_blog_groups_visible;
+
+-- blog_topics indexes
+DROP INDEX IF EXISTS public.idx_blog_topics_slug;
+DROP INDEX IF EXISTS public.idx_blog_topics_group_id;
+DROP INDEX IF EXISTS public.idx_blog_topics_sort_order;
+DROP INDEX IF EXISTS public.idx_blog_topics_visible;
+
+-- blog_tags indexes
+DROP INDEX IF EXISTS public.idx_blog_tags_slug;
+
+-- post_topics indexes
+DROP INDEX IF EXISTS public.idx_post_topics_topic_id;
+
+-- post_tags indexes
+DROP INDEX IF EXISTS public.idx_post_tags_tag_id;
+
+-- posts.group_id index
+DROP INDEX IF EXISTS public.idx_posts_group_id;
+
+
+-- ============================================
+-- DROP Column from posts (group_id)
+-- ============================================
+
+ALTER TABLE public.posts DROP COLUMN IF EXISTS group_id;
+
+
+-- ============================================
+-- DROP Tables (order matters: join tables first)
+-- ============================================
+
+DROP TABLE IF EXISTS public.post_tags CASCADE;
+DROP TABLE IF EXISTS public.post_topics CASCADE;
+DROP TABLE IF EXISTS public.blog_tags CASCADE;
+DROP TABLE IF EXISTS public.blog_topics CASCADE;
+DROP TABLE IF EXISTS public.blog_groups CASCADE;
+
+
+-- ============================================
+-- 完成 DONE (Blog Taxonomy v2)
+-- ============================================
+-- ============================================
 -- DROP: Safety Risk Engine Tables
 -- ============================================
--- 
+--
 -- Version: 1.0
 -- Last Updated: 2026-01-17
 --

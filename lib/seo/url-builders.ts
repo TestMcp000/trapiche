@@ -54,6 +54,85 @@ export function buildBlogListUrl(
     return queryString ? `${base}?${queryString}` : base;
 }
 
+/**
+ * Build canonical URL for a blog group (taxonomy v2).
+ * v2 canonical: /{locale}/blog/groups/{slug}
+ */
+export function buildBlogGroupUrl(
+    locale: string,
+    groupSlug: string,
+    query?: { q?: string; sort?: string }
+): string {
+    const base = `/${locale}/blog/groups/${groupSlug}`;
+    const params = new URLSearchParams();
+    if (query?.q) params.set('q', query.q);
+    if (query?.sort) params.set('sort', query.sort);
+    const queryString = params.toString();
+    return queryString ? `${base}?${queryString}` : base;
+}
+
+/**
+ * Build canonical URL for a blog topic (taxonomy v2).
+ * Maps to /blog/categories/[slug] for backward compatibility.
+ * v2 canonical: /{locale}/blog/categories/{slug}
+ */
+export function buildBlogTopicUrl(
+    locale: string,
+    topicSlug: string,
+    query?: { q?: string; sort?: string }
+): string {
+    // Topics use /blog/categories/[slug] for backward compatibility
+    return buildBlogCategoryUrl(locale, topicSlug, query);
+}
+
+/**
+ * Build canonical URL for a blog tag (taxonomy v2).
+ * v2 canonical: /{locale}/blog/tags/{slug}
+ */
+export function buildBlogTagUrl(
+    locale: string,
+    tagSlug: string,
+    query?: { sort?: string }
+): string {
+    const base = `/${locale}/blog/tags/${tagSlug}`;
+    const params = new URLSearchParams();
+    if (query?.sort) params.set('sort', query.sort);
+    const queryString = params.toString();
+    return queryString ? `${base}?${queryString}` : base;
+}
+
+// =============================================================================
+// Events URL Builders
+// =============================================================================
+
+/**
+ * Build URL for events list.
+ * /{locale}/events with optional query params
+ */
+export function buildEventsListUrl(
+    locale: string,
+    query?: { type?: string; q?: string; sort?: string }
+): string {
+    const base = `/${locale}/events`;
+    const params = new URLSearchParams();
+    if (query?.type) params.set('type', query.type);
+    if (query?.q) params.set('q', query.q);
+    if (query?.sort) params.set('sort', query.sort);
+    const queryString = params.toString();
+    return queryString ? `${base}?${queryString}` : base;
+}
+
+/**
+ * Build canonical URL for a single event.
+ * /{locale}/events/{slug}
+ */
+export function buildEventDetailUrl(
+    locale: string,
+    slug: string
+): string {
+    return `/${locale}/events/${slug}`;
+}
+
 // =============================================================================
 // Gallery URL Builders
 // =============================================================================
@@ -103,4 +182,27 @@ export function buildGalleryListUrl(
     if (query?.sort) params.set('sort', query.sort);
     const queryString = params.toString();
     return queryString ? `${base}?${queryString}` : base;
+}
+// =============================================================================
+// FAQ URL Builders
+// =============================================================================
+
+/**
+ * Build URL for FAQ page.
+ * /{locale}/faq
+ */
+export function buildFAQUrl(locale: string): string {
+    return `/${locale}/faq`;
+}
+
+// =============================================================================
+// Contact URL Builders
+// =============================================================================
+
+/**
+ * Build URL for contact page.
+ * /{locale}/contact
+ */
+export function buildContactUrl(locale: string): string {
+    return `/${locale}/contact`;
 }

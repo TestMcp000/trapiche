@@ -71,6 +71,33 @@ function resolveTarget(target: NavTarget, locale: string): { href: string; isExt
             return { href: `/${locale}/blog/posts/${target.postSlug}`, isExternal: false };
         }
 
+        case 'blog_group': {
+            const query = buildQueryString({
+                q: target.q,
+                sort: target.sort,
+                page: target.page,
+            });
+            return { href: `/${locale}/blog/groups/${target.groupSlug}${query}`, isExternal: false };
+        }
+
+        case 'blog_topic': {
+            // blog_topic maps to /blog/categories/[slug] for backward compatibility
+            const query = buildQueryString({
+                q: target.q,
+                sort: target.sort,
+                page: target.page,
+            });
+            return { href: `/${locale}/blog/categories/${target.topicSlug}${query}`, isExternal: false };
+        }
+
+        case 'blog_tag': {
+            const query = buildQueryString({
+                sort: target.sort,
+                page: target.page,
+            });
+            return { href: `/${locale}/blog/tags/${target.tagSlug}${query}`, isExternal: false };
+        }
+
         case 'gallery_index': {
             const query = buildQueryString({
                 q: target.q,
@@ -96,6 +123,24 @@ function resolveTarget(target: NavTarget, locale: string): { href: string; isExt
                 href: `/${locale}/gallery/items/${target.categorySlug}/${target.itemSlug}`,
                 isExternal: false,
             };
+        }
+
+        case 'events_index': {
+            const query = buildQueryString({
+                type: target.eventType,
+                q: target.q,
+                sort: target.sort,
+                page: target.page,
+            });
+            return { href: `/${locale}/events${query}`, isExternal: false };
+        }
+
+        case 'event_detail': {
+            return { href: `/${locale}/events/${target.eventSlug}`, isExternal: false };
+        }
+
+        case 'faq_index': {
+            return { href: `/${locale}/faq`, isExternal: false };
         }
 
         case 'page': {

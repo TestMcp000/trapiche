@@ -357,3 +357,131 @@ export function generateHomePageJsonLd(input: HomePageJsonLdInput): object {
   };
 }
 
+// =============================================================================
+// Event JSON-LD
+// =============================================================================
+
+export interface EventJsonLdInput {
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  timezone?: string;
+  url: string;
+  image?: string;
+  location?: {
+    name?: string;
+    address?: string;
+  };
+  isOnline?: boolean;
+  onlineUrl?: string;
+  organizer?: {
+    name: string;
+    url: string;
+  };
+  eventStatus?: 'scheduled' | 'cancelled' | 'postponed' | 'rescheduled';
+  eventAttendanceMode?: 'online' | 'offline' | 'mixed';
+  registrationUrl?: string;
+}
+
+/**
+ * Generate Event JSON-LD for event detail pages
+ * @see https://schema.org/Event
+ */
+export function generateEventJsonLd(input: EventJsonLdInput): object {
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: input.name,
+    startDate: input.startDate,
+    url: input.url,
+    inLanguage: 'zh-Hant',
+  };
+
+  if (input.description) {
+    jsonLd.description = input.description;
+  }
+
+  if (input.endDate) {
+    jsonLd.endDate = input.endDate;
+  }
+
+  if (input.image) {
+    jsonLd.image = {
+      '@type': 'ImageObject',
+      url: input.image,
+    };
+  }
+
+  // Determine event attendance mode
+  if (input.isOnline && input.location?.name) {
+    jsonLd.eventAttendanceMode = 'https://schema.org/MixedEventAttendanceMode';
+  } else if (input.isOnline) {
+    jsonLd.eventAttendanceMode = 'https://schema.org/OnlineEventAttendanceMode';
+  } else {
+    jsonLd.eventAttendanceMode = 'https://schema.org/OfflineEventAttendanceMode';
+  }
+
+  // Location
+  if (input.location?.name || input.location?.address) {
+    jsonLd.location = {
+      '@type': 'Place',
+      name: input.location.name || input.location.address,
+      ...(input.location.address && {
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: input.location.address,
+        },
+      }),
+    };
+  }
+
+  // Virtual location for online events
+  if (input.isOnline && input.onlineUrl) {
+    const virtualLocation = {
+      '@type': 'VirtualLocation',
+      url: input.onlineUrl,
+    };
+
+    if (jsonLd.location) {
+      // Mixed mode: both physical and virtual
+      jsonLd.location = [jsonLd.location, virtualLocation];
+    } else {
+      jsonLd.location = virtualLocation;
+    }
+  }
+
+  // Organizer
+  if (input.organizer) {
+    jsonLd.organizer = {
+      '@type': 'Organization',
+      name: input.organizer.name,
+      url: input.organizer.url,
+    };
+  }
+
+  // Event status
+  if (input.eventStatus) {
+    const statusMap: Record<string, string> = {
+      scheduled: 'https://schema.org/EventScheduled',
+      cancelled: 'https://schema.org/EventCancelled',
+      postponed: 'https://schema.org/EventPostponed',
+      rescheduled: 'https://schema.org/EventRescheduled',
+    };
+    jsonLd.eventStatus = statusMap[input.eventStatus];
+  } else {
+    jsonLd.eventStatus = 'https://schema.org/EventScheduled';
+  }
+
+  // Offers (registration)
+  if (input.registrationUrl) {
+    jsonLd.offers = {
+      '@type': 'Offer',
+      url: input.registrationUrl,
+      availability: 'https://schema.org/InStock',
+    };
+  }
+
+  return jsonLd;
+}
+

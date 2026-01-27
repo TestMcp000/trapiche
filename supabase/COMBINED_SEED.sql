@@ -664,19 +664,76 @@ INSERT INTO public.gallery_hotspots (
 -- SEED: 部落格假資料 (Blog Seed Data)
 -- ============================================
 --
--- 版本 Version: 2.0
--- 最後更新 Last Updated: 2026-01-25
+-- 版本 Version: 3.0
+-- 最後更新 Last Updated: 2026-01-27
 --
 -- 說明：
 -- - 插入部落格分類與文章假資料（用於 Home Suggest section / blog listing）
+-- - 插入 Blog Taxonomy v2（Groups/Topics/Tags）假資料
 -- - 假圖片使用 picsum.photos 作為封面來源
 --
 -- ============================================
 
 
 -- ============================================
--- PART 1: 部落格分類 (Blog Categories)
+-- PART 0: Blog Taxonomy v2 (Groups/Topics/Tags)
 -- ============================================
+-- 依據 PRD：身心健康衛教 / 書籍推薦 為大分類 (Groups)
+-- Topics 為細分主題（例如情緒照顧、焦慮壓力等）
+
+-- blog_groups: 大分類
+INSERT INTO public.blog_groups (slug, name_zh, sort_order, is_visible) VALUES
+  ('health-education', '身心健康衛教', 1, true),
+  ('book-recommendations', '書籍推薦', 2, true)
+ON CONFLICT (slug) DO UPDATE SET
+  name_zh = EXCLUDED.name_zh,
+  sort_order = EXCLUDED.sort_order,
+  is_visible = EXCLUDED.is_visible,
+  updated_at = TIMEZONE('utc', NOW());
+
+-- blog_topics: 子主題（身心健康衛教下的主題）
+INSERT INTO public.blog_topics (group_id, slug, name_zh, sort_order, is_visible) VALUES
+  ((SELECT id FROM public.blog_groups WHERE slug = 'health-education'), 'emotion-care', '情緒照顧', 1, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'health-education'), 'anxiety-stress', '焦慮壓力', 2, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'health-education'), 'sleep', '睡眠議題', 3, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'health-education'), 'boundaries', '關係界線', 4, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'health-education'), 'self-awareness', '自我覺察', 5, true)
+ON CONFLICT (slug) DO UPDATE SET
+  group_id = EXCLUDED.group_id,
+  name_zh = EXCLUDED.name_zh,
+  sort_order = EXCLUDED.sort_order,
+  is_visible = EXCLUDED.is_visible,
+  updated_at = TIMEZONE('utc', NOW());
+
+-- blog_topics: 書籍推薦下的主題
+INSERT INTO public.blog_topics (group_id, slug, name_zh, sort_order, is_visible) VALUES
+  ((SELECT id FROM public.blog_groups WHERE slug = 'book-recommendations'), 'emotion-healing-books', '情緒療癒', 1, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'book-recommendations'), 'relationship-repair-books', '關係修復', 2, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'book-recommendations'), 'self-growth-books', '自我成長', 3, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'book-recommendations'), 'healing-writing-books', '療癒書寫', 4, true),
+  ((SELECT id FROM public.blog_groups WHERE slug = 'book-recommendations'), 'parenting-books', '親子教養', 5, true)
+ON CONFLICT (slug) DO UPDATE SET
+  group_id = EXCLUDED.group_id,
+  name_zh = EXCLUDED.name_zh,
+  sort_order = EXCLUDED.sort_order,
+  is_visible = EXCLUDED.is_visible,
+  updated_at = TIMEZONE('utc', NOW());
+
+-- blog_tags: 自由標籤（示範用）
+INSERT INTO public.blog_tags (slug, name_zh) VALUES
+  ('beginner', '入門'),
+  ('practice', '實作練習'),
+  ('recommended', '精選推薦'),
+  ('work-life', '職場生活')
+ON CONFLICT (slug) DO UPDATE SET
+  name_zh = EXCLUDED.name_zh,
+  updated_at = TIMEZONE('utc', NOW());
+
+
+-- ============================================
+-- PART 1: 部落格分類 (Blog Categories) - Legacy
+-- ============================================
+-- 保留既有 categories 以維持向後相容
 
 INSERT INTO public.categories (name_en, name_zh, slug) VALUES
   ('Emotion Care', '情緒照顧', 'emotion-care'),
@@ -783,7 +840,87 @@ ON CONFLICT (slug) DO UPDATE SET
 
 
 -- ============================================
--- 完成 DONE
+-- PART 3: 設定文章的 group_id
+-- ============================================
+-- 將所有現有文章設定為「身心健康衛教」大分類
+
+UPDATE public.posts
+SET group_id = (SELECT id FROM public.blog_groups WHERE slug = 'health-education')
+WHERE group_id IS NULL;
+
+
+-- ============================================
+-- PART 4: 文章與 Topics 關聯 (post_topics)
+-- ============================================
+
+-- anxiety-body-signals -> 焦慮壓力
+INSERT INTO public.post_topics (post_id, topic_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_topics t
+WHERE p.slug = 'anxiety-body-signals' AND t.slug = 'anxiety-stress'
+ON CONFLICT (post_id, topic_id) DO NOTHING;
+
+-- building-boundaries -> 關係界線
+INSERT INTO public.post_topics (post_id, topic_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_topics t
+WHERE p.slug = 'building-boundaries' AND t.slug = 'boundaries'
+ON CONFLICT (post_id, topic_id) DO NOTHING;
+
+-- self-care-methods -> 情緒照顧
+INSERT INTO public.post_topics (post_id, topic_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_topics t
+WHERE p.slug = 'self-care-methods' AND t.slug = 'emotion-care'
+ON CONFLICT (post_id, topic_id) DO NOTHING;
+
+-- relationship-safety -> 自我覺察, 關係界線（多主題示範）
+INSERT INTO public.post_topics (post_id, topic_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_topics t
+WHERE p.slug = 'relationship-safety' AND t.slug = 'self-awareness'
+ON CONFLICT (post_id, topic_id) DO NOTHING;
+
+INSERT INTO public.post_topics (post_id, topic_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_topics t
+WHERE p.slug = 'relationship-safety' AND t.slug = 'boundaries'
+ON CONFLICT (post_id, topic_id) DO NOTHING;
+
+
+-- ============================================
+-- PART 5: 文章與 Tags 關聯 (post_tags)
+-- ============================================
+
+-- anxiety-body-signals -> 入門, 實作練習
+INSERT INTO public.post_tags (post_id, tag_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_tags t
+WHERE p.slug = 'anxiety-body-signals' AND t.slug = 'beginner'
+ON CONFLICT (post_id, tag_id) DO NOTHING;
+
+INSERT INTO public.post_tags (post_id, tag_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_tags t
+WHERE p.slug = 'anxiety-body-signals' AND t.slug = 'practice'
+ON CONFLICT (post_id, tag_id) DO NOTHING;
+
+-- self-care-methods -> 實作練習, 精選推薦
+INSERT INTO public.post_tags (post_id, tag_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_tags t
+WHERE p.slug = 'self-care-methods' AND t.slug = 'practice'
+ON CONFLICT (post_id, tag_id) DO NOTHING;
+
+INSERT INTO public.post_tags (post_id, tag_id)
+SELECT p.id, t.id
+FROM public.posts p, public.blog_tags t
+WHERE p.slug = 'self-care-methods' AND t.slug = 'recommended'
+ON CONFLICT (post_id, tag_id) DO NOTHING;
+
+
+-- ============================================
+-- 完成 DONE (Blog Seed)
 -- ============================================
 
 

@@ -422,6 +422,7 @@ interface ApiErrorResponse {
 - Active drift repair steps (keep completed snapshots in archive): `doc/meta/STEP_PLAN.md`
 - Single-feature specs index (stable): `doc/specs/README.md`
 - Home UIUX + Gallery Hero/Hotspots PRD（proposed；Implementation Contract）：`doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md`
+- Admin CMS vNext PRD（proposed；Nav/Blog taxonomy/Events/Pages）：`doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`
 
 ---
 

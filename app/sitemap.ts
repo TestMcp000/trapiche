@@ -1,9 +1,17 @@
 ﻿import { MetadataRoute } from 'next';
 import { getPublicPostsForSitemapCached } from '@/lib/modules/blog/cached';
 import { getVisibleGalleryItemsForSitemapCached } from '@/lib/modules/gallery/cached';
+import {
+  getVisibleBlogGroupsCached,
+  getVisibleBlogTopicsCached,
+  getBlogTagsWithCountsCached,
+} from '@/lib/modules/blog/taxonomy-cached';
+import { getPublicEventsForSitemapCached } from '@/lib/modules/events/cached';
+import { getFAQsForSitemapCached } from '@/lib/modules/faq/cached';
 import { isBlogEnabledCached, isGalleryEnabledCached } from '@/lib/features/cached';
 // P0-6: Use centralized SITE_URL from lib/seo/hreflang
 import { SITE_URL } from '@/lib/seo/hreflang';
+
 
 // Static pages that exist on the site
 const STATIC_PAGES = [
@@ -49,26 +57,68 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Add blog posts with language alternates
-  try {
-    const posts = await getPublicPostsForSitemapCached();
+  if (blogEnabled) {
+    try {
+      const posts = await getPublicPostsForSitemapCached();
 
-    for (const post of posts) {
-      // v2 canonical URL: /blog/posts/[slug]
-      const blogPath = `/blog/posts/${post.slug}`;
-      const lastModified = new Date(post.updatedAt);
+      for (const post of posts) {
+        // v2 canonical URL: /blog/posts/[slug]
+        const blogPath = `/blog/posts/${post.slug}`;
+        const lastModified = new Date(post.updatedAt);
 
-      // Only add Chinese version if post has Chinese content
-      if (post.hasChinese) {
+        // Only add Chinese version if post has Chinese content
+        if (post.hasChinese) {
+          sitemapEntries.push({
+            url: `${SITE_URL}/zh${blogPath}`,
+            lastModified,
+            changeFrequency: 'weekly',
+            priority: 0.7,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error generating sitemap for blog posts:', error);
+    }
+
+    // Add blog taxonomy pages (groups, topics, tags)
+    try {
+      // Blog Groups
+      const groups = await getVisibleBlogGroupsCached();
+      for (const group of groups) {
         sitemapEntries.push({
-          url: `${SITE_URL}/zh${blogPath}`,
-          lastModified,
+          url: `${SITE_URL}/zh/blog/groups/${group.slug}`,
+          lastModified: new Date(group.updated_at),
           changeFrequency: 'weekly',
-          priority: 0.7,
+          priority: 0.6,
         });
       }
+
+      // Blog Topics (use /blog/categories/[slug] for backward compatibility)
+      const topics = await getVisibleBlogTopicsCached();
+      for (const topic of topics) {
+        sitemapEntries.push({
+          url: `${SITE_URL}/zh/blog/categories/${topic.slug}`,
+          lastModified: new Date(topic.updated_at),
+          changeFrequency: 'weekly',
+          priority: 0.6,
+        });
+      }
+
+      // Blog Tags (only include tags with posts)
+      const tagsWithCounts = await getBlogTagsWithCountsCached();
+      for (const tag of tagsWithCounts) {
+        if (tag.post_count > 0) {
+          sitemapEntries.push({
+            url: `${SITE_URL}/zh/blog/tags/${tag.slug}`,
+            lastModified: new Date(tag.updated_at),
+            changeFrequency: 'weekly',
+            priority: 0.5,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error generating sitemap for blog taxonomy:', error);
     }
-  } catch (error) {
-    console.error('Error generating sitemap for blog posts:', error);
   }
 
   // Add gallery items with language alternates (if gallery is enabled)
@@ -91,6 +141,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     } catch (error) {
       console.error('Error generating sitemap for gallery items:', error);
     }
+  }
+
+  // Add events
+  try {
+    const events = await getPublicEventsForSitemapCached();
+
+    // Add events index page
+    sitemapEntries.push({
+      url: `${SITE_URL}/zh/events`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    });
+
+    // Add individual event pages
+    for (const event of events) {
+      sitemapEntries.push({
+        url: `${SITE_URL}/zh/events/${event.slug}`,
+        lastModified: new Date(event.updated_at),
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      });
+    }
+  } catch (error) {
+    console.error('Error generating sitemap for events:', error);
+  }
+
+  // Add FAQ page
+  try {
+    const faqData = await getFAQsForSitemapCached();
+
+    sitemapEntries.push({
+      url: `${SITE_URL}/zh/faq`,
+      lastModified: faqData ? new Date(faqData.updated_at) : new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    });
+  } catch (error) {
+    console.error('Error generating sitemap for FAQ:', error);
   }
 
   return sitemapEntries;

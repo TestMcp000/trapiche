@@ -402,6 +402,21 @@ function AdminSidebarContent({
           icon: icons.blog,
         },
         {
+          labelKey: "eventsManagement",
+          href: `/${routeLocale}/admin/events`,
+          icon: icons.landing,
+        },
+        {
+          labelKey: "faqsManagement",
+          href: `/${routeLocale}/admin/faqs`,
+          icon: icons.content,
+        },
+        {
+          labelKey: "contactMessages",
+          href: `/${routeLocale}/admin/contact-messages`,
+          icon: icons.content,
+        },
+        {
           labelKey: "portfolio",
           href: `/${routeLocale}/admin/portfolio`,
           icon: icons.portfolio,
@@ -423,6 +438,11 @@ function AdminSidebarContent({
           labelKey: "settings",
           href: `/${routeLocale}/admin/settings`,
           icon: icons.settings,
+        },
+        {
+          labelKey: "navigation",
+          href: `/${routeLocale}/admin/settings/navigation`,
+          icon: icons.content,
         },
         {
           labelKey: "theme",

@@ -17,6 +17,9 @@ import {
   getCategoriesWithCounts,
   getRelatedPosts,
   getPublicPostsForSitemap,
+  getPublicPostsByGroup,
+  getPublicPostsByTopic,
+  getPublicPostsByTag,
 } from '@/lib/modules/blog/io';
 
 const CACHE_REVALIDATE_SECONDS = 60;
@@ -80,3 +83,48 @@ export const getPublicPostsForSitemapCached = cachedQuery(
 
 // Re-export getAuthorInfo directly (no caching needed - returns static values)
 export { getAuthorInfo } from '@/lib/modules/blog/io';
+
+// =============================================================================
+// Taxonomy v2 Cached Queries
+// =============================================================================
+
+export const getPublicPostsByGroupCached = cachedQuery(
+  async (options: {
+    groupSlug: string;
+    locale?: string;
+    search?: string;
+    sort?: 'newest' | 'oldest' | 'title-asc' | 'title-desc';
+    limit?: number;
+    offset?: number;
+  }): Promise<PostSummary[]> => getPublicPostsByGroup(options),
+  ['public-posts-by-group'],
+  ['blog'],
+  CACHE_REVALIDATE_SECONDS
+);
+
+export const getPublicPostsByTopicCached = cachedQuery(
+  async (options: {
+    topicSlug: string;
+    locale?: string;
+    search?: string;
+    sort?: 'newest' | 'oldest' | 'title-asc' | 'title-desc';
+    limit?: number;
+    offset?: number;
+  }): Promise<PostSummary[]> => getPublicPostsByTopic(options),
+  ['public-posts-by-topic'],
+  ['blog'],
+  CACHE_REVALIDATE_SECONDS
+);
+
+export const getPublicPostsByTagCached = cachedQuery(
+  async (options: {
+    tagSlug: string;
+    locale?: string;
+    sort?: 'newest' | 'oldest' | 'title-asc' | 'title-desc';
+    limit?: number;
+    offset?: number;
+  }): Promise<PostSummary[]> => getPublicPostsByTag(options),
+  ['public-posts-by-tag'],
+  ['blog'],
+  CACHE_REVALIDATE_SECONDS
+);

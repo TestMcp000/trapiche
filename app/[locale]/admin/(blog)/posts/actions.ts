@@ -23,6 +23,7 @@ import {
   deletePost,
   getPostById,
 } from '@/lib/modules/blog/admin-io';
+import { updatePostTaxonomy } from '@/lib/modules/blog/taxonomy-admin-io';
 import {
   ADMIN_ERROR_CODES,
   actionSuccess,
@@ -52,6 +53,10 @@ export interface PostActionInput {
   category_id: string | null;
   visibility: Visibility;
   reading_time_minutes: number | null;
+  // Taxonomy v2 fields
+  group_id?: string | null;
+  topic_ids?: string[];
+  tag_ids?: string[];
 }
 
 // ============================================================================
@@ -125,6 +130,7 @@ function toPostInput(input: PostActionInput): PostInput {
     reading_time_minutes: input.reading_time_minutes && input.reading_time_minutes > 0
       ? input.reading_time_minutes
       : undefined,
+    // Note: group_id is handled separately via updatePostTaxonomy, not in PostInput
   };
 }
 
@@ -161,7 +167,17 @@ export async function createPostAction(
       return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
     }
 
-    // 4. Revalidate cache/SEO
+    // 4. Update taxonomy relations (group + topics + tags)
+    if (input.group_id || (input.topic_ids && input.topic_ids.length > 0) || (input.tag_ids && input.tag_ids.length > 0)) {
+      await updatePostTaxonomy(
+        post.id,
+        input.group_id || null,
+        input.topic_ids || [],
+        input.tag_ids || []
+      );
+    }
+
+    // 5. Revalidate cache/SEO
     revalidateTag('blog', { expire: 0 });
     revalidatePath(`/${locale}/admin/posts`);
     revalidatePath(buildBlogListUrl(locale));
@@ -214,7 +230,15 @@ export async function updatePostAction(
       return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
-    // 5. Revalidate cache/SEO (including old and new detail pages)
+    // 5. Update taxonomy relations (group + topics + tags)
+    await updatePostTaxonomy(
+      postId,
+      input.group_id || null,
+      input.topic_ids || [],
+      input.tag_ids || []
+    );
+
+    // 6. Revalidate cache/SEO (including old and new detail pages)
     revalidateTag('blog', { expire: 0 });
     revalidatePath(`/${locale}/admin/posts`);
     revalidatePath(buildBlogListUrl(locale));

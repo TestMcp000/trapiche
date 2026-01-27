@@ -20,7 +20,7 @@
 ## 目錄
 
 - [Home（UIUX v2）](#home-uiux-v2)
-- [網站頁面（About/Services/Platforms/Portfolio/Contact/Privacy/Login）](#site-pages)
+- [網站頁面（About/Services/Platforms/Portfolio/FAQ/Contact/Privacy/Login）](#site-pages)
 - [部落格系統](#blog-system)
 - [圖庫](#gallery)
 - [留言](#comments)
@@ -74,7 +74,7 @@
 
 <a id="site-pages"></a>
 
-## 網站頁面（About/Services/Platforms/Portfolio/Contact/Privacy/Login）
+## 網站頁面（About/Services/Platforms/Portfolio/FAQ/Contact/Privacy/Login）
 
 ### 路由
 
@@ -84,7 +84,8 @@
 | `/[locale]/services` | 服務頁 | `services`（visible） |
 | `/[locale]/platforms` | 技術平台頁 | `site_content(section_key='platforms')` |
 | `/[locale]/portfolio` | 作品集 | `portfolio_items`（visible） |
-| `/[locale]/contact` | 聯絡頁 | `site_content(section_key='contact')` + `company_settings` |
+| `/[locale]/faq` | 常見問題（FAQPage JSON-LD） | `faqs`（visible；排序） |
+| `/[locale]/contact` | 聯絡頁（含表單提交） | `site_content(section_key='contact')` + `company_settings` + `contact_messages`（insert） |
 | `/[locale]/privacy` | 隱私權政策 | 目前為靜態內容（inline HTML） |
 | `/[locale]/login` | Admin Login（Google OAuth） | Client-side Supabase OAuth（redirect → `/auth/callback`） |
 
@@ -425,6 +426,7 @@
 | `/admin/landing/[sectionKey]` | Landing section editor                         |
 | `/admin/portfolio`            | Portfolio 管理                                 |
 | `/admin/settings`             | Company settings（theme 由 `/admin/theme` 管） |
+| `/admin/settings/navigation`  | 導覽選單可視化編輯器（Hamburger menu editor）  |
 
 **Blog**
 
@@ -434,6 +436,24 @@
 | `/admin/posts/new`       | 新增文章 |
 | `/admin/posts/[id]/edit` | 編輯文章 |
 | `/admin/categories`      | 分類管理 |
+
+**Events（活動）**
+
+| 路由            | 說明               |
+| --------------- | ------------------ |
+| `/admin/events` | 活動列表與類型管理 |
+
+**FAQ（常見問題）**
+
+| 路由          | 說明                               |
+| ------------- | ---------------------------------- |
+| `/admin/faqs` | FAQ 管理（CRUD + 拖曳排序 + 可見） |
+
+**Contact Messages（聯絡訊息）**
+
+| 路由                     | 說明                                    |
+| ------------------------ | --------------------------------------- |
+| `/admin/contact-messages`| 聯絡表單訊息管理（讀取/封存/刪除）       |
 
 **Engagement（互動）**
 
@@ -481,6 +501,7 @@
 
 - Header nav labels（Legacy Header）：`site_content(section_key='nav')`（fallback：`messages/*`）
 - Hamburger nav（Home v2 HeaderBar）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：built-in default）
+  - 後台可視化編輯器：`/admin/settings/navigation`（支援 groups/items 拖曳排序、target picker、draft/publish 兩段式驗證）
 - Footer copy：`site_content(section_key='footer')`（fallback：`messages/*`）
 - Company short name：`site_content(section_key='company')`（fallback：`messages/*`）
 - Home v2 hero copy：`site_content(section_key='hero')`
@@ -611,6 +632,18 @@
 ### Home UIUX / Navigation
 
 - Suggest section 仍為 placeholder（見 Home 章節說明；後續以 `doc/ROADMAP.md` 為準）。
+
+### CMS vNext（Nav / Blog taxonomy / Events / Pages）
+
+> 本項為 planned work（未落地）；規格與落地步驟以 PRD/step plan 為準，避免把「想做」誤讀成「已實作」。
+
+- PRD（planned）：`specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`
+- 落地步驟（PR-by-PR）：`meta/STEP_PLAN.md`（PR-32+）
+- 主要缺口（現況 → 目標）：
+  - ~~Hamburger menu 後台仍為 JSON editor → 需補「可視化 editor」~~（已完成：`/admin/settings/navigation`；PR-32）
+  - Blog taxonomy：`categories` 單選 → 需升級為 Group/Topics/Tags（多選）
+  - Events：尚無 `events` domain（DB + public `/events` + admin CRUD）
+  - ~~FAQ/Contact form：尚未落地（FAQPage JSON-LD 已有 helper，但缺資料來源與頁面）~~（已完成：`/faq` + `/admin/faqs` + `/admin/contact-messages`；PR-38）
 
 ### Data Intelligence（後台）
 

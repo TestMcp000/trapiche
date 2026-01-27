@@ -46,10 +46,19 @@ async function validateTarget(
             return validateGalleryCategory(target.categorySlug, path);
 
         case 'blog_index':
+        case 'blog_group':
+        case 'blog_topic':
+        case 'blog_tag':
         case 'gallery_index':
+        case 'events_index':
+        case 'event_detail':
+        case 'faq_index':
         case 'page':
         case 'anchor':
         case 'external':
+            // These targets don't require DB existence validation
+            // (blog_group/topic/tag validation will be added in PR-35 with admin CRUD)
+            // (events validation will be added in PR-37 with admin CRUD)
             return null;
 
         default: {
