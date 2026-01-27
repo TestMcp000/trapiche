@@ -72,7 +72,9 @@ export default async function EventDetailPage({ params }: PageProps) {
 
   // Validate external URLs (render-side hardening)
   const validatedOnlineUrl = validateOptionalExternalUrl(event.online_url);
-  const validatedRegistrationUrl = validateOptionalExternalUrl(event.registration_url);
+  const validatedRegistrationUrl = validateOptionalExternalUrl(
+    event.registration_url,
+  );
 
   const safeOnlineUrl = validatedOnlineUrl.valid
     ? validatedOnlineUrl.data

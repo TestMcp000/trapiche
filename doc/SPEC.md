@@ -78,16 +78,16 @@
 
 ### 路由
 
-| 路由 | 說明 | 主要資料來源 |
-| --- | --- | --- |
-| `/[locale]/about` | 關於頁 | `site_content(section_key='about')` + `company_settings` |
-| `/[locale]/services` | 服務頁 | `services`（visible） |
-| `/[locale]/platforms` | 技術平台頁 | `site_content(section_key='platforms')` |
-| `/[locale]/portfolio` | 作品集 | `portfolio_items`（visible） |
-| `/[locale]/faq` | 常見問題（FAQPage JSON-LD） | `faqs`（visible；排序） |
-| `/[locale]/contact` | 聯絡頁（含表單提交） | `site_content(section_key='contact')` + `company_settings` + `contact_messages`（insert） |
-| `/[locale]/privacy` | 隱私權政策 | 目前為靜態內容（inline HTML） |
-| `/[locale]/login` | Admin Login（Google OAuth） | Client-side Supabase OAuth（redirect → `/auth/callback`） |
+| 路由                  | 說明                        | 主要資料來源                                                                              |
+| --------------------- | --------------------------- | ----------------------------------------------------------------------------------------- |
+| `/[locale]/about`     | 關於頁                      | `site_content(section_key='about')` + `company_settings`                                  |
+| `/[locale]/services`  | 服務頁                      | `services`（visible）                                                                     |
+| `/[locale]/platforms` | 技術平台頁                  | `site_content(section_key='platforms')`                                                   |
+| `/[locale]/portfolio` | 作品集                      | `portfolio_items`（visible）                                                              |
+| `/[locale]/faq`       | 常見問題（FAQPage JSON-LD） | `faqs`（visible；排序）                                                                   |
+| `/[locale]/contact`   | 聯絡頁（含表單提交）        | `site_content(section_key='contact')` + `company_settings` + `contact_messages`（insert） |
+| `/[locale]/privacy`   | 隱私權政策                  | 目前為靜態內容（inline HTML）                                                             |
+| `/[locale]/login`     | Admin Login（Google OAuth） | Client-side Supabase OAuth（redirect → `/auth/callback`）                                 |
 
 ### 實作備註
 
@@ -149,13 +149,13 @@
 
 ### 路由
 
-| 路由                                        | 說明                                                            |
-| ------------------------------------------- | --------------------------------------------------------------- |
+| 路由                                        | 說明                                                                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `/[locale]/gallery`                         | 圖庫列表（支援 `?q=<q>&tag=<tag>&sort=<...>`；legacy `?category=<slug>` 會 redirect 到 `/[locale]/gallery/categories/[slug]`） |
-| `/[locale]/gallery/categories/[slug]`       | 分類列表（v2 canonical；支援 `?q=<q>&tag=<tag>&sort=<...>`） |
-| `/[locale]/gallery/items/[category]/[slug]` | 單一作品頁（v2 canonical） |
-| `/[locale]/gallery/[category]`              | legacy（308 → `/[locale]/gallery/categories/[slug]`） |
-| `/[locale]/gallery/[category]/[slug]`       | legacy（301 → `/[locale]/gallery/items/[category]/[slug]`）     |
+| `/[locale]/gallery/categories/[slug]`       | 分類列表（v2 canonical；支援 `?q=<q>&tag=<tag>&sort=<...>`）                                                                   |
+| `/[locale]/gallery/items/[category]/[slug]` | 單一作品頁（v2 canonical）                                                                                                     |
+| `/[locale]/gallery/[category]`              | legacy（308 → `/[locale]/gallery/categories/[slug]`）                                                                          |
+| `/[locale]/gallery/[category]/[slug]`       | legacy（301 → `/[locale]/gallery/items/[category]/[slug]`）                                                                    |
 
 ### API 端點
 
@@ -451,9 +451,9 @@
 
 **Contact Messages（聯絡訊息）**
 
-| 路由                     | 說明                                    |
-| ------------------------ | --------------------------------------- |
-| `/admin/contact-messages`| 聯絡表單訊息管理（讀取/封存/刪除）       |
+| 路由                      | 說明                               |
+| ------------------------- | ---------------------------------- |
+| `/admin/contact-messages` | 聯絡表單訊息管理（讀取/封存/刪除） |
 
 **Engagement（互動）**
 

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Hamburger Nav Editor Client Component
@@ -10,23 +10,27 @@
  * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-A1–A4)
  */
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type {
   HamburgerNavV2,
   HamburgerNavGroup,
   HamburgerNavItem,
   NavTarget,
-} from '@/lib/types/hamburger-nav';
-import type { ContentHistory } from '@/lib/types/content';
-import type { Category } from '@/lib/types/blog';
-import type { GalleryCategory } from '@/lib/types/gallery';
-import type { EventType } from '@/lib/types/events';
-import { saveNavDraft, publishNav, unpublishNav } from '@/app/[locale]/admin/settings/navigation/actions';
-import NavGroupList from './hamburger-nav-editor/NavGroupList';
-import NavValidationErrors from './hamburger-nav-editor/NavValidationErrors';
-import NavHistoryPanel from './hamburger-nav-editor/NavHistoryPanel';
+} from "@/lib/types/hamburger-nav";
+import type { ContentHistory } from "@/lib/types/content";
+import type { Category } from "@/lib/types/blog";
+import type { GalleryCategory } from "@/lib/types/gallery";
+import type { EventType } from "@/lib/types/events";
+import {
+  saveNavDraft,
+  publishNav,
+  unpublishNav,
+} from "@/app/[locale]/admin/settings/navigation/actions";
+import NavGroupList from "./hamburger-nav-editor/NavGroupList";
+import NavValidationErrors from "./hamburger-nav-editor/NavValidationErrors";
+import NavHistoryPanel from "./hamburger-nav-editor/NavHistoryPanel";
 
 interface HamburgerNavEditorClientProps {
   initialNav: HamburgerNavV2;
@@ -50,14 +54,19 @@ export default function HamburgerNavEditorClient({
   staticPages,
 }: HamburgerNavEditorClientProps) {
   const router = useRouter();
-  const t = useTranslations('admin.navigation');
+  const t = useTranslations("admin.navigation");
 
   // State
   const [nav, setNav] = useState<HamburgerNavV2>(initialNav);
   const [isPublished, setIsPublished] = useState(initialIsPublished);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [validationErrors, setValidationErrors] = useState<Array<{ path: string; message: string }>>([]);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [validationErrors, setValidationErrors] = useState<
+    Array<{ path: string; message: string }>
+  >([]);
   const [showHistory, setShowHistory] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -72,7 +81,7 @@ export default function HamburgerNavEditorClient({
   const addGroup = useCallback(() => {
     const newGroup: HamburgerNavGroup = {
       id: `group-${Date.now()}`,
-      label: t('newGroup'),
+      label: t("newGroup"),
       items: [],
     };
     setNav((prev) => ({
@@ -86,11 +95,13 @@ export default function HamburgerNavEditorClient({
     (groupId: string, updates: Partial<HamburgerNavGroup>) => {
       setNav((prev) => ({
         ...prev,
-        groups: prev.groups.map((g) => (g.id === groupId ? { ...g, ...updates } : g)),
+        groups: prev.groups.map((g) =>
+          g.id === groupId ? { ...g, ...updates } : g,
+        ),
       }));
       markChanged();
     },
-    [markChanged]
+    [markChanged],
   );
 
   const deleteGroup = useCallback(
@@ -101,25 +112,28 @@ export default function HamburgerNavEditorClient({
       }));
       markChanged();
     },
-    [markChanged]
+    [markChanged],
   );
 
   const moveGroup = useCallback(
-    (groupId: string, direction: 'up' | 'down') => {
+    (groupId: string, direction: "up" | "down") => {
       setNav((prev) => {
         const idx = prev.groups.findIndex((g) => g.id === groupId);
         if (idx === -1) return prev;
-        if (direction === 'up' && idx === 0) return prev;
-        if (direction === 'down' && idx === prev.groups.length - 1) return prev;
+        if (direction === "up" && idx === 0) return prev;
+        if (direction === "down" && idx === prev.groups.length - 1) return prev;
 
         const newGroups = [...prev.groups];
-        const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-        [newGroups[idx], newGroups[swapIdx]] = [newGroups[swapIdx], newGroups[idx]];
+        const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+        [newGroups[idx], newGroups[swapIdx]] = [
+          newGroups[swapIdx],
+          newGroups[idx],
+        ];
         return { ...prev, groups: newGroups };
       });
       markChanged();
     },
-    [markChanged]
+    [markChanged],
   );
 
   // Item operations
@@ -127,18 +141,18 @@ export default function HamburgerNavEditorClient({
     (groupId: string) => {
       const newItem: HamburgerNavItem = {
         id: `item-${Date.now()}`,
-        label: t('newItem'),
-        target: { type: 'page', path: '/about' },
+        label: t("newItem"),
+        target: { type: "page", path: "/about" },
       };
       setNav((prev) => ({
         ...prev,
         groups: prev.groups.map((g) =>
-          g.id === groupId ? { ...g, items: [...g.items, newItem] } : g
+          g.id === groupId ? { ...g, items: [...g.items, newItem] } : g,
         ),
       }));
       markChanged();
     },
-    [t, markChanged]
+    [t, markChanged],
   );
 
   const updateItem = useCallback(
@@ -149,14 +163,16 @@ export default function HamburgerNavEditorClient({
           g.id === groupId
             ? {
                 ...g,
-                items: g.items.map((i) => (i.id === itemId ? { ...i, ...updates } : i)),
+                items: g.items.map((i) =>
+                  i.id === itemId ? { ...i, ...updates } : i,
+                ),
               }
-            : g
+            : g,
         ),
       }));
       markChanged();
     },
-    [markChanged]
+    [markChanged],
   );
 
   const deleteItem = useCallback(
@@ -164,34 +180,39 @@ export default function HamburgerNavEditorClient({
       setNav((prev) => ({
         ...prev,
         groups: prev.groups.map((g) =>
-          g.id === groupId ? { ...g, items: g.items.filter((i) => i.id !== itemId) } : g
+          g.id === groupId
+            ? { ...g, items: g.items.filter((i) => i.id !== itemId) }
+            : g,
         ),
       }));
       markChanged();
     },
-    [markChanged]
+    [markChanged],
   );
 
   const moveItem = useCallback(
-    (groupId: string, itemId: string, direction: 'up' | 'down') => {
+    (groupId: string, itemId: string, direction: "up" | "down") => {
       setNav((prev) => ({
         ...prev,
         groups: prev.groups.map((g) => {
           if (g.id !== groupId) return g;
           const idx = g.items.findIndex((i) => i.id === itemId);
           if (idx === -1) return g;
-          if (direction === 'up' && idx === 0) return g;
-          if (direction === 'down' && idx === g.items.length - 1) return g;
+          if (direction === "up" && idx === 0) return g;
+          if (direction === "down" && idx === g.items.length - 1) return g;
 
           const newItems = [...g.items];
-          const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-          [newItems[idx], newItems[swapIdx]] = [newItems[swapIdx], newItems[idx]];
+          const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+          [newItems[idx], newItems[swapIdx]] = [
+            newItems[swapIdx],
+            newItems[idx],
+          ];
           return { ...g, items: newItems };
         }),
       }));
       markChanged();
     },
-    [markChanged]
+    [markChanged],
   );
 
   // Update item target
@@ -199,7 +220,7 @@ export default function HamburgerNavEditorClient({
     (groupId: string, itemId: string, target: NavTarget) => {
       updateItem(groupId, itemId, { target });
     },
-    [updateItem]
+    [updateItem],
   );
 
   // Save draft
@@ -214,9 +235,9 @@ export default function HamburgerNavEditorClient({
       if (result.validationErrors && result.validationErrors.length > 0) {
         setValidationErrors(result.validationErrors);
       }
-      setMessage({ type: 'error', text: result.error || t('saveFailed') });
+      setMessage({ type: "error", text: result.error || t("saveFailed") });
     } else {
-      setMessage({ type: 'success', text: t('draftSaved') });
+      setMessage({ type: "success", text: t("draftSaved") });
       setHasChanges(false);
       router.refresh();
     }
@@ -234,7 +255,10 @@ export default function HamburgerNavEditorClient({
         if (saveResult.validationErrors) {
           setValidationErrors(saveResult.validationErrors);
         }
-        setMessage({ type: 'error', text: saveResult.error || t('saveFailed') });
+        setMessage({
+          type: "error",
+          text: saveResult.error || t("saveFailed"),
+        });
         setSaving(false);
         return;
       }
@@ -250,9 +274,9 @@ export default function HamburgerNavEditorClient({
       if (result.validationErrors && result.validationErrors.length > 0) {
         setValidationErrors(result.validationErrors);
       }
-      setMessage({ type: 'error', text: result.error || t('publishFailed') });
+      setMessage({ type: "error", text: result.error || t("publishFailed") });
     } else {
-      setMessage({ type: 'success', text: t('published') });
+      setMessage({ type: "success", text: t("published") });
       setIsPublished(true);
       setHasChanges(false);
       router.refresh();
@@ -269,9 +293,9 @@ export default function HamburgerNavEditorClient({
     const result = await unpublishNav(locale);
 
     if (!result.success) {
-      setMessage({ type: 'error', text: result.error || t('unpublishFailed') });
+      setMessage({ type: "error", text: result.error || t("unpublishFailed") });
     } else {
-      setMessage({ type: 'success', text: t('unpublished') });
+      setMessage({ type: "success", text: t("unpublished") });
       setIsPublished(false);
       router.refresh();
     }
@@ -283,7 +307,7 @@ export default function HamburgerNavEditorClient({
   const handleRestore = useCallback(
     (historyItem: ContentHistory) => {
       if (!historyItem.old_value) {
-        setMessage({ type: 'error', text: t('noHistoryContent') });
+        setMessage({ type: "error", text: t("noHistoryContent") });
         return;
       }
 
@@ -294,12 +318,12 @@ export default function HamburgerNavEditorClient({
       if (value.content_zh) {
         // Cast to HamburgerNavV2
         setNav(value.content_zh as unknown as HamburgerNavV2);
-        setMessage({ type: 'success', text: t('historyLoaded') });
+        setMessage({ type: "success", text: t("historyLoaded") });
         setHasChanges(true);
         setShowHistory(false);
       }
     },
-    [t]
+    [t],
   );
 
   return (
@@ -307,8 +331,12 @@ export default function HamburgerNavEditorClient({
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('description')}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t("title")}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {t("description")}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -316,19 +344,17 @@ export default function HamburgerNavEditorClient({
           <span
             className={`px-3 py-1 text-xs font-medium rounded-full ${
               isPublished
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-            }`}
-          >
-            {isPublished ? t('statusPublished') : t('statusDraft')}
+                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+            }`}>
+            {isPublished ? t("statusPublished") : t("statusDraft")}
           </span>
 
           {/* History button */}
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-          >
-            {t('history')}
+            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+            {t("history")}
           </button>
 
           {/* Publish/Unpublish button */}
@@ -336,17 +362,15 @@ export default function HamburgerNavEditorClient({
             <button
               onClick={handleUnpublish}
               disabled={saving}
-              className="px-4 py-2 text-sm text-yellow-700 bg-yellow-100 rounded-lg hover:bg-yellow-200 disabled:opacity-50"
-            >
-              {t('unpublish')}
+              className="px-4 py-2 text-sm text-yellow-700 bg-yellow-100 rounded-lg hover:bg-yellow-200 disabled:opacity-50">
+              {t("unpublish")}
             </button>
           ) : (
             <button
               onClick={handlePublish}
               disabled={saving}
-              className="px-4 py-2 text-sm text-green-700 bg-green-100 rounded-lg hover:bg-green-200 disabled:opacity-50"
-            >
-              {t('publish')}
+              className="px-4 py-2 text-sm text-green-700 bg-green-100 rounded-lg hover:bg-green-200 disabled:opacity-50">
+              {t("publish")}
             </button>
           )}
 
@@ -354,9 +378,8 @@ export default function HamburgerNavEditorClient({
           <button
             onClick={handleSaveDraft}
             disabled={saving || !hasChanges}
-            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? t('saving') : t('saveDraft')}
+            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {saving ? t("saving") : t("saveDraft")}
           </button>
         </div>
       </div>
@@ -364,7 +387,7 @@ export default function HamburgerNavEditorClient({
       {/* Unsaved changes indicator */}
       {hasChanges && (
         <div className="mb-4 p-3 rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 text-sm">
-          {t('unsavedChanges')}
+          {t("unsavedChanges")}
         </div>
       )}
 
@@ -372,17 +395,18 @@ export default function HamburgerNavEditorClient({
       {message && (
         <div
           className={`mb-4 p-3 rounded-lg ${
-            message.type === 'success'
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-          }`}
-        >
+            message.type === "success"
+              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+          }`}>
           {message.text}
         </div>
       )}
 
       {/* Validation Errors */}
-      {validationErrors.length > 0 && <NavValidationErrors errors={validationErrors} />}
+      {validationErrors.length > 0 && (
+        <NavValidationErrors errors={validationErrors} />
+      )}
 
       {/* Group List */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">

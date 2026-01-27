@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Nav Item Row Component
@@ -8,13 +8,13 @@
  * @module components/admin/settings/hamburger-nav-editor/NavItemRow
  */
 
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
-import type { HamburgerNavItem, NavTarget } from '@/lib/types/hamburger-nav';
-import type { Category } from '@/lib/types/blog';
-import type { GalleryCategory } from '@/lib/types/gallery';
-import type { EventType } from '@/lib/types/events';
-import NavTargetPicker from './NavTargetPicker';
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import type { HamburgerNavItem, NavTarget } from "@/lib/types/hamburger-nav";
+import type { Category } from "@/lib/types/blog";
+import type { GalleryCategory } from "@/lib/types/gallery";
+import type { EventType } from "@/lib/types/events";
+import NavTargetPicker from "./NavTargetPicker";
 
 interface NavItemRowProps {
   item: HamburgerNavItem;
@@ -22,7 +22,7 @@ interface NavItemRowProps {
   totalItems: number;
   onUpdate: (updates: Partial<HamburgerNavItem>) => void;
   onDelete: () => void;
-  onMove: (direction: 'up' | 'down') => void;
+  onMove: (direction: "up" | "down") => void;
   onUpdateTarget: (target: NavTarget) => void;
   blogCategories: Category[];
   galleryCategories: GalleryCategory[];
@@ -43,7 +43,7 @@ export default function NavItemRow({
   eventTypes,
   staticPages,
 }: NavItemRowProps) {
-  const t = useTranslations('admin.navigation');
+  const t = useTranslations("admin.navigation");
   const [isEditing, setIsEditing] = useState(false);
   const [editLabel, setEditLabel] = useState(item.label);
   const [showTargetPicker, setShowTargetPicker] = useState(false);
@@ -64,60 +64,60 @@ export default function NavItemRow({
   // Get target type display label
   const getTargetTypeLabel = (target: NavTarget): string => {
     switch (target.type) {
-      case 'blog_index':
-        return t('targetTypes.blogIndex');
-      case 'blog_category':
-        return t('targetTypes.blogCategory');
-      case 'blog_post':
-        return t('targetTypes.blogPost');
-      case 'gallery_index':
-        return t('targetTypes.galleryIndex');
-      case 'gallery_category':
-        return t('targetTypes.galleryCategory');
-      case 'gallery_item':
-        return t('targetTypes.galleryItem');
-      case 'events_index':
-        return t('targetTypes.eventsIndex');
-      case 'event_detail':
-        return t('targetTypes.eventDetail');
-      case 'page':
-        return t('targetTypes.page');
-      case 'anchor':
-        return t('targetTypes.anchor');
-      case 'external':
-        return t('targetTypes.external');
+      case "blog_index":
+        return t("targetTypes.blogIndex");
+      case "blog_category":
+        return t("targetTypes.blogCategory");
+      case "blog_post":
+        return t("targetTypes.blogPost");
+      case "gallery_index":
+        return t("targetTypes.galleryIndex");
+      case "gallery_category":
+        return t("targetTypes.galleryCategory");
+      case "gallery_item":
+        return t("targetTypes.galleryItem");
+      case "events_index":
+        return t("targetTypes.eventsIndex");
+      case "event_detail":
+        return t("targetTypes.eventDetail");
+      case "page":
+        return t("targetTypes.page");
+      case "anchor":
+        return t("targetTypes.anchor");
+      case "external":
+        return t("targetTypes.external");
       default:
-        return t('targetTypes.unknown');
+        return t("targetTypes.unknown");
     }
   };
 
   // Get target detail string
   const getTargetDetail = (target: NavTarget): string => {
     switch (target.type) {
-      case 'blog_index':
-        return target.q ? `?q=${target.q}` : '';
-      case 'blog_category':
+      case "blog_index":
+        return target.q ? `?q=${target.q}` : "";
+      case "blog_category":
         return target.categorySlug;
-      case 'blog_post':
+      case "blog_post":
         return target.postSlug;
-      case 'gallery_index':
-        return target.q ? `?q=${target.q}` : '';
-      case 'gallery_category':
+      case "gallery_index":
+        return target.q ? `?q=${target.q}` : "";
+      case "gallery_category":
         return target.categorySlug;
-      case 'gallery_item':
+      case "gallery_item":
         return `${target.categorySlug}/${target.itemSlug}`;
-      case 'events_index':
-        return target.eventType ? `?type=${target.eventType}` : '';
-      case 'event_detail':
+      case "events_index":
+        return target.eventType ? `?type=${target.eventType}` : "";
+      case "event_detail":
         return target.eventSlug;
-      case 'page':
-        return target.path + (target.hash ? `#${target.hash}` : '');
-      case 'anchor':
+      case "page":
+        return target.path + (target.hash ? `#${target.hash}` : "");
+      case "anchor":
         return `#${target.hash}`;
-      case 'external':
+      case "external":
         return target.url;
       default:
-        return '';
+        return "";
     }
   };
 
@@ -141,29 +141,47 @@ export default function NavItemRow({
               className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveLabel();
-                if (e.key === 'Escape') handleCancelEdit();
+                if (e.key === "Enter") handleSaveLabel();
+                if (e.key === "Escape") handleCancelEdit();
               }}
             />
             <button
               onClick={handleSaveLabel}
-              className="text-green-600 hover:text-green-700"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              className="text-green-600 hover:text-green-700">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </button>
-            <button onClick={handleCancelEdit} className="text-gray-500 hover:text-gray-700">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <button
+              onClick={handleCancelEdit}
+              className="text-gray-500 hover:text-gray-700">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
         ) : (
           <button
             onClick={() => setIsEditing(true)}
-            className="text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate block"
-          >
+            className="text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate block">
             {item.label}
           </button>
         )}
@@ -173,8 +191,7 @@ export default function NavItemRow({
       <button
         onClick={() => setShowTargetPicker(true)}
         className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 max-w-[200px] truncate"
-        title={getTargetDetail(item.target)}
-      >
+        title={getTargetDetail(item.target)}>
         <span className="font-medium">{getTargetTypeLabel(item.target)}</span>
         {getTargetDetail(item.target) && (
           <span className="text-gray-400 dark:text-gray-500 truncate">
@@ -187,25 +204,41 @@ export default function NavItemRow({
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {/* Move up */}
         <button
-          onClick={() => onMove('up')}
+          onClick={() => onMove("up")}
           disabled={index === 0}
           className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30"
-          title={t('moveUp')}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          title={t("moveUp")}>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 15l7-7 7 7"
+            />
           </svg>
         </button>
 
         {/* Move down */}
         <button
-          onClick={() => onMove('down')}
+          onClick={() => onMove("down")}
           disabled={index === totalItems - 1}
           className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30"
-          title={t('moveDown')}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          title={t("moveDown")}>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
 
@@ -217,18 +250,34 @@ export default function NavItemRow({
                 onDelete();
                 setShowDeleteConfirm(false);
               }}
-              className="p-1 text-red-600 hover:text-red-700"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              className="p-1 text-red-600 hover:text-red-700">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </button>
             <button
               onClick={() => setShowDeleteConfirm(false)}
-              className="p-1 text-gray-500 hover:text-gray-700"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              className="p-1 text-gray-500 hover:text-gray-700">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -236,9 +285,12 @@ export default function NavItemRow({
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="p-1 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-            title={t('deleteItem')}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            title={t("deleteItem")}>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

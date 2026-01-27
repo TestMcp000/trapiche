@@ -8,24 +8,24 @@
  * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-A1–A4)
  */
 
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/infrastructure/supabase/server';
-import { isSiteAdmin } from '@/lib/auth';
-import { getSiteContent } from '@/lib/modules/content/site-content-io';
-import { getContentHistory } from '@/lib/modules/content/history-io';
-import { parseHamburgerNav } from '@/lib/validators/hamburger-nav';
-import { getCategories } from '@/lib/modules/blog/io';
-import { getVisibleGalleryCategories } from '@/lib/modules/gallery/io';
-import { getVisibleEventTypesCached } from '@/lib/modules/events/cached';
-import HamburgerNavEditorClient from '@/components/admin/settings/HamburgerNavEditorClient';
-import type { HamburgerNavV2 } from '@/lib/types/hamburger-nav';
-import type { Category } from '@/lib/types/blog';
-import type { GalleryCategory } from '@/lib/types/gallery';
-import type { EventType } from '@/lib/types/events';
+import { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/infrastructure/supabase/server";
+import { isSiteAdmin } from "@/lib/auth";
+import { getSiteContent } from "@/lib/modules/content/site-content-io";
+import { getContentHistory } from "@/lib/modules/content/history-io";
+import { parseHamburgerNav } from "@/lib/validators/hamburger-nav";
+import { getCategories } from "@/lib/modules/blog/io";
+import { getVisibleGalleryCategories } from "@/lib/modules/gallery/io";
+import { getVisibleEventTypesCached } from "@/lib/modules/events/cached";
+import HamburgerNavEditorClient from "@/components/admin/settings/HamburgerNavEditorClient";
+import type { HamburgerNavV2 } from "@/lib/types/hamburger-nav";
+import type { Category } from "@/lib/types/blog";
+import type { GalleryCategory } from "@/lib/types/gallery";
+import type { EventType } from "@/lib/types/events";
 
 export const metadata: Metadata = {
-  title: '導覽選單設定 | 網站後台',
+  title: "導覽選單設定 | 網站後台",
   robots: { index: false, follow: false },
 };
 
@@ -60,7 +60,7 @@ export default async function NavigationSettingsPage({ params }: PageProps) {
   }
 
   // Load current hamburger nav content
-  const siteContent = await getSiteContent('hamburger_nav');
+  const siteContent = await getSiteContent("hamburger_nav");
   let initialNav: HamburgerNavV2 = DEFAULT_NAV;
   let isPublished = false;
 
@@ -74,7 +74,7 @@ export default async function NavigationSettingsPage({ params }: PageProps) {
 
   // Load history for restore functionality
   const history = siteContent
-    ? await getContentHistory('site_content', siteContent.id)
+    ? await getContentHistory("site_content", siteContent.id)
     : [];
 
   // Load target options for the picker
@@ -86,13 +86,13 @@ export default async function NavigationSettingsPage({ params }: PageProps) {
 
   // Static page options (allowlist from PRD)
   const staticPages = [
-    { path: '/about', label: '關於 / 心理師介紹' },
-    { path: '/services', label: '服務方式' },
-    { path: '/contact', label: '聯絡表單' },
-    { path: '/blog', label: '部落格首頁' },
-    { path: '/gallery', label: '作品集首頁' },
-    { path: '/events', label: '活動列表' },
-    { path: '/platforms', label: '講座／活動' },
+    { path: "/about", label: "關於 / 心理師介紹" },
+    { path: "/services", label: "服務方式" },
+    { path: "/contact", label: "聯絡表單" },
+    { path: "/blog", label: "部落格首頁" },
+    { path: "/gallery", label: "作品集首頁" },
+    { path: "/events", label: "活動列表" },
+    { path: "/platforms", label: "講座／活動" },
   ];
 
   return (
