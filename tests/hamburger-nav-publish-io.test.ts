@@ -8,7 +8,9 @@
  * @see lib/modules/content/hamburger-nav-publish-io.ts
  * @see lib/modules/content/hamburger-nav-publish-blog-validate-io.ts
  * @see lib/modules/content/hamburger-nav-publish-gallery-validate-io.ts
+ * @see lib/modules/content/hamburger-nav-publish-events-validate-io.ts
  * @see doc/specs/proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md (hamburger nav contract)
+ * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (PR-42)
  */
 
 import { describe, it } from 'node:test';
@@ -52,6 +54,13 @@ describe('hamburger-nav-publish-io table names', () => {
             assert.ok(
                 publishFiles.includes('hamburger-nav-publish-gallery-validate-io.ts'),
                 'Expected hamburger-nav-publish-gallery-validate-io.ts to exist'
+            );
+        });
+
+        it('has events validation module', () => {
+            assert.ok(
+                publishFiles.includes('hamburger-nav-publish-events-validate-io.ts'),
+                'Expected hamburger-nav-publish-events-validate-io.ts to exist'
             );
         });
     });
@@ -102,6 +111,52 @@ describe('hamburger-nav-publish-io table names', () => {
             assert.ok(
                 combinedSource.includes(".from('gallery_items')"),
                 'Expected validateGalleryItem to use .from(\'gallery_items\')'
+            );
+        });
+    });
+
+    describe('Blog taxonomy validation (PR-42)', () => {
+        it('uses "blog_groups" table', () => {
+            assert.ok(
+                combinedSource.includes(".from('blog_groups')"),
+                'Expected validateBlogGroup to use .from(\'blog_groups\')'
+            );
+        });
+
+        it('uses "blog_topics" table', () => {
+            assert.ok(
+                combinedSource.includes(".from('blog_topics')"),
+                'Expected validateBlogTopic to use .from(\'blog_topics\')'
+            );
+        });
+
+        it('uses "blog_tags" table', () => {
+            assert.ok(
+                combinedSource.includes(".from('blog_tags')"),
+                'Expected validateBlogTag to use .from(\'blog_tags\')'
+            );
+        });
+    });
+
+    describe('Events validation (PR-42)', () => {
+        it('uses "event_types" table', () => {
+            assert.ok(
+                combinedSource.includes(".from('event_types')"),
+                'Expected validateEventType to use .from(\'event_types\')'
+            );
+        });
+
+        it('uses "event_tags" table', () => {
+            assert.ok(
+                combinedSource.includes(".from('event_tags')"),
+                'Expected validateEventTag to use .from(\'event_tags\')'
+            );
+        });
+
+        it('uses "events" table', () => {
+            assert.ok(
+                combinedSource.includes(".from('events')"),
+                'Expected validateEventDetail to use .from(\'events\')'
             );
         });
     });

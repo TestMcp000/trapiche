@@ -412,11 +412,6 @@ function AdminSidebarContent({
           icon: icons.content,
         },
         {
-          labelKey: "contactMessages",
-          href: `/${routeLocale}/admin/contact-messages`,
-          icon: icons.content,
-        },
-        {
           labelKey: "portfolio",
           href: `/${routeLocale}/admin/portfolio`,
           icon: icons.portfolio,

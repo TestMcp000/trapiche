@@ -21,8 +21,9 @@ import type {
 } from "@/lib/types/hamburger-nav";
 import type { ContentHistory } from "@/lib/types/content";
 import type { Category } from "@/lib/types/blog";
+import type { BlogGroup, BlogTopic, BlogTag } from "@/lib/types/blog-taxonomy";
 import type { GalleryCategory } from "@/lib/types/gallery";
-import type { EventType } from "@/lib/types/events";
+import type { EventType, EventTag } from "@/lib/types/events";
 import {
   saveNavDraft,
   publishNav,
@@ -38,8 +39,12 @@ interface HamburgerNavEditorClientProps {
   isPublished: boolean;
   locale: string;
   blogCategories: Category[];
+  blogGroups: BlogGroup[];
+  blogTopics: BlogTopic[];
+  blogTags: BlogTag[];
   galleryCategories: GalleryCategory[];
   eventTypes: EventType[];
+  eventTags: EventTag[];
   staticPages: Array<{ path: string; label: string }>;
 }
 
@@ -49,8 +54,12 @@ export default function HamburgerNavEditorClient({
   isPublished: initialIsPublished,
   locale,
   blogCategories,
+  blogGroups,
+  blogTopics,
+  blogTags,
   galleryCategories,
   eventTypes,
+  eventTags,
   staticPages,
 }: HamburgerNavEditorClientProps) {
   const router = useRouter();
@@ -422,8 +431,12 @@ export default function HamburgerNavEditorClient({
           onMoveItem={moveItem}
           onUpdateItemTarget={updateItemTarget}
           blogCategories={blogCategories}
+          blogGroups={blogGroups}
+          blogTopics={blogTopics}
+          blogTags={blogTags}
           galleryCategories={galleryCategories}
           eventTypes={eventTypes}
+          eventTags={eventTags}
           staticPages={staticPages}
         />
       </div>

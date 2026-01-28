@@ -6,7 +6,7 @@
  *
  * @see lib/modules/events/io.ts - Raw IO functions
  * @see lib/modules/events/admin-io.ts - Admin operations (not cached)
- * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C1–C3)
+ * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C1–C4)
  */
 
 import { cachedQuery } from '@/lib/cache/wrapper';
@@ -15,6 +15,8 @@ import type {
     EventSummary,
     EventType,
     EventTypeWithCount,
+    EventTag,
+    EventTagWithCount,
     EventsQueryOptions,
     EventForSitemap,
 } from '@/lib/types/events';
@@ -22,6 +24,9 @@ import {
     getVisibleEventTypes,
     getEventTypeBySlug,
     getEventTypesWithCounts,
+    getVisibleEventTags,
+    getEventTagBySlug,
+    getEventTagsWithCounts,
     getPublicEvents,
     getPublicEventBySlug,
     getPublicEventsForSitemap,
@@ -51,6 +56,31 @@ export const getEventTypeBySlugCached = cachedQuery(
 export const getEventTypesWithCountsCached = cachedQuery(
     async (): Promise<EventTypeWithCount[]> => getEventTypesWithCounts(),
     ['event-types-with-counts'],
+    ['events'],
+    CACHE_REVALIDATE_SECONDS
+);
+
+// =============================================================================
+// Event Tags - Cached
+// =============================================================================
+
+export const getVisibleEventTagsCached = cachedQuery(
+    async (): Promise<EventTag[]> => getVisibleEventTags(),
+    ['visible-event-tags'],
+    ['events'],
+    CACHE_REVALIDATE_SECONDS
+);
+
+export const getEventTagBySlugCached = cachedQuery(
+    async (slug: string): Promise<EventTag | null> => getEventTagBySlug(slug),
+    ['event-tag-by-slug'],
+    ['events'],
+    CACHE_REVALIDATE_SECONDS
+);
+
+export const getEventTagsWithCountsCached = cachedQuery(
+    async (): Promise<EventTagWithCount[]> => getEventTagsWithCounts(),
+    ['event-tags-with-counts'],
     ['events'],
     CACHE_REVALIDATE_SECONDS
 );

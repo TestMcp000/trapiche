@@ -1,7 +1,7 @@
 # Admin CMS vNext：Hamburger Nav Editor + Blog Taxonomy v2（Groups/Topics/Tags）+ Events + Editable Pages - Product Requirements Document (PRD)
 
 > **Version**: 0.1  
-> **Last Updated**: 2026-01-25  
+> **Last Updated**: 2026-01-27  
 > **Status**: Draft  
 > **Owner**: Admin / Product  
 > **Parent Document**: `../../SPEC.md`
@@ -11,7 +11,7 @@
 1) Hamburger menu（2 層）在後台可視化編輯（不是 JSON 編輯器）  
 2) Blog 分類模型升級：**Group（大分類）+ Topic（子主題，可多選）+ Tag（自由標籤，可多選）**  
 3) 講座/活動（Events）資料表 + 後台 CRUD + 前台列表/詳情（SEO 友善）  
-4) 關於/聯絡相關頁面（含 FAQ/Contact form）可由後台編輯（表單化、可預覽、可發布）
+4) 關於/聯絡相關頁面（含 FAQ/合作邀請頁/Contact mailto）可由後台編輯（表單化、可預覽、可發布）
 
 ---
 
@@ -19,8 +19,8 @@
 
 - Admin：在「網站設定」用拖曳 + 表單，直接編輯 Hamburger menu 的分類/細項/排序/連結目標（含 blog topics、events filters、站內頁、外連）。  
 - Blog：文章可選 1 個大分類（Group），並可同時選多個子主題（Topic，例如同時「情緒照顧」+「睡眠議題」），也可加多個 Tag。  
-- Events：後台能新增/編輯/下架講座活動（日期/地點/報名連結等），前台有列表/詳情頁與 JSON-LD（Event）。  
-- Pages：心理師介紹/服務方式/常見問題/聯絡表單等頁面內容，後台用欄位化表單編輯並可 preview/publish（避免直接改 JSON）。
+- Events：後台能新增/編輯/下架講座活動（日期/地點/報名連結等），且活動同時支援「type + tags」；前台有列表/詳情頁與 JSON-LD（Event）。  
+- Pages：心理師介紹/服務方式/常見問題/合作邀請等頁面內容，後台用欄位化表單編輯並可 preview/publish（避免直接改 JSON）；Contact 維持 mailto（不存 DB）。
 
 ---
 
@@ -32,7 +32,9 @@
 | Hamburger storage | 仍使用 `site_content(section_key='hamburger_nav')` 作為 SSOT（draft/publish + history） | 既有 infra 完整（publish/validation/fallback/caching），只補「可視化編輯 UI」 |
 | Blog taxonomy | `Post` 需選 **1 個 Group**；可選 **0..N Topics**；可選 **0..N Tags** | 大分類對應 IA；Topics/Tags 解決「同篇多主題」需求 |
 | Canonical URLs | Blog post canonical 繼續使用 `/blog/posts/[slug]`；新增 Group/Topic/Tag 的 canonical pages | 維持既有 SEO 既定行為，避免 redirect chain/drift |
-| Events model | 新增 `events`（+ optional `event_types`）並提供 public list/detail | 需求是可被後台編輯的活動內容，且需前台可瀏覽/可 SEO |
+| Events model | Events 同時支援 `event_types`（單選）+ `event_tags`（多選） | 分類清楚（type）+ 彈性標記（tags），仍可保持後台可用性 |
+| Collaboration invitation | 「合作邀請」同時存在：A) events type（可被篩選）B) 獨立內容頁（長期資訊） | IA 需要一個穩定入口頁；同時也要能把「合作邀請」當作活動型內容管理 |
+| Contact submissions | Contact 維持 mailto（不存 DB、不做後台 inbox） | 降低資安/隱私風險與維運成本；避免存放敏感訊息 |
 | Non‑coder editing | Admin 新增「表單化 editor」；JSON 編輯器只作為 fallback（advanced） | 降低心理師操作門檻；仍保留工程 fallback 以免被 block |
 
 ---
@@ -54,7 +56,8 @@
   - Public list/detail + SEO（Event JSON-LD）
 - Pages（關於/聯絡）：
   - FAQ（表單化 CRUD）
-  - Contact page 支援「聯絡表單」（可選：submission 存 DB + admin read-only）
+  - 合作邀請（獨立內容頁；表單化/可預覽/可發布）
+  - Contact（mailto；不存 DB）
 
 ### Out of Scope（Non-goals）
 
@@ -96,11 +99,15 @@
 - FR-C1：後台 CRUD：可新增/編輯/下架活動（日期時間、地點、報名連結、封面圖、摘要、內文）。
 - FR-C2：前台活動列表頁與活動詳情頁（含 SEO metadata + Event JSON-LD）。
 - FR-C3：Hamburger menu 可 link 到 events index（可帶 filter，例如 event type）。
+- FR-C4：Events 支援 tags（0..N；後台可新增/選取，前台可篩選 `?tag=<slug>`）。
+- FR-C5：「合作邀請」同時存在：
+  - events type：可建立/管理活動型合作邀請（有日期/報名等）
+  - 獨立頁面：`/collaboration`（長期資訊，非事件列表）
 
 #### D) Pages（關於/聯絡）
 
-- FR-D1：後台可編輯「心理師介紹 / 服務方式 / 常見問題 / 聯絡表單」等頁面內容（表單化）。
-- FR-D2（可選）：聯絡表單提交可存 DB（含基本 anti-spam），後台可讀取 submissions（read-only）。
+- FR-D1：後台可編輯「心理師介紹 / 服務方式 / 常見問題 / 合作邀請 / 聯絡頁」等頁面內容（表單化）。
+- FR-D2：Contact 頁維持 mailto（CTA 直接寄信），不在本系統存放 submissions。
 
 ### Non-Functional (NFR)
 
@@ -111,11 +118,11 @@
 
 ---
 
-## Open Questions
+## Resolved Decisions（2026-01-27）
 
-1) Events 分類是否要「單選 type」即可？（例如：近期講座/工作坊/企業內訓）還是需要多選 tags？  
-2) 「合作邀請」是 events type（活動分類）還是獨立頁面（內容頁）？  
-3) Contact submissions 是否需要後台 inbox（DB 存檔 + 列表/刪除）？還是 mailto 即可？  
+1) Events：type + tags 兩者都要  
+2) 合作邀請：events type + 獨立頁面兩者都要  
+3) Contact：mailto 即可（不做 submissions inbox）  
 
 ---
 
@@ -139,8 +146,9 @@
 | `blog_group` | `groupSlug` | `q`, `sort`, `page` | `/blog/groups/<groupSlug>` + query |
 | `blog_topic` | `topicSlug` | `q`, `sort`, `page` | `/blog/categories/<topicSlug>` + query |
 | `blog_tag` | `tagSlug` | `sort`, `page` | `/blog/tags/<tagSlug>` + query |
-| `events_index` | - | `type`, `q`, `sort`, `page` | `/events` + query |
+| `events_index` | - | `eventType`, `tag`, `q`, `sort`, `page` | `/events` + query |
 | `event_detail` | `eventSlug` | - | `/events/<eventSlug>` |
+| `faq_index` | - | - | `/faq` |
 
 （既有 `blog_index`/`blog_category`/`blog_post`/`page`/`anchor`/`external` 依現況保留）
 
@@ -221,10 +229,19 @@
   - `visibility text not null default 'draft'`（`draft/private/public`）
   - `published_at timestamptz null`
   - timestamps
+ - `event_tags`：
+   - `id uuid pk`
+   - `slug text unique not null`
+   - `name_zh text not null`
+   - timestamps
+ - `event_event_tags`（join；多對多）：
+   - `event_id uuid not null references events(id) on delete cascade`
+   - `tag_id uuid not null references event_tags(id) on delete restrict`
+   - composite pk `(event_id, tag_id)`
 
 **Public routes（proposed）**
 
-- `/[locale]/events`（filters：`?type=<slug>&q=<q>&sort=<...>&page=<n>`）
+- `/[locale]/events`（filters：`?type=<slug>&tag=<slug>&q=<q>&sort=<...>&page=<n>`）
 - `/[locale]/events/[slug]`
 
 **JSON-LD**
@@ -235,9 +252,8 @@
 ### 4) Pages / FAQ / Contact
 
 - FAQ 建議以 `faqs` table 管理（可排序/上下架），public render 可搭配 FAQPage JSON-LD（提升 SEO）。
-- Contact form 若要存 DB，需明確定義：
-  - anti-spam：honeypot + rate limit（可選 reCAPTCHA/Akismet）
-  - PII 存放與 retention policy（見 `doc/SECURITY.md`）
+- 合作邀請建議為獨立內容頁（`/collaboration`），內容來源可沿用 `site_content`（draft/publish/history）。
+- Contact 維持 mailto（不存 DB、不做 inbox）；若未來要做 submissions，需先補齊 PII/retention/anti-spam 規格與 `doc/SECURITY.md` 對齊。
 
 ---
 

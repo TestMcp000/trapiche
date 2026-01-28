@@ -16,13 +16,22 @@ import { getSiteContent } from "@/lib/modules/content/site-content-io";
 import { getContentHistory } from "@/lib/modules/content/history-io";
 import { parseHamburgerNav } from "@/lib/validators/hamburger-nav";
 import { getCategories } from "@/lib/modules/blog/io";
+import {
+  getVisibleBlogGroupsCached,
+  getVisibleBlogTopicsCached,
+  getAllBlogTagsCached,
+} from "@/lib/modules/blog/taxonomy-cached";
 import { getVisibleGalleryCategories } from "@/lib/modules/gallery/io";
-import { getVisibleEventTypesCached } from "@/lib/modules/events/cached";
+import {
+  getVisibleEventTypesCached,
+  getVisibleEventTagsCached,
+} from "@/lib/modules/events/cached";
 import HamburgerNavEditorClient from "@/components/admin/settings/HamburgerNavEditorClient";
 import type { HamburgerNavV2 } from "@/lib/types/hamburger-nav";
 import type { Category } from "@/lib/types/blog";
+import type { BlogGroup, BlogTopic, BlogTag } from "@/lib/types/blog-taxonomy";
 import type { GalleryCategory } from "@/lib/types/gallery";
-import type { EventType } from "@/lib/types/events";
+import type { EventType, EventTag } from "@/lib/types/events";
 
 export const metadata: Metadata = {
   title: "導覽選單設定 | 網站後台",
@@ -78,21 +87,36 @@ export default async function NavigationSettingsPage({ params }: PageProps) {
     : [];
 
   // Load target options for the picker
-  const [blogCategories, galleryCategories, eventTypes] = await Promise.all([
+  const [
+    blogCategories,
+    blogGroups,
+    blogTopics,
+    blogTags,
+    galleryCategories,
+    eventTypes,
+    eventTags,
+  ] = await Promise.all([
     getCategories(),
+    getVisibleBlogGroupsCached(),
+    getVisibleBlogTopicsCached(),
+    getAllBlogTagsCached(),
     getVisibleGalleryCategories(),
     getVisibleEventTypesCached(),
+    getVisibleEventTagsCached(),
   ]);
 
   // Static page options (allowlist from PRD)
+  // Updated in PR-42 to add /faq and /collaboration
+  // Updated in PR-43: removed /platforms (legacy route, redirects to /events)
   const staticPages = [
     { path: "/about", label: "關於 / 心理師介紹" },
     { path: "/services", label: "服務方式" },
-    { path: "/contact", label: "聯絡表單" },
+    { path: "/contact", label: "聯絡方式" },
     { path: "/blog", label: "部落格首頁" },
     { path: "/gallery", label: "作品集首頁" },
     { path: "/events", label: "活動列表" },
-    { path: "/platforms", label: "講座／活動" },
+    { path: "/faq", label: "常見問題" },
+    { path: "/collaboration", label: "合作邀請" },
   ];
 
   return (
@@ -103,8 +127,12 @@ export default async function NavigationSettingsPage({ params }: PageProps) {
         isPublished={isPublished}
         locale={locale}
         blogCategories={blogCategories as Category[]}
+        blogGroups={blogGroups as BlogGroup[]}
+        blogTopics={blogTopics as BlogTopic[]}
+        blogTags={blogTags as BlogTag[]}
         galleryCategories={galleryCategories as GalleryCategory[]}
         eventTypes={eventTypes as EventType[]}
+        eventTags={eventTags as EventTag[]}
         staticPages={staticPages}
       />
     </div>

@@ -125,6 +125,7 @@ import { parseHamburgerNav } from '@/lib/validators/hamburger-nav';
 
 /**
  * Default hamburger nav seed (matches doc/archive/DESIGN_SSOT.md §6)
+ * @see doc/meta/STEP_PLAN.md (PR-40 updated events targets to events_index)
  */
 const DEFAULT_HAMBURGER_NAV: HamburgerNavV2 = {
   version: 2,
@@ -155,10 +156,10 @@ const DEFAULT_HAMBURGER_NAV: HamburgerNavV2 = {
       id: 'events',
       label: '講座／活動',
       items: [
-        { id: 'recent-talks', label: '近期講座', target: { type: 'page', path: '/platforms' } },
-        { id: 'collaboration', label: '合作邀請', target: { type: 'page', path: '/contact' } },
-        { id: 'workshops', label: '療癒工作坊', target: { type: 'page', path: '/platforms' } },
-        { id: 'corporate-training', label: '企業內訓', target: { type: 'page', path: '/platforms' } },
+        { id: 'recent-talks', label: '近期講座', target: { type: 'events_index', eventType: 'talks' } },
+        { id: 'workshops', label: '療癒工作坊', target: { type: 'events_index', eventType: 'workshops' } },
+        { id: 'corporate-training', label: '企業內訓', target: { type: 'events_index', eventType: 'corporate-training' } },
+        { id: 'collaboration', label: '合作邀請', target: { type: 'page', path: '/collaboration' } },
       ],
     },
     {
@@ -167,8 +168,8 @@ const DEFAULT_HAMBURGER_NAV: HamburgerNavV2 = {
       items: [
         { id: 'about', label: '心理師介紹', target: { type: 'page', path: '/about' } },
         { id: 'services', label: '服務方式', target: { type: 'page', path: '/services' } },
-        { id: 'faq', label: '常見問題', target: { type: 'page', path: '/services', hash: '#faq' } },
-        { id: 'contact', label: '聯絡表單', target: { type: 'page', path: '/contact' } },
+        { id: 'faq', label: '常見問題', target: { type: 'faq_index' } },
+        { id: 'contact', label: '聯絡方式', target: { type: 'page', path: '/contact' } },
       ],
     },
   ],

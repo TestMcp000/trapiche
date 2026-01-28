@@ -185,6 +185,7 @@ export default function ContentEditorClient({
     nav: '導航選單',
     company: '公司資訊',
     gallery: '畫廊',
+    collaboration: '合作邀請',
   };
 
   const label = sectionLabels[sectionKey] || sectionKey;

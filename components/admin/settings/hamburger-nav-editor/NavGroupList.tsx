@@ -15,8 +15,9 @@ import type {
   NavTarget,
 } from "@/lib/types/hamburger-nav";
 import type { Category } from "@/lib/types/blog";
+import type { BlogGroup, BlogTopic, BlogTag } from "@/lib/types/blog-taxonomy";
 import type { GalleryCategory } from "@/lib/types/gallery";
-import type { EventType } from "@/lib/types/events";
+import type { EventType, EventTag } from "@/lib/types/events";
 import NavGroupCard from "./NavGroupCard";
 
 interface NavGroupListProps {
@@ -43,8 +44,12 @@ interface NavGroupListProps {
     target: NavTarget,
   ) => void;
   blogCategories: Category[];
+  blogGroups: BlogGroup[];
+  blogTopics: BlogTopic[];
+  blogTags: BlogTag[];
   galleryCategories: GalleryCategory[];
   eventTypes: EventType[];
+  eventTags: EventTag[];
   staticPages: Array<{ path: string; label: string }>;
 }
 
@@ -60,8 +65,12 @@ export default function NavGroupList({
   onMoveItem,
   onUpdateItemTarget,
   blogCategories,
+  blogGroups,
+  blogTopics,
+  blogTags,
   galleryCategories,
   eventTypes,
+  eventTags,
   staticPages,
 }: NavGroupListProps) {
   const t = useTranslations("admin.navigation");
@@ -113,8 +122,12 @@ export default function NavGroupList({
                 onUpdateItemTarget(group.id, itemId, target)
               }
               blogCategories={blogCategories}
+              blogGroups={blogGroups}
+              blogTopics={blogTopics}
+              blogTags={blogTags}
               galleryCategories={galleryCategories}
               eventTypes={eventTypes}
+              eventTags={eventTags}
               staticPages={staticPages}
             />
           ))}

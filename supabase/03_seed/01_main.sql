@@ -193,10 +193,10 @@ INSERT INTO site_content (section_key, content_en, content_zh, is_published) VAL
         "id": "events",
         "label": "講座／活動",
         "items": [
-          { "id": "recent-talks", "label": "近期講座", "target": { "type": "page", "path": "/platforms" } },
-          { "id": "collaboration", "label": "合作邀請", "target": { "type": "page", "path": "/contact" } },
-          { "id": "workshops", "label": "療癒工作坊", "target": { "type": "page", "path": "/platforms" } },
-          { "id": "corporate-training", "label": "企業內訓", "target": { "type": "page", "path": "/platforms" } }
+          { "id": "recent-talks", "label": "近期講座", "target": { "type": "events_index", "eventType": "talks" } },
+          { "id": "workshops", "label": "療癒工作坊", "target": { "type": "events_index", "eventType": "workshops" } },
+          { "id": "corporate-training", "label": "企業內訓", "target": { "type": "events_index", "eventType": "corporate-training" } },
+          { "id": "collaboration", "label": "合作邀請", "target": { "type": "page", "path": "/collaboration" } }
         ]
       },
       {
@@ -205,8 +205,8 @@ INSERT INTO site_content (section_key, content_en, content_zh, is_published) VAL
         "items": [
           { "id": "about", "label": "心理師介紹", "target": { "type": "page", "path": "/about" } },
           { "id": "services", "label": "服務方式", "target": { "type": "page", "path": "/services" } },
-          { "id": "faq", "label": "常見問題", "target": { "type": "page", "path": "/services", "hash": "#faq" } },
-          { "id": "contact", "label": "聯絡表單", "target": { "type": "page", "path": "/contact" } }
+          { "id": "faq", "label": "常見問題", "target": { "type": "faq_index" } },
+          { "id": "contact", "label": "聯絡方式", "target": { "type": "page", "path": "/contact" } }
         ]
       }
     ]
@@ -217,6 +217,74 @@ INSERT INTO site_content (section_key, content_en, content_zh, is_published) VAL
   'gallery',
   '{}'::jsonb,
   '{}'::jsonb,
+  true
+),
+(
+  'collaboration',
+  '{
+    "title": "Collaboration",
+    "lead": "We welcome collaboration with businesses, schools, and community organizations for talks, workshops, or corporate training.",
+    "sections": [
+      {
+        "title": "Talk Topics",
+        "description": "Topics are planned according to your needs. Common directions include:",
+        "items": [
+          "Emotion care and stress management",
+          "Workplace mental health and self-awareness",
+          "Sleep issues and physical-mental recovery",
+          "Boundaries and interpersonal communication"
+        ]
+      },
+      {
+        "title": "Workshop Formats",
+        "description": "Experiential learning combined with art therapy materials:",
+        "items": [
+          "Half-day workshop (2-3 hours)",
+          "Full-day workshop (6 hours)",
+          "Series courses (planned as needed)"
+        ]
+      },
+      {
+        "title": "Corporate Training",
+        "description": "Customized employee mental health courses for businesses, which can be combined with EAP programs."
+      }
+    ],
+    "ctaTitle": "Contact Us",
+    "ctaText": "Please contact us via email to describe your needs and preferred collaboration format. We will respond within business days.",
+    "ctaButton": "Send Email"
+  }'::jsonb,
+  '{
+    "title": "合作邀請",
+    "lead": "歡迎企業、學校或社群單位洽談講座、工作坊或企業內訓合作。",
+    "sections": [
+      {
+        "title": "講座主題",
+        "description": "依據單位需求規劃主題，常見方向包含：",
+        "items": [
+          "情緒照顧與壓力調適",
+          "職場心理健康與自我覺察",
+          "睡眠議題與身心復原",
+          "關係界線與人際溝通"
+        ]
+      },
+      {
+        "title": "工作坊形式",
+        "description": "結合藝術療癒媒材的體驗式學習：",
+        "items": [
+          "半日工作坊（2-3 小時）",
+          "全日工作坊（6 小時）",
+          "系列課程（依需求規劃）"
+        ]
+      },
+      {
+        "title": "企業內訓",
+        "description": "為企業量身打造的員工心理健康課程，可結合 EAP 方案規劃。"
+      }
+    ],
+    "ctaTitle": "聯繫洽談",
+    "ctaText": "請透過電子郵件聯繫，說明您的需求與期待的合作形式，我們會在工作日內回覆。",
+    "ctaButton": "寄送郵件"
+  }'::jsonb,
   true
 );
 

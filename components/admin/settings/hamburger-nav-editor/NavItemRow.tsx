@@ -12,8 +12,9 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { HamburgerNavItem, NavTarget } from "@/lib/types/hamburger-nav";
 import type { Category } from "@/lib/types/blog";
+import type { BlogGroup, BlogTopic, BlogTag } from "@/lib/types/blog-taxonomy";
 import type { GalleryCategory } from "@/lib/types/gallery";
-import type { EventType } from "@/lib/types/events";
+import type { EventType, EventTag } from "@/lib/types/events";
 import NavTargetPicker from "./NavTargetPicker";
 
 interface NavItemRowProps {
@@ -25,8 +26,12 @@ interface NavItemRowProps {
   onMove: (direction: "up" | "down") => void;
   onUpdateTarget: (target: NavTarget) => void;
   blogCategories: Category[];
+  blogGroups: BlogGroup[];
+  blogTopics: BlogTopic[];
+  blogTags: BlogTag[];
   galleryCategories: GalleryCategory[];
   eventTypes: EventType[];
+  eventTags: EventTag[];
   staticPages: Array<{ path: string; label: string }>;
 }
 
@@ -39,8 +44,12 @@ export default function NavItemRow({
   onMove,
   onUpdateTarget,
   blogCategories,
+  blogGroups,
+  blogTopics,
+  blogTags,
   galleryCategories,
   eventTypes,
+  eventTags,
   staticPages,
 }: NavItemRowProps) {
   const t = useTranslations("admin.navigation");
@@ -70,6 +79,12 @@ export default function NavItemRow({
         return t("targetTypes.blogCategory");
       case "blog_post":
         return t("targetTypes.blogPost");
+      case "blog_group":
+        return t("targetTypes.blogGroup");
+      case "blog_topic":
+        return t("targetTypes.blogTopic");
+      case "blog_tag":
+        return t("targetTypes.blogTag");
       case "gallery_index":
         return t("targetTypes.galleryIndex");
       case "gallery_category":
@@ -80,6 +95,8 @@ export default function NavItemRow({
         return t("targetTypes.eventsIndex");
       case "event_detail":
         return t("targetTypes.eventDetail");
+      case "faq_index":
+        return t("targetTypes.faqIndex");
       case "page":
         return t("targetTypes.page");
       case "anchor":
@@ -100,16 +117,28 @@ export default function NavItemRow({
         return target.categorySlug;
       case "blog_post":
         return target.postSlug;
+      case "blog_group":
+        return target.groupSlug;
+      case "blog_topic":
+        return target.topicSlug;
+      case "blog_tag":
+        return target.tagSlug;
       case "gallery_index":
         return target.q ? `?q=${target.q}` : "";
       case "gallery_category":
         return target.categorySlug;
       case "gallery_item":
         return `${target.categorySlug}/${target.itemSlug}`;
-      case "events_index":
-        return target.eventType ? `?type=${target.eventType}` : "";
+      case "events_index": {
+        const params: string[] = [];
+        if (target.eventType) params.push(`type=${target.eventType}`);
+        if (target.tag) params.push(`tag=${target.tag}`);
+        return params.length > 0 ? `?${params.join("&")}` : "";
+      }
       case "event_detail":
         return target.eventSlug;
+      case "faq_index":
+        return "";
       case "page":
         return target.path + (target.hash ? `#${target.hash}` : "");
       case "anchor":
@@ -312,8 +341,12 @@ export default function NavItemRow({
           }}
           onClose={() => setShowTargetPicker(false)}
           blogCategories={blogCategories}
+          blogGroups={blogGroups}
+          blogTopics={blogTopics}
+          blogTags={blogTags}
           galleryCategories={galleryCategories}
           eventTypes={eventTypes}
+          eventTags={eventTags}
           staticPages={staticPages}
         />
       )}

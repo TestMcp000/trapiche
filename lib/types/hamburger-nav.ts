@@ -166,6 +166,7 @@ export interface NavTargetExternal {
 export interface NavTargetEventsIndex {
     type: 'events_index';
     eventType?: string;
+    tag?: string;
     q?: string;
     sort?: string;
     page?: string;

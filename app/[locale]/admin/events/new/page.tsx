@@ -8,7 +8,7 @@
 
 import { getTranslations, getMessages } from "next-intl/server";
 import type { AbstractIntlMessages } from "next-intl";
-import { getAllEventTypesAdmin } from "../actions";
+import { getAllEventTypesAdmin, getAllEventTagsAdmin } from "../actions";
 import EventFormClient from "../components/EventFormClient";
 
 export default async function NewEventPage({
@@ -26,7 +26,10 @@ export default async function NewEventPage({
   const allMessages = await getMessages({ locale: routeLocale });
   const adminMessages = { admin: allMessages.admin } as AbstractIntlMessages;
 
-  const eventTypes = await getAllEventTypesAdmin();
+  const [eventTypes, eventTags] = await Promise.all([
+    getAllEventTypesAdmin(),
+    getAllEventTagsAdmin(),
+  ]);
 
   return (
     <div>
@@ -40,8 +43,9 @@ export default async function NewEventPage({
       {/* Form */}
       <EventFormClient
         eventTypes={eventTypes}
-        routeLocale={routeLocale}
+        eventTags={eventTags}
         messages={adminMessages}
+        routeLocale={routeLocale}
       />
     </div>
   );

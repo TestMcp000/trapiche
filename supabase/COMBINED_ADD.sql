@@ -4769,6 +4769,116 @@ GRANT INSERT, UPDATE, DELETE ON public.events TO authenticated;
 -- ============================================
 
 -- ============================================
+-- ADD: Event Tags (event_tags + event_event_tags)
+-- ============================================
+--
+-- Version: 1.0
+-- Last Updated: 2026-01-27
+--
+-- @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C4)
+-- @see doc/meta/STEP_PLAN.md (PR-39)
+--
+-- Tables:
+-- - event_tags: 活動標籤 (e.g., 親子, 團體, 線上)
+-- - event_event_tags: join table (events <-> tags)
+--
+-- ============================================
+
+
+-- ============================================
+-- PART 1: Create Tables
+-- ============================================
+
+-- event_tags: 活動標籤
+CREATE TABLE IF NOT EXISTS public.event_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT UNIQUE NOT NULL,
+  name_zh TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_visible BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- event_event_tags: join table (many-to-many)
+CREATE TABLE IF NOT EXISTS public.event_event_tags (
+  event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES public.event_tags(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  PRIMARY KEY (event_id, tag_id)
+);
+
+
+-- ============================================
+-- PART 2: Create Indexes
+-- ============================================
+
+-- event_tags indexes
+CREATE INDEX IF NOT EXISTS idx_event_tags_slug ON public.event_tags(slug);
+CREATE INDEX IF NOT EXISTS idx_event_tags_sort_order ON public.event_tags(sort_order);
+CREATE INDEX IF NOT EXISTS idx_event_tags_visible ON public.event_tags(is_visible);
+
+-- event_event_tags indexes (composite PK serves as index for (event_id, tag_id))
+CREATE INDEX IF NOT EXISTS idx_event_event_tags_tag_id ON public.event_event_tags(tag_id);
+
+
+-- ============================================
+-- PART 3: Enable RLS
+-- ============================================
+
+ALTER TABLE public.event_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.event_event_tags ENABLE ROW LEVEL SECURITY;
+
+
+-- ============================================
+-- PART 4: RLS Policies
+-- ============================================
+
+-- event_tags: Public read (visible only)
+CREATE POLICY "Anyone can read visible event tags"
+  ON public.event_tags FOR SELECT
+  TO anon, authenticated
+  USING (is_visible = true);
+
+-- event_tags: Admin manage
+CREATE POLICY "Admins can manage event tags"
+  ON public.event_tags FOR ALL
+  TO authenticated
+  USING ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor'))
+  WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor'));
+
+-- event_event_tags: Public read (for joins)
+CREATE POLICY "Anyone can read event event tags"
+  ON public.event_event_tags FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+-- event_event_tags: Admin manage
+CREATE POLICY "Admins can manage event event tags"
+  ON public.event_event_tags FOR ALL
+  TO authenticated
+  USING ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor'))
+  WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor'));
+
+
+-- ============================================
+-- PART 5: Grants
+-- ============================================
+
+-- Public read access
+GRANT SELECT ON public.event_tags TO anon, authenticated;
+GRANT SELECT ON public.event_event_tags TO anon, authenticated;
+
+-- Admin write access
+GRANT INSERT, UPDATE, DELETE ON public.event_tags TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.event_event_tags TO authenticated;
+
+
+-- ============================================
+-- 完成 DONE (Event Tags)
+-- ============================================
+
+-- ============================================
 -- ADD: FAQs
 -- ============================================
 --
@@ -4846,91 +4956,4 @@ GRANT INSERT, UPDATE, DELETE ON public.faqs TO authenticated;
 
 -- ============================================
 -- 完成 DONE (FAQs)
--- ============================================
-
-
--- ============================================
--- ADD: Contact Messages
--- ============================================
---
--- Version: 1.0
--- Last Updated: 2026-01-27
---
--- @see doc/meta/STEP_PLAN.md (PR-38)
---
--- Tables:
--- - contact_messages: Contact form submissions
---
--- Retention policy: Messages older than 90 days can be purged via admin action
---
--- ============================================
-
-
--- ============================================
--- PART 1: Create Tables
--- ============================================
-
--- contact_messages: Contact form submissions
-CREATE TABLE IF NOT EXISTS public.contact_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  subject TEXT,
-  message TEXT NOT NULL,
-  honeypot TEXT,
-  ip_hash TEXT,
-  is_read BOOLEAN NOT NULL DEFAULT false,
-  is_archived BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
-);
-
-
--- ============================================
--- PART 2: Create Indexes
--- ============================================
-
--- contact_messages indexes
-CREATE INDEX IF NOT EXISTS idx_contact_messages_created_at ON public.contact_messages(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_contact_messages_is_read ON public.contact_messages(is_read);
-CREATE INDEX IF NOT EXISTS idx_contact_messages_is_archived ON public.contact_messages(is_archived);
-
-
--- ============================================
--- PART 3: Enable RLS
--- ============================================
-
-ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
-
-
--- ============================================
--- PART 4: RLS Policies
--- ============================================
-
--- contact_messages: Public can insert (honeypot for spam filtering)
-CREATE POLICY "Anyone can submit contact messages"
-  ON public.contact_messages FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
-
--- contact_messages: Admin can read and manage
-CREATE POLICY "Admins can manage contact messages"
-  ON public.contact_messages FOR ALL
-  TO authenticated
-  USING ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor'))
-  WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'editor'));
-
-
--- ============================================
--- PART 5: Grants
--- ============================================
-
--- Public insert access (for contact form)
-GRANT INSERT ON public.contact_messages TO anon, authenticated;
-
--- Admin full access
-GRANT SELECT, UPDATE, DELETE ON public.contact_messages TO authenticated;
-
-
--- ============================================
--- 完成 DONE (Contact Messages)
 -- ============================================

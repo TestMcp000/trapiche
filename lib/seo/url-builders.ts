@@ -111,11 +111,12 @@ export function buildBlogTagUrl(
  */
 export function buildEventsListUrl(
     locale: string,
-    query?: { type?: string; q?: string; sort?: string }
+    query?: { type?: string; tag?: string; q?: string; sort?: string }
 ): string {
     const base = `/${locale}/events`;
     const params = new URLSearchParams();
     if (query?.type) params.set('type', query.type);
+    if (query?.tag) params.set('tag', query.tag);
     if (query?.q) params.set('q', query.q);
     if (query?.sort) params.set('sort', query.sort);
     const queryString = params.toString();
@@ -205,4 +206,16 @@ export function buildFAQUrl(locale: string): string {
  */
 export function buildContactUrl(locale: string): string {
     return `/${locale}/contact`;
+}
+
+// =============================================================================
+// Collaboration URL Builders
+// =============================================================================
+
+/**
+ * Build URL for collaboration page.
+ * /{locale}/collaboration
+ */
+export function buildCollaborationUrl(locale: string): string {
+    return `/${locale}/collaboration`;
 }

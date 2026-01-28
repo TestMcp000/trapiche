@@ -14,16 +14,19 @@ import { SITE_URL } from '@/lib/seo/hreflang';
 
 
 // Static pages that exist on the site
+// Note: /platforms is a legacy route that redirects to /events (PR-43)
 const STATIC_PAGES = [
   '',           // Homepage
   '/about',
   '/services',
-  '/platforms',
   '/portfolio',
   '/gallery',
   '/contact',
   '/blog',
   '/privacy',
+  '/events',
+  '/faq',
+  '/collaboration',
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

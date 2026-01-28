@@ -9,7 +9,6 @@ import { getMetadataAlternates, SITE_URL } from "@/lib/seo";
 import { generateBreadcrumbJsonLd } from "@/lib/seo/jsonld";
 import type { SiteContent } from "@/lib/types/content";
 import { getCompanySettingValue } from "@/lib/modules/content/company-settings";
-import ContactFormClient from "@/components/sections/ContactFormClient";
 
 // Helper to get localized content
 function getContent<T>(
@@ -101,15 +100,58 @@ export default async function ContactPage({
       />
       <Header locale={locale} />
       <main className="pt-24 md:pt-32 pb-16">
-        <ContactFormClient
-          emailAddress={emailAddress}
-          githubUrl={githubUrl}
-          content={{
-            ctaTitle: contact.ctaTitle,
-            ctaText: contact.ctaText,
-            ctaButton: contact.ctaButton,
-          }}
-        />
+        <section
+          id="contact"
+          className="py-24 md:py-32 bg-surface/30 border-t border-border-light">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
+            <div className="glass-card rounded-theme-lg p-8 md:p-12 shadow-soft text-center">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                {contact.ctaTitle}
+              </h2>
+              <p className="text-lg text-secondary mb-8 max-w-xl mx-auto">
+                {contact.ctaText}
+              </p>
+
+              {/* Mailto CTA Button */}
+              <a
+                href={`mailto:${emailAddress}`}
+                className="inline-flex items-center justify-center px-8 py-4 text-base font-medium rounded-full text-white bg-primary hover:bg-primary-hover transition-all shadow-glow hover:scale-[1.02] active:scale-[0.98]">
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                {contact.ctaButton}
+              </a>
+
+              {/* Contact Info */}
+              <div className="mt-10 pt-8 border-t border-border/50 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-sm">
+                <span className="text-secondary">聯絡方式：</span>
+                <a
+                  href={`mailto:${emailAddress}`}
+                  className="text-secondary hover:text-primary transition-colors">
+                  {emailAddress}
+                </a>
+                {githubUrl && (
+                  <a
+                    href={githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-secondary hover:text-primary transition-colors">
+                    GitHub
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
       <Footer locale={locale} />
     </>

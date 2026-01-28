@@ -39,45 +39,48 @@ DROP TABLE IF EXISTS public.faqs CASCADE;
 
 
 -- ============================================
--- DROP: Contact Messages
+-- DROP: Event Tags (event_tags + event_event_tags)
 -- ============================================
 --
 -- Version: 1.0
 -- Last Updated: 2026-01-27
 --
--- @see doc/meta/STEP_PLAN.md (PR-38)
+-- @see doc/meta/STEP_PLAN.md (PR-39)
 --
 -- ============================================
 
 
 -- ============================================
--- Drop Policies
+-- DROP Policies First
 -- ============================================
 
-DROP POLICY IF EXISTS "Anyone can submit contact messages" ON public.contact_messages;
-DROP POLICY IF EXISTS "Admins can manage contact messages" ON public.contact_messages;
-
-
--- ============================================
--- Drop Indexes
--- ============================================
-
-DROP INDEX IF EXISTS idx_contact_messages_created_at;
-DROP INDEX IF EXISTS idx_contact_messages_is_read;
-DROP INDEX IF EXISTS idx_contact_messages_is_archived;
+DROP POLICY IF EXISTS "Anyone can read visible event tags" ON public.event_tags;
+DROP POLICY IF EXISTS "Admins can manage event tags" ON public.event_tags;
+DROP POLICY IF EXISTS "Anyone can read event event tags" ON public.event_event_tags;
+DROP POLICY IF EXISTS "Admins can manage event event tags" ON public.event_event_tags;
 
 
 -- ============================================
--- Drop Tables
+-- DROP Indexes
 -- ============================================
 
-DROP TABLE IF EXISTS public.contact_messages CASCADE;
+DROP INDEX IF EXISTS public.idx_event_tags_slug;
+DROP INDEX IF EXISTS public.idx_event_tags_sort_order;
+DROP INDEX IF EXISTS public.idx_event_tags_visible;
+DROP INDEX IF EXISTS public.idx_event_event_tags_tag_id;
 
 
 -- ============================================
--- 完成 DONE (Contact Messages Drop)
+-- DROP Tables
 -- ============================================
 
+DROP TABLE IF EXISTS public.event_event_tags;
+DROP TABLE IF EXISTS public.event_tags;
+
+
+-- ============================================
+-- 完成 DONE (Drop Event Tags)
+-- ============================================
 
 -- ============================================
 -- DROP: Events (event_types + events)

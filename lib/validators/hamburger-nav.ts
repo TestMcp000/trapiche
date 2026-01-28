@@ -28,9 +28,15 @@ export const ALLOWED_TARGET_TYPES: readonly NavTargetType[] = [
     'blog_index',
     'blog_category',
     'blog_post',
+    'blog_group',
+    'blog_topic',
+    'blog_tag',
     'gallery_index',
     'gallery_category',
     'gallery_item',
+    'events_index',
+    'event_detail',
+    'faq_index',
     'page',
     'anchor',
     'external',
@@ -65,6 +71,29 @@ function validateSlug(slug: string, path: string): NavValidationError | null {
 }
 
 /**
+ * Allowed target-specific keys for each target type
+ */
+const TARGET_SPECIFIC_KEYS = new Set([
+    'type',
+    // Blog
+    'categorySlug',
+    'postSlug',
+    'groupSlug',
+    'topicSlug',
+    'tagSlug',
+    // Gallery
+    'itemSlug',
+    // Events
+    'eventType',
+    'eventSlug',
+    'tag', // events_index tag filter
+    // Page/Anchor/External
+    'path',
+    'hash',
+    'url',
+]);
+
+/**
  * Validate query parameters
  */
 function validateQueryParams(
@@ -72,7 +101,7 @@ function validateQueryParams(
     path: string
 ): NavValidationError[] {
     const errors: NavValidationError[] = [];
-    const allowedKeys = new Set(['type', 'categorySlug', 'postSlug', 'itemSlug', 'path', 'hash', 'url']);
+    const allowedKeys = new Set(TARGET_SPECIFIC_KEYS);
 
     for (const key of ALLOWED_QUERY_KEYS) {
         allowedKeys.add(key);
@@ -214,6 +243,27 @@ function validateTarget(target: unknown, path: string): NavValidationError[] {
             break;
         }
 
+        case 'blog_group': {
+            const slugError = validateSlug(t.groupSlug as string, `${path}.groupSlug`);
+            if (slugError) errors.push(slugError);
+            errors.push(...validateQueryParams(t, path));
+            break;
+        }
+
+        case 'blog_topic': {
+            const slugError = validateSlug(t.topicSlug as string, `${path}.topicSlug`);
+            if (slugError) errors.push(slugError);
+            errors.push(...validateQueryParams(t, path));
+            break;
+        }
+
+        case 'blog_tag': {
+            const slugError = validateSlug(t.tagSlug as string, `${path}.tagSlug`);
+            if (slugError) errors.push(slugError);
+            errors.push(...validateQueryParams(t, path));
+            break;
+        }
+
         case 'gallery_category': {
             const slugError = validateSlug(t.categorySlug as string, `${path}.categorySlug`);
             if (slugError) errors.push(slugError);
@@ -228,6 +278,26 @@ function validateTarget(target: unknown, path: string): NavValidationError[] {
             if (itemError) errors.push(itemError);
             break;
         }
+
+        case 'events_index': {
+            // eventType is optional, validate slug format if present
+            if (t.eventType !== undefined) {
+                const slugError = validateSlug(t.eventType as string, `${path}.eventType`);
+                if (slugError) errors.push(slugError);
+            }
+            errors.push(...validateQueryParams(t, path));
+            break;
+        }
+
+        case 'event_detail': {
+            const slugError = validateSlug(t.eventSlug as string, `${path}.eventSlug`);
+            if (slugError) errors.push(slugError);
+            break;
+        }
+
+        case 'faq_index':
+            // No additional parameters required for faq_index
+            break;
 
         case 'page': {
             const pathError = validatePath(t.path as string, `${path}.path`);

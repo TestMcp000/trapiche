@@ -49,7 +49,7 @@ Templates:
 | --- | --- | --- | --- | --- |
 | [admin-errorlog-spec.md](proposed/admin-errorlog-spec.md) | Spec | DRAFT | 2026-01-02 | Admin Error Log — Spec |
 | [ANALYTICS_PERSONALIZATION_UMAMI.md](proposed/ANALYTICS_PERSONALIZATION_UMAMI.md) | PRD | Draft | 2026-01-04 | Behavior Analytics + Personalization (Umami + Supabase) - Product Requirements Document (PRD) |
-| [CMS_NAV_BLOG_TAXONOMY_EVENTS.md](proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md) | PRD | Draft | 2026-01-25 | Admin CMS vNext：Hamburger Nav Editor + Blog Taxonomy v2（Groups/Topics/Tags）+ Events + Editable Pages - Product Requirements Document (PRD) |
+| [CMS_NAV_BLOG_TAXONOMY_EVENTS.md](proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md) | PRD | Draft | 2026-01-27 | Admin CMS vNext：Hamburger Nav Editor + Blog Taxonomy v2（Groups/Topics/Tags）+ Events + Editable Pages - Product Requirements Document (PRD) |
 | [GALLERY_HERO_IMAGE_AND_HOTSPOTS.md](proposed/GALLERY_HERO_IMAGE_AND_HOTSPOTS.md) | PRD | Draft | 2026-01-21 | Home（UIUX 跟稿）+ Gallery Hero Image + Image Hotspots（圖上 Pin）- Product Requirements Document (PRD) |
 
 <!-- AUTO-GENERATED:SPECS_PROPOSED:END -->

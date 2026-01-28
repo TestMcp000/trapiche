@@ -28,6 +28,13 @@ import {
     deleteEvent,
     eventSlugExists,
     eventTypeSlugExists,
+    getAllEventTagsAdmin,
+    createEventTag,
+    updateEventTag,
+    deleteEventTag,
+    eventTagSlugExists,
+    updateEventTags,
+    getEventTagIdsAdmin,
     type AdminEventsQueryOptions,
 } from '@/lib/modules/events/admin-io';
 import {
@@ -42,6 +49,9 @@ import type {
     EventWithType,
     EventType,
     EventTypeWithCount,
+    EventTag,
+    EventTagWithCount,
+    EventTagInput,
     EventInput,
     EventTypeInput,
 } from '@/lib/types/events';
@@ -276,6 +286,8 @@ export interface EventActionInput {
     online_url?: string | null;
     registration_url?: string | null;
     visibility: 'draft' | 'private' | 'public';
+    /** Tag IDs for many-to-many relation */
+    tag_ids?: string[];
 }
 
 /**
@@ -329,6 +341,11 @@ export async function createEventAction(
 
         if (!event) {
             return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
+        }
+
+        // Update event tags if provided
+        if (input.tag_ids !== undefined) {
+            await updateEventTags(event.id, input.tag_ids);
         }
 
         revalidateTag('events', { expire: 0 });
@@ -401,6 +418,11 @@ export async function updateEventAction(
             return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
         }
 
+        // Update event tags if provided
+        if (input.tag_ids !== undefined) {
+            await updateEventTags(id, input.tag_ids);
+        }
+
         revalidateTag('events', { expire: 0 });
         revalidatePath(`/${locale}/admin/events`);
         revalidatePath(`/${locale}/events`);
@@ -451,4 +473,190 @@ export async function deleteEventAction(
 // Data Fetching Helpers (for server components)
 // =============================================================================
 
-export { getAllEventTypesAdmin, getAllEventsAdmin, getEventByIdAdmin, getEventTypeByIdAdmin };
+export {
+    getAllEventTypesAdmin,
+    getAllEventsAdmin,
+    getEventByIdAdmin,
+    getEventTypeByIdAdmin,
+    getAllEventTagsAdmin,
+    getEventTagIdsAdmin,
+};
+
+// =============================================================================
+// Event Tag Actions
+// =============================================================================
+
+/**
+ * Create a new event tag
+ */
+export async function createEventTagAction(
+    input: EventTagInput,
+    locale: string
+): Promise<ActionResult<EventTag>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        // Validate input
+        if (!input.name_zh?.trim()) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+        if (!input.slug?.trim() || !isValidSlug(input.slug.trim())) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        // Check for duplicate slug
+        const slugExists = await eventTagSlugExists(input.slug.trim());
+        if (slugExists) {
+            return actionError(ADMIN_ERROR_CODES.SLUG_DUPLICATE);
+        }
+
+        const eventTag = await createEventTag({
+            slug: input.slug.trim(),
+            name_zh: input.name_zh.trim(),
+            is_visible: input.is_visible ?? true,
+        });
+
+        if (!eventTag) {
+            return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
+        }
+
+        revalidateTag('events', { expire: 0 });
+        revalidatePath(`/${locale}/admin/events`);
+
+        return actionSuccess(eventTag);
+    } catch (error) {
+        console.error('[events/actions] createEventTagAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Update an event tag
+ */
+export async function updateEventTagAction(
+    id: string,
+    input: Partial<EventTagInput>,
+    locale: string
+): Promise<ActionResult<EventTag>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        // Validate slug if provided
+        if (input.slug !== undefined) {
+            if (!input.slug.trim() || !isValidSlug(input.slug.trim())) {
+                return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+            }
+
+            // Check for duplicate slug
+            const slugExists = await eventTagSlugExists(input.slug.trim(), id);
+            if (slugExists) {
+                return actionError(ADMIN_ERROR_CODES.SLUG_DUPLICATE);
+            }
+        }
+
+        // Validate name_zh if provided
+        if (input.name_zh !== undefined && !input.name_zh.trim()) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const eventTag = await updateEventTag(id, {
+            ...(input.slug !== undefined && { slug: input.slug.trim() }),
+            ...(input.name_zh !== undefined && { name_zh: input.name_zh.trim() }),
+            ...(input.is_visible !== undefined && { is_visible: input.is_visible }),
+        });
+
+        if (!eventTag) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        revalidateTag('events', { expire: 0 });
+        revalidatePath(`/${locale}/admin/events`);
+        revalidatePath(`/${locale}/events`);
+
+        return actionSuccess(eventTag);
+    } catch (error) {
+        console.error('[events/actions] updateEventTagAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Delete an event tag
+ */
+export async function deleteEventTagAction(
+    id: string,
+    locale: string
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const success = await deleteEventTag(id);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.RESOURCE_IN_USE);
+        }
+
+        revalidateTag('events', { expire: 0 });
+        revalidatePath(`/${locale}/admin/events`);
+        revalidatePath(`/${locale}/events`);
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[events/actions] deleteEventTagAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Toggle event tag visibility
+ */
+export async function toggleEventTagVisibilityAction(
+    id: string,
+    isVisible: boolean,
+    locale: string
+): Promise<ActionResult<EventTag>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const eventTag = await updateEventTag(id, { is_visible: isVisible });
+        if (!eventTag) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        revalidateTag('events', { expire: 0 });
+        revalidatePath(`/${locale}/admin/events`);
+        revalidatePath(`/${locale}/events`);
+
+        return actionSuccess(eventTag);
+    } catch (error) {
+        console.error('[events/actions] toggleEventTagVisibilityAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}

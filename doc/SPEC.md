@@ -20,7 +20,7 @@
 ## 目錄
 
 - [Home（UIUX v2）](#home-uiux-v2)
-- [網站頁面（About/Services/Platforms/Portfolio/FAQ/Contact/Privacy/Login）](#site-pages)
+- [網站頁面（About/Services/Portfolio/Events/FAQ/Contact/Collaboration/Privacy/Login）](#site-pages)
 - [部落格系統](#blog-system)
 - [圖庫](#gallery)
 - [留言](#comments)
@@ -74,20 +74,23 @@
 
 <a id="site-pages"></a>
 
-## 網站頁面（About/Services/Platforms/Portfolio/FAQ/Contact/Privacy/Login）
+## 網站頁面（About/Services/Portfolio/Events/FAQ/Contact/Collaboration/Privacy/Login）
 
 ### 路由
 
-| 路由                  | 說明                        | 主要資料來源                                                                              |
-| --------------------- | --------------------------- | ----------------------------------------------------------------------------------------- |
-| `/[locale]/about`     | 關於頁                      | `site_content(section_key='about')` + `company_settings`                                  |
-| `/[locale]/services`  | 服務頁                      | `services`（visible）                                                                     |
-| `/[locale]/platforms` | 技術平台頁                  | `site_content(section_key='platforms')`                                                   |
-| `/[locale]/portfolio` | 作品集                      | `portfolio_items`（visible）                                                              |
-| `/[locale]/faq`       | 常見問題（FAQPage JSON-LD） | `faqs`（visible；排序）                                                                   |
-| `/[locale]/contact`   | 聯絡頁（含表單提交）        | `site_content(section_key='contact')` + `company_settings` + `contact_messages`（insert） |
-| `/[locale]/privacy`   | 隱私權政策                  | 目前為靜態內容（inline HTML）                                                             |
-| `/[locale]/login`     | Admin Login（Google OAuth） | Client-side Supabase OAuth（redirect → `/auth/callback`）                                 |
+| 路由                      | 說明                                                | 主要資料來源                                                                |
+| ------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
+| `/[locale]/about`         | 關於頁                                              | `site_content(section_key='about')` + `company_settings`                    |
+| `/[locale]/services`      | 服務頁                                              | `services`（visible）                                                       |
+| `/[locale]/portfolio`     | 作品集                                              | `portfolio_items`（visible）                                                |
+| `/[locale]/events`        | 活動列表（支援 `?type=&tag=&q=&sort=`）             | `events`（public visibility）+ `event_types` + `event_tags`                 |
+| `/[locale]/events/[slug]` | 活動詳情（Event JSON-LD）                           | `events`（single by slug）                                                  |
+| `/[locale]/faq`           | 常見問題（FAQPage JSON-LD）                         | `faqs`（visible；排序）                                                     |
+| `/[locale]/contact`       | 聯絡頁（mailto CTA）                                | `site_content(section_key='contact')` + `company_settings`                  |
+| `/[locale]/collaboration` | 合作邀請頁                                          | `site_content(section_key='collaboration')` + `company_settings`            |
+| `/[locale]/privacy`       | 隱私權政策                                          | 目前為靜態內容（inline HTML）                                               |
+| `/[locale]/login`         | Admin Login（Google OAuth）                         | Client-side Supabase OAuth（redirect → `/auth/callback`）                   |
+| `/[locale]/platforms`     | **Legacy**（301 → `/[locale]/events`）              | —（永久 redirect；PR-43）                                                   |
 
 ### 實作備註
 
@@ -449,12 +452,6 @@
 | ------------- | ---------------------------------- |
 | `/admin/faqs` | FAQ 管理（CRUD + 拖曳排序 + 可見） |
 
-**Contact Messages（聯絡訊息）**
-
-| 路由                      | 說明                               |
-| ------------------------- | ---------------------------------- |
-| `/admin/contact-messages` | 聯絡表單訊息管理（讀取/封存/刪除） |
-
 **Engagement（互動）**
 
 | 路由                       | 說明     |
@@ -502,6 +499,22 @@
 - Header nav labels（Legacy Header）：`site_content(section_key='nav')`（fallback：`messages/*`）
 - Hamburger nav（Home v2 HeaderBar）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：built-in default）
   - 後台可視化編輯器：`/admin/settings/navigation`（支援 groups/items 拖曳排序、target picker、draft/publish 兩段式驗證）
+  - **Nav Target Allowlist（PR-42）**：
+    | Target Type | 必填欄位 | 選填欄位 | 說明 |
+    |-------------|----------|----------|------|
+    | `page` | `path` | `hash` | 內部靜態頁面（/about, /services, /contact, /faq, /collaboration, /events；/platforms 已為 legacy redirect） |
+    | `blog_index` | - | `q` | 部落格首頁（可帶搜尋） |
+    | `blog_category` | `categorySlug` | `q` | 部落格分類頁 |
+    | `blog_group` | `groupSlug` | `q` | 部落格群組頁（taxonomy v2） |
+    | `blog_topic` | `topicSlug` | `q` | 部落格主題頁（taxonomy v2） |
+    | `blog_tag` | `tagSlug` | - | 部落格標籤頁（taxonomy v2） |
+    | `gallery_index` | - | `q` | 畫廊首頁 |
+    | `gallery_category` | `categorySlug` | `q` | 畫廊分類頁 |
+    | `events_index` | - | `eventType`, `tag` | 活動列表（可篩選類型/標籤） |
+    | `faq_index` | - | - | 常見問題頁 |
+    | `anchor` | `hash` | - | 頁內錨點 |
+    | `external` | `url` | - | 外部連結（僅 `https:`/`mailto:`） |
+  - Deep Validation（Publish 時）：`blog_group/topic/tag`、`event_detail` 會驗證 DB 是否存在且可見
 - Footer copy：`site_content(section_key='footer')`（fallback：`messages/*`）
 - Company short name：`site_content(section_key='company')`（fallback：`messages/*`）
 - Home v2 hero copy：`site_content(section_key='hero')`
@@ -643,7 +656,7 @@
   - ~~Hamburger menu 後台仍為 JSON editor → 需補「可視化 editor」~~（已完成：`/admin/settings/navigation`；PR-32）
   - Blog taxonomy：`categories` 單選 → 需升級為 Group/Topics/Tags（多選）
   - Events：尚無 `events` domain（DB + public `/events` + admin CRUD）
-  - ~~FAQ/Contact form：尚未落地（FAQPage JSON-LD 已有 helper，但缺資料來源與頁面）~~（已完成：`/faq` + `/admin/faqs` + `/admin/contact-messages`；PR-38）
+  - ~~FAQ/Contact form：尚未落地（FAQPage JSON-LD 已有 helper，但缺資料來源與頁面）~~（已完成：`/faq` + `/admin/faqs`；PR-38；contact 改為 mailto CTA；PR-41 移除 contact_messages）
 
 ### Data Intelligence（後台）
 

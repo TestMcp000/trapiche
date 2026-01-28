@@ -1,10 +1,10 @@
 # Step-by-Step Execution Plan — V15（CMS vNext：Nav/Blog Taxonomy/Events/Pages）
 
 > 狀態: Active（本檔只寫「修復/新增的方案與步驟」，不在此直接改程式碼）  
-> 最後更新: 2026-01-25  
+> 最後更新: 2026-01-27  
 > 現況 SSoT（已實作行為）: `doc/SPEC.md`  
-> vNext PRD（planned / not shipped yet）: `doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`  
-> Repo 驗證（2026-01-25）：請以本次 PR 的 `npm test`, `npm run lint`, `npm run type-check`, `npm run docs:check-indexes`, `npm run lint:md-links`, `npm run build` 為準  
+> vNext PRD（decisions locked 2026-01-27）: `doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`  
+> Repo 驗證（2026-01-27）：請以本次 PR 的 `npm test`, `npm run lint`, `npm run type-check`, `npm run docs:check-indexes`, `npm run lint:md-links`, `npm run build` 為準  
 > 歷史 snapshots（已完成只留 archive）：`doc/archive/README.md`（最新：`doc/archive/2026-01-23-step-plan-v14-edge-functions-auth-hardening.md`）
 
 ---
@@ -24,15 +24,32 @@
 
 > 本節只列「尚未修復」的飄移/技術債；已完成項一律歸檔到 `doc/archive/*`。
 
-- CMS vNext gaps（2026-01-25；規格：`doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`）
-  - ~~(A) Hamburger menu 仍需用 JSON editor 編輯（不符合「心理師可操作」需求）~~（PR-32 已完成：`/admin/settings/navigation`）
-  - ~~(B) Blog taxonomy 只有 `categories`（單選）+ `posts.category_id`，不支援多主題/Tags/Groups~~（PR-33/34/35 已完成：`/admin/(blog)/groups|topics|tags` + Posts editor multi-select）
-  - ~~(C) Events domain 尚未落地（無 DB / 無 public `/events` / 無 admin CRUD）~~（PR-36 已完成：DB + public routes；PR-37 pending：admin CRUD）
-    - ~~Evidence：`Get-ChildItem -LiteralPath 'app/[locale]'`（無 `events/`）、`rg -n \"CREATE TABLE events\" supabase`（0 hits）~~
-    - ~~Violates：PRD §Requirements（FR-C1–C3）~~
-  - (D) FAQ / Contact form 尚未落地（contact 現況為 mailto + link）
-    - Evidence：`app/[locale]/contact/page.tsx`, `components/sections/ContactSection.tsx`
-    - Violates：PRD §Requirements（FR-D1–D2）
+- CMS vNext follow-ups（2026-01-27；規格：`doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`）
+  - (A) Hamburger nav contract drift（typed targets 已擴充，但 draft validator / editor / deep validate 未對齊）
+    - Evidence（types vs validator drift）：
+      - `lib/types/hamburger-nav.ts`（已包含 `blog_group/blog_topic/blog_tag/events_index/event_detail/faq_index`）
+      - `lib/validators/hamburger-nav.ts`（`ALLOWED_TARGET_TYPES` 尚未包含上述 types）
+    - Evidence（admin editor drift）：
+      - `app/[locale]/admin/settings/navigation/page.tsx`（仍以 legacy `categories` 作為 Blog target options；static pages 仍含 `/platforms` + `聯絡表單`）
+      - `components/admin/settings/hamburger-nav-editor/NavTargetPicker.tsx`（events target 使用錯誤欄位 `eventTypeSlug`；且未支援 blog_group/blog_topic/blog_tag/faq_index）
+    - Evidence（deep validate drift）：`lib/modules/content/hamburger-nav-publish-io.ts`（尚未驗證 blog_group/blog_topic/blog_tag/event_detail 的 DB existence；註解仍寫「will be added」）
+    - Fix: PR-42
+  - (B) Events：需要「type + tags」兩者都要（目前只有 `event_types`）✅ **RESOLVED by PR-39**
+    - Evidence：`supabase/02_add/22_events.sql`, `lib/types/events.ts`, `app/[locale]/events/page.tsx`（無 `tag` filter）
+    - Fix: PR-39 ✅ COMPLETED
+  - (C) 合作邀請：需同時存在「events type」+「獨立內容頁」
+    - Evidence（缺獨立頁）：`Get-ChildItem -LiteralPath 'app/[locale]'`（目前無 `collaboration/`）
+    - Evidence（nav 仍指向舊頁）：`lib/modules/content/cached.ts`（default nav：合作邀請 → `/contact`；講座類型 → `/platforms`）
+    - Fix: PR-40
+  - (D) Contact：決策改為 mailto only（需移除 contact_messages/inbox/form）✅ **RESOLVED by PR-41**
+    - Evidence：`supabase/02_add/24_contact_messages.sql`, `components/sections/ContactFormClient.tsx`, `app/[locale]/admin/contact-messages/page.tsx`
+    - Fix: PR-41 ✅ COMPLETED
+  - (E) Legacy `/platforms`：目前仍被用作「講座／活動」placeholder（應收斂到 `/events` 或改為 redirect）
+    - Evidence：`app/[locale]/platforms/page.tsx`, `lib/modules/content/cached.ts`（default nav items 指向 `/platforms`）
+    - Fix: PR-43
+  - (F) 文件漂移：`doc/SPEC.md`（SSoT）尚未同步 blog taxonomy v2 / events / CMS vNext 現況與後續變更（需在上述 PR 完成後同步）
+    - Evidence：`doc/SPEC.md`（Blog 仍寫 `categories/posts`；Known gaps 仍寫「Events 尚未落地」）
+    - Fix: PR-42 / PR-43（各 PR merge 後更新對應章節）
 
 ---
 
@@ -359,13 +376,22 @@
 
 ---
 
-### PR-37 — Events（Admin）：CRUD UI + Hamburger menu target picker 支援 events filters
+### PR-37 — Events（Admin）：CRUD UI + Hamburger menu target picker 支援 events filters ✅ COMPLETED
 
-**Fix steps**
+> **Status**: Completed (2026-01-27)
 
-- Add: `app/[locale]/admin/events/*`（list/new/edit）
-- Update: `components/admin/settings/HamburgerNavEditorClient.tsx`（target picker 增加 events options）
-- Revalidate：`revalidateTag('events')`
+**Implemented**
+
+- Admin routes + actions
+  - `app/[locale]/admin/events/page.tsx`（list）
+  - `app/[locale]/admin/events/new/page.tsx`（create）
+  - `app/[locale]/admin/events/[id]/edit/page.tsx`（edit）
+  - `app/[locale]/admin/events/actions.ts`（server actions + revalidate paths）
+  - `app/[locale]/admin/events/components/EventFormClient.tsx`
+  - `app/[locale]/admin/events/components/EventsListClient.tsx`
+- Navigation editor options
+  - `app/[locale]/admin/settings/navigation/page.tsx`（載入 `eventTypes` options）
+  - `components/admin/settings/hamburger-nav-editor/NavTargetPicker.tsx`（支援選擇 events index target；**欄位命名 drift 需在 PR-42 修復**）
 
 ---
 
@@ -411,6 +437,295 @@
 - `npm test`, `npm run lint`, `npm run type-check`, `npm run build`
 
 ---
+
+### PR-39 — Events v2：Add Tags（type + tags；public filter + admin editor）✅ COMPLETED
+
+> **Status**: Completed (2026-01-27)
+> **Files added**:
+>
+> - `supabase/02_add/25_events_tags.sql`（event_tags + event_event_tags + RLS）
+> - `supabase/01_drop/25_events_tags.sql`（idempotent drop）
+> - `lib/modules/events/event-types-io.ts`（public event types reads）
+> - `lib/modules/events/event-tags-io.ts`（public event tags reads）
+> - `lib/modules/events/events-io.ts`（public events reads with tag filter）
+> - `lib/modules/events/event-types-admin-io.ts`（admin event types CRUD）
+> - `lib/modules/events/event-tags-admin-io.ts`（admin event tags CRUD）
+> - `lib/modules/events/events-admin-io.ts`（admin events CRUD）
+> - `tests/events-tags.test.ts`（URL builders + EventTag type + slug validator）
+> **Files updated**:
+>
+> - `lib/types/events.ts`（EventTag, EventTagInput, EventTagWithCount types）
+> - `lib/modules/events/io.ts`（converted to thin aggregator re-exporting from split modules）
+> - `lib/modules/events/admin-io.ts`（converted to thin aggregator re-exporting from split modules）
+> - `lib/modules/events/cached.ts`（getVisibleEventTagsCached, getEventTagsWithCountsCached）
+> - `app/[locale]/events/page.tsx`（tag filter support: ?tag=<slug>）
+> - `app/[locale]/admin/events/actions.ts`（re-exports for event tags admin）
+> - `app/[locale]/admin/events/components/EventFormClient.tsx`（tags multi-select）
+> - `app/[locale]/admin/events/new/page.tsx`（fetch eventTags）
+> - `app/[locale]/admin/events/[id]/edit/page.tsx`（fetch eventTags + selectedTagIds）
+> - `supabase/COMBINED_ADD.sql`（includes 25_events_tags.sql）
+> - `supabase/COMBINED_DROP.sql`（includes 25_events_tags.sql）
+> - `messages/zh.json`（events.allTags, events.filteredByTag, admin.events.form.tagsLabel/tagsHint/noTags）
+
+**Evidence**
+
+- `supabase/02_add/22_events.sql`（目前只有 `event_types` + `events`）
+- `lib/types/events.ts`（無 EventTag / event_tag_ids）
+- `app/[locale]/events/page.tsx`（`searchParams` 目前只支援 `type/q/sort`）
+
+**Violates**
+
+- `doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`（FR-C4）
+
+**Fix steps**
+
+1) DB schema（idempotent + 可 reset）
+   - Add: `supabase/02_add/25_events_tags.sql`
+     - Create: `event_tags`（`slug/name_zh/sort_order/is_visible/timestamps`）
+     - Create: `event_event_tags`（join；`event_id/tag_id`；PK + indexes）
+     - RLS：public read（visible only）、admin manage（owner/editor）
+     - Grants：anon/authenticated select；authenticated insert/update/delete（admin gated by RLS）
+   - Add: `supabase/01_drop/25_events_tags.sql`（drop policies/indexes/tables）
+   - Update: `supabase/COMBINED_ADD.sql`
+   - Update: `supabase/COMBINED_DROP.sql`
+2) Types / validators（單一真相來源）
+   - Update: `lib/types/events.ts`
+     - Add: `EventTag`, `EventTagInput`, `EventTagWithCount`
+     - Add to `EventSummary` / `EventWithType`: `event_tags?: EventTag[]`
+     - Update `EventInput`：新增 `tag_ids?: string[]`（multi-select）
+3) IO / cached modules（server-only）
+   - Update: `lib/modules/events/io.ts`（public list/detail 支援 join tags；新增 tag filter）
+   - Update: `lib/modules/events/admin-io.ts`（寫入 tags join；transaction-safe）
+   - Update: `lib/modules/events/cached.ts`（新增 `getVisibleEventTagsCached`/`getEventTagsWithCountsCached`；tag=`events`）
+4) Public `/events`（SEO-friendly）
+   - Update: `app/[locale]/events/page.tsx`
+     - 支援 `?tag=<eventTagSlug>` filter（先做單選；多選 future）
+     - UI：顯示 tag filter pills（optional）
+     - Metadata：若帶 `tag`，調整 title/description（避免重複收錄可加 `noindex`）
+5) Admin UI
+   - Update: `app/[locale]/admin/events/components/EventFormClient.tsx`
+     - Tags multi-select（從 `getVisibleEventTagsCached()` 取得 options）
+     - 可選：快速新增 tag（`getOrCreateEventTag`）
+6) Navigation target contract（如需）
+   - Update: `lib/types/hamburger-nav.ts`（`events_index` 新增 optional `tag`）
+   - Update: `lib/site/nav-resolver.ts`（query string include `tag`）
+   - Update: `lib/validators/hamburger-nav.ts` + `lib/modules/content/hamburger-nav-publish-io.ts`（見 PR-42）
+7) Tests（避免回歸）
+   - Add: `tests/events-tags.test.ts`（IO filter + DTO shape）
+   - Update/Add: URL builders / nav resolver tests（若新增 `tag`）
+8) Docs（merge 後同步）
+   - Update: `doc/SPEC.md`（新增 Events tags 行為；標註 `tag` filter 是否 index/noindex）
+
+**DoD**
+
+- `npm test`, `npm run lint`, `npm run type-check`, `npm run build`
+- DB reset sanity（需先有 `SUPABASE_DB_URL`）：`npm run db:reset`
+
+---
+
+### PR-40 — 合作邀請：獨立內容頁（/collaboration）+ Events type seed ✅
+
+> **Status: COMPLETED** (2026-01-28)
+>
+> Implemented:
+> - Added `/collaboration` public page (`app/[locale]/collaboration/page.tsx`)
+> - Added `site_content` collaboration seed (`supabase/03_seed/01_main.sql`)
+> - Added events type seed (`supabase/03_seed/09_events.sql`)
+> - Updated `DEFAULT_HAMBURGER_NAV` to use `events_index` targets + `/collaboration` page
+> - Updated hamburger_nav seed to align with DEFAULT
+> - Updated Admin content editor labels (added `collaboration`)
+> - Updated `COMBINED_SEED.sql`
+> - Added URL builder: `buildCollaborationUrl`
+
+**Evidence**
+
+- Default nav：`lib/modules/content/cached.ts`（合作邀請 → `/contact`；其他活動指向 `/platforms`）
+- 缺 page route：`Get-ChildItem -LiteralPath 'app/[locale]'`（目前無 `collaboration/`）
+- 缺 seed：`rg -n \"INSERT INTO public\\.event_types\" supabase/03_seed -S`（0 hits）
+
+**Violates**
+
+- `doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`（FR-C5）
+
+**Fix steps**
+
+1) 新增 `/collaboration` public page（server-first）
+   - Add: `app/[locale]/collaboration/page.tsx`
+     - Data: `site_content(section_key='collaboration')` + `company_settings`（email）
+     - SEO：metadata + breadcrumbs JSON-LD（使用 `lib/seo/*`）
+2) 新增 `site_content` seed（非 coder 可在後台再改）
+   - Update: `supabase/03_seed/01_main.sql`（insert/update `site_content.section_key='collaboration'`）
+   - Update: `supabase/COMBINED_SEED.sql`
+3) Events type seed（對齊 hamburger IA）
+   - Add: `supabase/03_seed/09_events.sql`（`event_types` seeds；含 collaboration + 近期講座/療癒工作坊/企業內訓）
+   - Update: `supabase/COMBINED_SEED.sql`
+   - Update: `scripts/db.mjs`（若有 feature seed list；確保 `--feature main` 也包含新 seed 檔）
+4) Hamburger nav seed 收斂到 canonical
+   - Update: `lib/modules/content/cached.ts#DEFAULT_HAMBURGER_NAV`
+     - 近期講座/工作坊/企業內訓 → `events_index`（`eventType=<slug>`）
+     - 合作邀請 → `page`（`/collaboration`）
+   - Update: `supabase/03_seed/01_main.sql` 的 `hamburger_nav` 初始 published JSON（與 DEFAULT 對齊）
+5) Admin content editor labels（非 coder 可發現）
+   - Update: `app/[locale]/admin/content/[section]/ContentEditorClient.tsx`（`sectionLabels` 增加 `collaboration`）
+6) Docs（merge 後同步）
+   - Update: `doc/SPEC.md`（新增 `/collaboration`；說明內容來源）
+
+**DoD**
+
+- `npm test`, `npm run lint`, `npm run type-check`, `npm run build`
+- `npm run lint:md-links`
+
+---
+
+### PR-41 — Contact：mailto only（移除 contact_messages/inbox/form）✅ COMPLETED
+
+> **Status**: Completed (2026-01-28)
+>
+> **Implemented**:
+> - Updated `/contact` page to use mailto CTA (removed form submission)
+> - Deleted `app/[locale]/contact/actions.ts`
+> - Deleted `components/sections/ContactFormClient.tsx`
+> - Deleted `lib/types/contact.ts`
+> - Deleted `lib/modules/contact/` directory (io.ts + admin-io.ts)
+> - Deleted `app/[locale]/admin/contact-messages/` directory
+> - Updated `components/admin/common/AdminSidebar.tsx` (removed contact-messages entry)
+> - Updated `messages/zh.json` (removed admin.contactMessages + contactForm keys)
+> - Deleted `supabase/02_add/24_contact_messages.sql`
+> - Deleted `supabase/01_drop/24_contact_messages.sql`
+> - Updated `supabase/COMBINED_ADD.sql` (removed contact_messages section)
+> - Updated `supabase/COMBINED_DROP.sql` (removed contact_messages section)
+> - Updated `doc/SPEC.md` (contact → mailto; removed /admin/contact-messages)
+
+**Evidence**
+
+- DB：`supabase/02_add/24_contact_messages.sql`（`contact_messages`）
+- Public：`components/sections/ContactFormClient.tsx`, `app/[locale]/contact/actions.ts`
+- Admin：`app/[locale]/admin/contact-messages/page.tsx`
+- PRD：`doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`（Contact mailto only）
+
+**Violates**
+
+- `doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`（FR-D2）
+
+**Fix steps**
+
+1) Public contact page：改回 mailto CTA（不送 DB）
+   - Update: `app/[locale]/contact/page.tsx`（移除 `ContactFormClient`；改 render mailto section）✅
+   - Delete (if unused after update): `app/[locale]/contact/actions.ts` ✅
+   - Delete (if unused after update): `components/sections/ContactFormClient.tsx` ✅
+   - Ensure: external links 仍走 allowlist（`lib/validators/external-url.ts`）✅
+2) 移除 Contact Messages domain（server-only）
+   - Delete: `lib/types/contact.ts` ✅
+   - Delete: `lib/modules/contact/io.ts`, `lib/modules/contact/admin-io.ts` ✅
+3) 移除 Admin inbox
+   - Delete: `app/[locale]/admin/contact-messages/**` ✅
+   - Update: `components/admin/common/AdminSidebar.tsx`（移除入口）✅
+   - Update: `messages/zh.json`（移除 `admin.contactMessages` 相關 keys；同時更新 index 檢查）✅
+4) DB cleanup（確保 reset 後不再存在）
+   - Delete: `supabase/02_add/24_contact_messages.sql` ✅
+   - Delete: `supabase/01_drop/24_contact_messages.sql` ✅
+   - Update: `supabase/COMBINED_ADD.sql`（移除 contact_messages DDL/RLS/GRANT）✅
+   - Update: `supabase/COMBINED_DROP.sql`（移除 contact_messages section）✅
+5) Docs（merge 後同步）
+   - Update: `doc/SPEC.md`（contact 改 mailto；移除 `/admin/contact-messages`）✅
+   - Update: `doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`（若有任何舊描述）— N/A
+6) Cleanup guards（避免殘留）
+   - `rg -n \"contact_messages|ContactFormClient|contact-messages\" -S app components lib supabase doc` → **0 hits** ✅
+
+**DoD**
+
+- `npm test`, `npm run lint`, `npm run type-check`, `npm run build` ✅
+
+---
+
+### PR-42 — Hamburger Nav v2：validator/publish/editor 對齊 taxonomy v2 + events + faq + collaboration ✅ DONE
+
+**Evidence**
+
+- Types 已擴充：`lib/types/hamburger-nav.ts`
+- Draft validator 未擴充：`lib/validators/hamburger-nav.ts#ALLOWED_TARGET_TYPES`
+- Publish deep validate 未擴充：`lib/modules/content/hamburger-nav-publish-io.ts`
+- Editor drift：`components/admin/settings/hamburger-nav-editor/NavTargetPicker.tsx`（events 欄位命名錯誤；target types 不完整）
+
+**Violates**
+
+- `doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`（FR-A2/A3；Implementation Contract: target allowlist + publish deep validate）
+- `ARCHITECTURE.md`（單一真相來源 + SEO canonical）
+
+**Fix steps**
+
+1) Draft save validator（pure）✅
+   - Update: `lib/validators/hamburger-nav.ts`
+     - `ALLOWED_TARGET_TYPES` 加入：`blog_group`, `blog_topic`, `blog_tag`, `events_index`, `event_detail`, `faq_index` ✅
+     - allowed keys 加入：`groupSlug`, `topicSlug`, `tagSlug`, `eventType`, `eventSlug`, `tag`（若 PR-39 加入 events tag filter）✅
+2) Publish deep validate（server-only; DB existence）✅
+   - Update: `lib/modules/content/hamburger-nav-publish-io.ts` ✅
+     - blog_group/blog_topic/blog_tag：查 `blog_groups/blog_topics/blog_tags`（exists + is_visible）✅
+     - event_detail：查 `events`（exists + visibility='public'）✅
+     - events_index：若帶 `eventType`/`tag`，需驗證對應 type/tag 存在且 visible（避免發布壞連結）✅
+   - Add/Update: `lib/modules/content/hamburger-nav-publish-blog-validate-io.ts`（新增 group/topic/tag validators）✅
+   - Add: `lib/modules/content/hamburger-nav-publish-events-validate-io.ts`（新增 event validators；避免塞進 orchestrator）✅
+3) Admin editor target picker（non-coder UX）✅
+   - Update: `components/admin/settings/hamburger-nav-editor/NavTargetPicker.tsx` ✅
+     - 修正：`events_index` 使用 `eventType`（移除錯誤 `eventTypeSlug`）✅
+     - 增加 target types：blog_group/blog_topic/blog_tag/faq_index（並支援 events tag filter）✅
+   - Update: `app/[locale]/admin/settings/navigation/page.tsx` ✅
+     - options：改抓 blog groups/topics/tags（不再只抓 legacy categories）✅
+     - static pages：更新 `/contact` label、加入 `/faq` + `/collaboration` ✅
+4) Default nav seed（避免 drift；對齊 canonical）— N/A（保留現有 default，未含新 target types）
+   - Update: `lib/modules/content/cached.ts#DEFAULT_HAMBURGER_NAV` — N/A
+   - Update: `supabase/03_seed/01_main.sql`（`hamburger_nav` seed）— N/A
+5) Tests（守門）✅
+   - Add: `tests/hamburger-nav-validator-target-types.test.ts`（新 target types 可被 parse/validate）✅
+   - Update: `tests/hamburger-nav-publish-io.test.ts`（新 target types deep validate table checks）✅
+6) Docs（merge 後同步）✅
+   - Update: `doc/SPEC.md`（Hamburger nav target allowlist + 實際 editor 行為）✅
+
+**DoD**
+
+- `npm test`, `npm run lint`, `npm run type-check`, `npm run build` ✅
+- `rg -n \"eventTypeSlug\" components/admin/settings/hamburger-nav-editor/NavTargetPicker.tsx` → 0 hits ✅
+
+---
+
+### PR-43 — Legacy：`/platforms` → `/events` canonicalization + cleanup ✅ COMPLETED
+
+> **Status**: Completed (2026-01-28)
+>
+> **Implemented**:
+> - Updated `app/[locale]/platforms/page.tsx` to use `permanentRedirect()` → `/events`
+> - Removed `/platforms` from `app/sitemap.ts` STATIC_PAGES (added /events, /faq, /collaboration)
+> - Removed `/platforms` option from admin navigation editor (`app/[locale]/admin/settings/navigation/page.tsx`)
+> - Updated `doc/SPEC.md` to document `/platforms` as legacy redirect route
+> - Verified hamburger nav `DEFAULT_HAMBURGER_NAV` already uses `events_index` targets (no `/platforms` references)
+> - Cleanup guards verified: `/platforms` references only in legacy redirect page, i18n routing config, and documentation
+
+**Evidence**
+
+- `app/[locale]/platforms/page.tsx`（目前 page 標題為「講座／活動」但 URL 為 `/platforms`）
+- Default nav：`lib/modules/content/cached.ts`（多個 items 指向 `/platforms`）
+
+**Fix steps**
+
+1) Canonical 決策 ✅
+   - `/events` 是 canonical
+   - `/platforms` 視為 legacy route：永久 redirect 到 `/events`
+2) Implement redirect（SEO-friendly）✅
+   - Update: `app/[locale]/platforms/page.tsx`
+     - 使用 `permanentRedirect()` → `/${locale}/events`
+     - page 不再做 DB read（避免浪費）
+3) Update nav + seeds（避免 redirect chain）✅
+   - Ensure（should already be done in PR-40/42）：hamburger nav 不再指向 `/platforms`
+4) Sitemap / robots ✅
+   - Update: `app/sitemap.ts`（確保不再列出 `/platforms`）
+5) Docs（merge 後同步）✅
+   - Update: `doc/SPEC.md`（標註 `/platforms` legacy redirect；或移除該頁描述）
+6) Cleanup guards ✅
+   - `rg -n \"\\'/platforms\\'|/platforms\" -S app lib supabase doc` → 只允許 legacy redirect 與歷史 docs（archive）
+
+**DoD**
+
+- `npm test`, `npm run lint`, `npm run type-check`, `npm run build` ✅
 
 ## 3) 每 PR 驗證清單（不可省略）
 

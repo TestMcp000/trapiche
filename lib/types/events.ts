@@ -2,10 +2,10 @@
  * Events Types
  *
  * Type definitions for the Events domain.
- * Includes event types (categories) and individual events.
+ * Includes event types (categories), event tags, and individual events.
  *
  * @module lib/types/events
- * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C1–C3)
+ * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C1–C4)
  */
 
 // =============================================================================
@@ -39,6 +39,40 @@ export interface EventTypeWithCount extends EventType {
 }
 
 // =============================================================================
+// Event Tag
+// =============================================================================
+
+/**
+ * Event tag (e.g., 親子, 團體, 線上)
+ */
+export interface EventTag {
+    id: string;
+    slug: string;
+    name_zh: string;
+    sort_order: number;
+    is_visible: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Input for creating/updating an event tag
+ */
+export interface EventTagInput {
+    slug: string;
+    name_zh: string;
+    sort_order?: number;
+    is_visible?: boolean;
+}
+
+/**
+ * Event tag with event count for listing
+ */
+export interface EventTagWithCount extends EventTag {
+    event_count: number;
+}
+
+// =============================================================================
 // Event
 // =============================================================================
 
@@ -68,10 +102,11 @@ export interface Event {
 }
 
 /**
- * Event with related type information
+ * Event with related type and tags information
  */
 export interface EventWithType extends Event {
     event_type?: EventType | null;
+    event_tags?: EventTag[];
 }
 
 /**
@@ -92,6 +127,7 @@ export interface EventSummary {
     visibility: EventVisibility;
     published_at: string | null;
     event_type?: EventType | null;
+    event_tags?: EventTag[];
 }
 
 // =============================================================================
@@ -114,6 +150,8 @@ export interface EventInput {
     online_url?: string | null;
     registration_url?: string | null;
     visibility: EventVisibility;
+    /** Tag IDs for many-to-many relation */
+    tag_ids?: string[];
 }
 
 export interface EventTypeInput {
@@ -129,6 +167,8 @@ export interface EventTypeInput {
 
 export interface EventsQueryOptions {
     typeSlug?: string;
+    /** Filter by event tag slug */
+    tagSlug?: string;
     search?: string;
     sort?: 'newest' | 'oldest' | 'upcoming' | 'start-asc' | 'start-desc';
     limit?: number;

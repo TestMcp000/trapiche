@@ -17,6 +17,7 @@ import type { AbstractIntlMessages } from "next-intl";
 import type {
   EventWithType,
   EventTypeWithCount,
+  EventTagWithCount,
   EventVisibility,
 } from "@/lib/types/events";
 import { getErrorLabel } from "@/lib/types/action-result";
@@ -29,6 +30,8 @@ import {
 interface EventFormClientProps {
   event?: EventWithType;
   eventTypes: EventTypeWithCount[];
+  eventTags: EventTagWithCount[];
+  selectedTagIds?: string[];
   routeLocale: string;
   messages: AbstractIntlMessages;
 }
@@ -46,6 +49,8 @@ export default function EventFormClient(props: EventFormClientProps) {
 function EventFormContent({
   event,
   eventTypes,
+  eventTags,
+  selectedTagIds = [],
   routeLocale,
 }: EventFormClientProps) {
   const router = useRouter();
@@ -71,6 +76,7 @@ function EventFormContent({
     online_url: event?.online_url ?? "",
     registration_url: event?.registration_url ?? "",
     visibility: event?.visibility ?? "draft",
+    tag_ids: selectedTagIds,
   });
 
   const [loading, setLoading] = useState(false);
@@ -90,6 +96,19 @@ function EventFormContent({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleTagToggle = (tagId: string) => {
+    setFormData((prev) => {
+      const currentTags = prev.tag_ids ?? [];
+      const isSelected = currentTags.includes(tagId);
+      return {
+        ...prev,
+        tag_ids: isSelected
+          ? currentTags.filter((id) => id !== tagId)
+          : [...currentTags, tagId],
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -233,6 +252,37 @@ function EventFormContent({
               ))}
             </select>
           </div>
+
+          {/* Event Tags */}
+          {eventTags.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t("form.tagsLabel")}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {eventTags.map((tag) => {
+                  const isSelected = formData.tag_ids?.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => handleTagToggle(tag.id)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        isSelected
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      }`}>
+                      {tag.name_zh}
+                      {isSelected && <span className="ml-1">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t("form.tagsHint")}
+              </p>
+            </div>
+          )}
 
           {/* Excerpt */}
           <div>

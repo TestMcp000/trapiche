@@ -3,7 +3,7 @@
  *
  * Displays all public events at /events
  *
- * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C2)
+ * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C2, FR-C4)
  * @see lib/seo/url-builders.ts (buildEventsListUrl)
  */
 
@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import {
   getPublicEventsCached,
   getEventTypesWithCountsCached,
+  getEventTagsWithCountsCached,
 } from "@/lib/modules/events/cached";
 import { getMetadataAlternates } from "@/lib/seo";
 import {
@@ -25,12 +26,17 @@ import { zhTW } from "date-fns/locale";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ type?: string; q?: string; sort?: string }>;
+  searchParams: Promise<{
+    type?: string;
+    tag?: string;
+    q?: string;
+    sort?: string;
+  }>;
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps) {
   const { locale } = await params;
-  const { type: typeSlug } = await searchParams;
+  const { type: typeSlug, tag: tagSlug } = await searchParams;
   const t = await getTranslations({ locale, namespace: "events" });
 
   let title = t("title");
@@ -43,6 +49,16 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
     if (eventType) {
       title = `${eventType.name_zh} - ${t("title")}`;
       description = `瀏覽所有「${eventType.name_zh}」類型的活動`;
+    }
+  }
+
+  // If filtering by tag, adjust the title
+  if (tagSlug) {
+    const eventTags = await getEventTagsWithCountsCached();
+    const eventTag = eventTags.find((et) => et.slug === tagSlug);
+    if (eventTag) {
+      title = `${eventTag.name_zh} - ${t("title")}`;
+      description = `瀏覽所有「${eventTag.name_zh}」標籤的活動`;
     }
   }
 
@@ -71,7 +87,8 @@ function EventCard({
     end_at: string | null;
     location_name: string | null;
     online_url: string | null;
-    event_type?: { name_zh: string } | null;
+    event_type?: { name_zh: string; slug: string } | null;
+    event_tags?: { name_zh: string; slug: string }[];
   };
   locale: string;
   dateLocale: typeof zhTW;
@@ -101,12 +118,24 @@ function EventCard({
       )}
 
       <div className="p-6">
-        {/* Event Type Badge */}
-        {event.event_type && (
-          <span className="inline-block px-3 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full mb-3">
-            {event.event_type.name_zh}
-          </span>
-        )}
+        {/* Event Type Badge & Tags */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {event.event_type && (
+            <a
+              href={buildEventsListUrl(locale, { type: event.event_type.slug })}
+              className="inline-block px-3 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors">
+              {event.event_type.name_zh}
+            </a>
+          )}
+          {event.event_tags?.map((tag) => (
+            <a
+              key={tag.slug}
+              href={buildEventsListUrl(locale, { tag: tag.slug })}
+              className="inline-block px-3 py-1 text-xs font-medium bg-secondary/10 text-secondary rounded-full hover:bg-secondary/20 transition-colors">
+              {tag.name_zh}
+            </a>
+          ))}
+        </div>
 
         {/* Title */}
         <h2 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
@@ -195,13 +224,14 @@ export default async function EventsListPage({
   searchParams,
 }: PageProps) {
   const { locale } = await params;
-  const { type: typeSlug, q, sort } = await searchParams;
+  const { type: typeSlug, tag: tagSlug, q, sort } = await searchParams;
   const t = await getTranslations({ locale, namespace: "events" });
 
-  // Get events and event types
-  const [events, eventTypes] = await Promise.all([
+  // Get events, event types, and event tags
+  const [events, eventTypes, eventTags] = await Promise.all([
     getPublicEventsCached({
       typeSlug,
+      tagSlug,
       search: q,
       sort: sort as
         | "newest"
@@ -212,15 +242,30 @@ export default async function EventsListPage({
       includeExpired: sort === "oldest" || sort === "newest",
     }),
     getEventTypesWithCountsCached(),
+    getEventTagsWithCountsCached(),
   ]);
 
-  // Determine current type for filter highlight
+  // Determine current type and tag for filter highlight
   const currentType = typeSlug
     ? eventTypes.find((et) => et.slug === typeSlug)
+    : null;
+  const currentTag = tagSlug
+    ? eventTags.find((et) => et.slug === tagSlug)
     : null;
 
   // Pre-compute locale-specific date formatting
   const dateLocale = zhTW;
+
+  // Build page title based on filters
+  let pageTitle = t("title");
+  let pageDescription = t("description");
+  if (currentType) {
+    pageTitle = currentType.name_zh;
+    pageDescription = `瀏覽所有「${currentType.name_zh}」類型的活動`;
+  } else if (currentTag) {
+    pageTitle = `${currentTag.name_zh} 相關活動`;
+    pageDescription = `瀏覽所有「${currentTag.name_zh}」標籤的活動`;
+  }
 
   return (
     <div className="min-h-screen">
@@ -231,34 +276,71 @@ export default async function EventsListPage({
           {/* Page Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              {currentType ? currentType.name_zh : t("title")}
+              {pageTitle}
             </h1>
             <p className="text-lg text-secondary max-w-2xl mx-auto">
-              {currentType
-                ? `瀏覽所有「${currentType.name_zh}」類型的活動`
-                : t("description")}
+              {pageDescription}
             </p>
           </div>
 
           {/* Type Filters */}
           {eventTypes.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2 mb-8">
+            <div className="flex flex-wrap justify-center gap-2 mb-4">
               <a
-                href={buildEventsListUrl(locale, { q, sort })}
+                href={buildEventsListUrl(locale, { tag: tagSlug, q, sort })}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   !typeSlug
                     ? "bg-primary text-white"
                     : "bg-surface-raised text-secondary hover:bg-surface-raised-hover hover:text-foreground"
                 }`}>
-                全部活動
+                全部類型
               </a>
               {eventTypes.map((et) => (
                 <a
                   key={et.id}
-                  href={buildEventsListUrl(locale, { type: et.slug, q, sort })}
+                  href={buildEventsListUrl(locale, {
+                    type: et.slug,
+                    tag: tagSlug,
+                    q,
+                    sort,
+                  })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                     typeSlug === et.slug
                       ? "bg-primary text-white"
+                      : "bg-surface-raised text-secondary hover:bg-surface-raised-hover hover:text-foreground"
+                  }`}>
+                  {et.name_zh}
+                  <span className="ml-1 opacity-75">({et.event_count})</span>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* Tag Filters */}
+          {eventTags.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              <span className="px-2 py-2 text-sm text-secondary">標籤：</span>
+              <a
+                href={buildEventsListUrl(locale, { type: typeSlug, q, sort })}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  !tagSlug
+                    ? "bg-accent text-white"
+                    : "bg-surface-raised text-secondary hover:bg-surface-raised-hover hover:text-foreground"
+                }`}>
+                全部
+              </a>
+              {eventTags.map((et) => (
+                <a
+                  key={et.id}
+                  href={buildEventsListUrl(locale, {
+                    type: typeSlug,
+                    tag: et.slug,
+                    q,
+                    sort,
+                  })}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    tagSlug === et.slug
+                      ? "bg-accent text-white"
                       : "bg-surface-raised text-secondary hover:bg-surface-raised-hover hover:text-foreground"
                   }`}>
                   {et.name_zh}
@@ -274,6 +356,7 @@ export default async function EventsListPage({
               <a
                 href={buildEventsListUrl(locale, {
                   type: typeSlug,
+                  tag: tagSlug,
                   q,
                   sort: "upcoming",
                 })}
@@ -287,6 +370,7 @@ export default async function EventsListPage({
               <a
                 href={buildEventsListUrl(locale, {
                   type: typeSlug,
+                  tag: tagSlug,
                   q,
                   sort: "newest",
                 })}
@@ -300,6 +384,7 @@ export default async function EventsListPage({
               <a
                 href={buildEventsListUrl(locale, {
                   type: typeSlug,
+                  tag: tagSlug,
                   q,
                   sort: "oldest",
                 })}

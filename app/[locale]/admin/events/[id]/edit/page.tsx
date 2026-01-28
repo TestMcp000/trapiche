@@ -9,7 +9,12 @@
 import { notFound } from "next/navigation";
 import { getTranslations, getMessages } from "next-intl/server";
 import type { AbstractIntlMessages } from "next-intl";
-import { getAllEventTypesAdmin, getEventByIdAdmin } from "../../actions";
+import {
+  getAllEventTypesAdmin,
+  getAllEventTagsAdmin,
+  getEventByIdAdmin,
+  getEventTagIdsAdmin,
+} from "../../actions";
 import EventFormClient from "../../components/EventFormClient";
 
 export default async function EditEventPage({
@@ -27,9 +32,11 @@ export default async function EditEventPage({
   const allMessages = await getMessages({ locale: routeLocale });
   const adminMessages = { admin: allMessages.admin } as AbstractIntlMessages;
 
-  const [event, eventTypes] = await Promise.all([
+  const [event, eventTypes, eventTags, selectedTagIds] = await Promise.all([
     getEventByIdAdmin(id),
     getAllEventTypesAdmin(),
+    getAllEventTagsAdmin(),
+    getEventTagIdsAdmin(id),
   ]);
 
   if (!event) {
@@ -49,8 +56,10 @@ export default async function EditEventPage({
       <EventFormClient
         event={event}
         eventTypes={eventTypes}
-        routeLocale={routeLocale}
+        eventTags={eventTags}
+        selectedTagIds={selectedTagIds}
         messages={adminMessages}
+        routeLocale={routeLocale}
       />
     </div>
   );
