@@ -15,6 +15,7 @@ import {
     validateCoordinate,
     validateReadMoreUrl,
     validateHotspotInput,
+    validateHotspotPatch,
     validateReorderInput,
 } from '@/lib/validators/gallery-hotspots';
 
@@ -278,6 +279,49 @@ describe('validateHotspotInput', () => {
         assert.strictEqual(result.valid, true);
         assert.strictEqual(result.data?.preview, null);
         assert.strictEqual(result.data?.symbolism, null);
+    });
+});
+
+// =============================================================================
+// Hotspot Patch Validation Tests
+// =============================================================================
+
+describe('validateHotspotPatch', () => {
+    it('accepts x/y-only patch (drag-to-move)', () => {
+        const result = validateHotspotPatch({ x: 0.25, y: 0.75 });
+        assert.strictEqual(result.valid, true);
+        assert.deepStrictEqual(result.data, { x: 0.25, y: 0.75 });
+    });
+
+    it('rejects empty patch object', () => {
+        const result = validateHotspotPatch({});
+        assert.strictEqual(result.valid, false);
+        assert.ok(result.error?.includes('沒有要更新'));
+    });
+
+    it('rejects invalid coordinate values', () => {
+        const result = validateHotspotPatch({ x: -1, y: 2 });
+        assert.strictEqual(result.valid, false);
+        assert.ok(result.errors?.x);
+        assert.ok(result.errors?.y);
+    });
+
+    it('accepts trimming for string fields', () => {
+        const result = validateHotspotPatch({ media: '  油畫  ' });
+        assert.strictEqual(result.valid, true);
+        assert.deepStrictEqual(result.data, { media: '油畫' });
+    });
+
+    it('converts empty optional strings to null', () => {
+        const result = validateHotspotPatch({ preview: '   ', symbolism: '' });
+        assert.strictEqual(result.valid, true);
+        assert.deepStrictEqual(result.data, { preview: null, symbolism: null });
+    });
+
+    it('allows clearing read_more_url with null', () => {
+        const result = validateHotspotPatch({ read_more_url: null });
+        assert.strictEqual(result.valid, true);
+        assert.deepStrictEqual(result.data, { read_more_url: null });
     });
 });
 

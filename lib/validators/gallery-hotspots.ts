@@ -139,6 +139,125 @@ export function validateHotspotInput(
 }
 
 // =============================================================================
+// Hotspot Patch Validation (Partial Updates)
+// =============================================================================
+
+/**
+ * Validate hotspot patch input for partial update operations.
+ *
+ * Allows updating any subset of fields without requiring all required fields,
+ * while still validating each provided field with the same rules as create.
+ *
+ * This is used for admin actions like "drag pin to move" which updates only x/y.
+ */
+export function validateHotspotPatch(
+    input: unknown
+): ValidationResult<Partial<GalleryHotspotInput>> {
+    if (!input || typeof input !== 'object') {
+        return invalidResult('輸入必須為物件');
+    }
+
+    const obj = input as Record<string, unknown>;
+    const errors: Record<string, string> = {};
+    const validated: Partial<GalleryHotspotInput> = {};
+
+    const hasAnyField =
+        'x' in obj ||
+        'y' in obj ||
+        'media' in obj ||
+        'description_md' in obj ||
+        'preview' in obj ||
+        'symbolism' in obj ||
+        'read_more_url' in obj ||
+        'is_visible' in obj;
+
+    if (!hasAnyField) {
+        return invalidResult('沒有要更新的欄位');
+    }
+
+    if ('x' in obj) {
+        const xResult = validateCoordinate(obj.x, 'x');
+        if (!xResult.valid) {
+            errors.x = xResult.error!;
+        } else {
+            validated.x = xResult.data!;
+        }
+    }
+
+    if ('y' in obj) {
+        const yResult = validateCoordinate(obj.y, 'y');
+        if (!yResult.valid) {
+            errors.y = yResult.error!;
+        } else {
+            validated.y = yResult.data!;
+        }
+    }
+
+    if ('media' in obj) {
+        if (!isNonEmptyString(obj.media)) {
+            errors.media = '媒材名稱為必填';
+        } else {
+            validated.media = (obj.media as string).trim();
+        }
+    }
+
+    if ('description_md' in obj) {
+        if (!isNonEmptyString(obj.description_md)) {
+            errors.description_md = '詳細描述為必填';
+        } else {
+            validated.description_md = (obj.description_md as string).trim();
+        }
+    }
+
+    if ('preview' in obj) {
+        if (obj.preview === null || obj.preview === undefined) {
+            validated.preview = null;
+        } else if (typeof obj.preview !== 'string') {
+            errors.preview = 'preview 必須為字串';
+        } else {
+            const trimmed = obj.preview.trim();
+            validated.preview = trimmed === '' ? null : trimmed;
+        }
+    }
+
+    if ('symbolism' in obj) {
+        if (obj.symbolism === null || obj.symbolism === undefined) {
+            validated.symbolism = null;
+        } else if (typeof obj.symbolism !== 'string') {
+            errors.symbolism = 'symbolism 必須為字串';
+        } else {
+            const trimmed = obj.symbolism.trim();
+            validated.symbolism = trimmed === '' ? null : trimmed;
+        }
+    }
+
+    if ('read_more_url' in obj) {
+        const urlResult = validateReadMoreUrl(
+            obj.read_more_url as string | null | undefined
+        );
+        if (!urlResult.valid) {
+            errors.read_more_url = urlResult.error!;
+        } else {
+            validated.read_more_url = urlResult.data!;
+        }
+    }
+
+    if ('is_visible' in obj) {
+        if (typeof obj.is_visible !== 'boolean') {
+            errors.is_visible = 'is_visible 必須為布林值';
+        } else {
+            validated.is_visible = obj.is_visible;
+        }
+    }
+
+    if (Object.keys(errors).length > 0) {
+        return invalidResults(errors);
+    }
+
+    return validResult(validated);
+}
+
+// =============================================================================
 // Reorder Input Validation
 // =============================================================================
 

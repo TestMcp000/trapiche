@@ -4,7 +4,8 @@
  * Independent content page for collaboration invitations.
  * Content is fetched from site_content(section_key='collaboration').
  *
- * @see doc/meta/STEP_PLAN.md (PR-40)
+ * @see doc/SPEC.md (Collaboration: /collaboration)
+ * @see doc/archive/2026-01-28-step-plan-v15-cms-vnext-nav-blog-taxonomy-events-pages.md (PR-40)
  * @see doc/specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md (FR-C5)
  * @see lib/seo/url-builders.ts (buildCollaborationUrl)
  */

@@ -7,7 +7,8 @@
  * Supports drag and drop reordering.
  *
  * @see ../actions.ts - Server actions
- * @see doc/meta/STEP_PLAN.md (PR-38)
+ * @see doc/SPEC.md (FAQ: /admin/faqs)
+ * @see doc/archive/2026-01-28-step-plan-v15-cms-vnext-nav-blog-taxonomy-events-pages.md (PR-38)
  */
 
 import { useState } from "react";

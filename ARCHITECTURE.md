@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-> Last Updated: 2026-01-25
+> Last Updated: 2026-01-28
 > Status: Enforced
 > Role: Single source of truth for architecture and global constraints.
 

@@ -1,6 +1,6 @@
 # Admin UI/UX Cleanup Playbook（後台）— Drift Tracker / 修復手冊
 
-> Last Updated: 2026-01-23
+> Last Updated: 2026-01-28
 > Status: **ACTIVE**（維護中：只保留「飄移/未完成」項目；修復流程模板固定保留）  
 > Assumption: 專案尚未上線，DB 可直接 `reset`（遷移成本 ≈0，不保留相容性）。
 > Archive: `doc/archive/2025-12-31-uiux-refactor-archive.md`（舊版全文 + roadmap）
@@ -298,6 +298,38 @@ app/[locale]/admin/<module>/
    - `npm test`, `npm run type-check`, `npm run lint`
    - 重跑觸發條件 grep，確認已無「未經驗證就 render URL」的新命中
 
+### 3.11 Active Step Plan（`doc/meta/STEP_PLAN.md`）hygiene（completed → archive）
+
+> 目的：`doc/meta/STEP_PLAN.md` 只保留「未完成/下一步」，避免完成項長期堆積造成「以為還沒做」的 drift；同時避免 in-code `@see doc/meta/STEP_PLAN.md` 指向已移除內容。
+
+**觸發條件（任一即需修復）**
+
+1. `doc/meta/STEP_PLAN.md` 內出現已完成標記（例如 `✅ COMPLETED` / `Status: Completed` / `✅ DONE`）。
+2. `app/` / `components/` / `lib/` 內仍有 `@see doc/meta/STEP_PLAN.md`（代表 in-code doc 依賴 active step plan，容易 drift）。
+3. 新增/更新 `doc/archive/*` 後，`doc/archive/README.md` 的 index 未同步。
+
+**修復步驟（照順序做；避免模糊）**
+
+1. 盤點 active step plan 內的 completed sections（保留 evidence 供 PR 描述）：
+   - `rg -n \"✅|Status\\s*:\\s*Completed|\\bCOMPLETED\\b|\\bDONE\\b\" doc/meta/STEP_PLAN.md`
+2. 建立 archive snapshot（保留可追溯性；命名固定）：
+   - Add: `doc/archive/<YYYY-MM-DD>-step-plan-v<NN>-<short-slug>.md`
+   - 來源：直接從 `doc/meta/STEP_PLAN.md` copy（保持 verbatim），並在檔頭註明「archived snapshot；active plan lives in doc/meta/STEP_PLAN.md」
+3. 清理 `doc/meta/STEP_PLAN.md`：
+   - 僅保留：header、必讀 links、active drift list（未完成）、PR item template
+   - 加上一行指向剛建立的 archive snapshot（避免歷史資訊遺失）
+4. 修復 in-code `@see`（避免 step plan 內容被刪後，註解失效）：
+   - 找出所有引用：`rg -n \"doc/meta/STEP_PLAN\\.md\" app components lib`
+   - 逐筆更新 `@see`：
+     - 優先指向 `doc/SPEC.md`（現況 SSoT）或 `ARCHITECTURE.md`（約束）
+     - 若需要保留實作步驟 traceability：改指向剛建立的 `doc/archive/<...>.md`
+5. 更新 docs indexes（必做）：
+   - `npm run docs:generate-indexes`
+6. 驗證（必做）：
+   - `npm run docs:check-indexes`
+   - `npm run lint:md-links`
+   - `rg -n \"doc/meta/STEP_PLAN\\.md\" app components lib` → **0 hits**（預期：step plan 不再被 code 依賴）
+
 ---
 
 **Canonical references (avoid duplication)**
@@ -314,7 +346,7 @@ app/[locale]/admin/<module>/
 > 本節的 item 編號（尤其是 item 2/3/6/8）已被多處 in-code `@see uiux_refactor.md §4 item ...` 引用；請勿改號。
 > 本檔只保留「當前狀態 + 待修復 / 待落地」的最小資訊；詳細落地記錄請放/參照 `doc/archive/*`。
 
-**狀態（2026-01-25）**
+**狀態（2026-01-28）**
 
 - Open drift items：0
 

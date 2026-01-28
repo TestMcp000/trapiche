@@ -3,7 +3,8 @@
  *
  * Displays all public FAQs at /faq with FAQPage JSON-LD
  *
- * @see doc/meta/STEP_PLAN.md (PR-38)
+ * @see doc/SPEC.md (FAQ: /faq)
+ * @see doc/archive/2026-01-28-step-plan-v15-cms-vnext-nav-blog-taxonomy-events-pages.md (PR-38)
  * @see lib/seo/url-builders.ts (buildFAQUrl)
  */
 

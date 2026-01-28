@@ -6,7 +6,8 @@
  *
  * @module lib/modules/faq/io
  * @see ARCHITECTURE.md §3.4 - IO module splitting
- * @see doc/meta/STEP_PLAN.md (PR-38)
+ * @see doc/SPEC.md (FAQ: /faq + /admin/faqs)
+ * @see doc/archive/2026-01-28-step-plan-v15-cms-vnext-nav-blog-taxonomy-events-pages.md (PR-38)
  */
 
 import 'server-only';

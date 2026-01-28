@@ -30,6 +30,7 @@ import {
 } from '@/lib/modules/gallery/pins-admin-io';
 import {
   validateHotspotInput,
+  validateHotspotPatch,
   validateReorderInput,
 } from '@/lib/validators/gallery-hotspots';
 import { isValidUUID } from '@/lib/validators/api-common';
@@ -189,30 +190,18 @@ export async function updateHotspotAction(
     return { error: '無效的標記 ID' };
   }
 
-  // For partial updates, validate only provided fields
-  // Build a complete input object for validation
-  const fullInput = {
-    x: input.x ?? 0,
-    y: input.y ?? 0,
-    media: input.media ?? '',
-    description_md: input.description_md ?? '',
-    ...input,
-  };
-
-  // Only validate if all required fields are present
-  if (input.x !== undefined || input.y !== undefined || input.media !== undefined || input.description_md !== undefined) {
-    const validation = validateHotspotInput(fullInput);
-    if (!validation.valid) {
-      return {
-        error: validation.error || '輸入驗證失敗',
-        errors: validation.errors,
-      };
-    }
+  // Validate partial patch (allows x/y-only updates for drag-to-move)
+  const validation = validateHotspotPatch(input);
+  if (!validation.valid) {
+    return {
+      error: validation.error || '輸入驗證失敗',
+      errors: validation.errors,
+    };
   }
 
   // Validate markdown safety at save-time if description_md is being updated
-  if (input.description_md !== undefined) {
-    const isMarkdownValid = await isValidHotspotsMarkdown(input.description_md);
+  if (validation.data!.description_md !== undefined) {
+    const isMarkdownValid = await isValidHotspotsMarkdown(validation.data!.description_md);
     if (!isMarkdownValid) {
       return {
         error: '內容在安全處理後為空',
@@ -222,7 +211,7 @@ export async function updateHotspotAction(
   }
 
   try {
-    const result = await updateHotspotAdmin(hotspotId, input);
+    const result = await updateHotspotAdmin(hotspotId, validation.data!);
 
     if (!result.success) {
       return { error: result.error };

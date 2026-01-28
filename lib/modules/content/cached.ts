@@ -125,7 +125,8 @@ import { parseHamburgerNav } from '@/lib/validators/hamburger-nav';
 
 /**
  * Default hamburger nav seed (matches doc/archive/DESIGN_SSOT.md §6)
- * @see doc/meta/STEP_PLAN.md (PR-40 updated events targets to events_index)
+ * @see doc/SPEC.md (Home UIUX / Navigation)
+ * @see doc/archive/2026-01-28-step-plan-v15-cms-vnext-nav-blog-taxonomy-events-pages.md (PR-40)
  */
 const DEFAULT_HAMBURGER_NAV: HamburgerNavV2 = {
   version: 2,

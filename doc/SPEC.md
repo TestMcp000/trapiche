@@ -1,7 +1,7 @@
 # 功能規格（已實作行為 / SSoT）
 
 > 已落地功能與技術細節（Single Source of Truth）  
-> 最後更新: 2026-01-25  
+> 最後更新: 2026-01-28  
 > 狀態: Active
 
 本文件描述「**已實作**」的行為與其技術細節（以本檔為準）。
@@ -108,7 +108,7 @@
 ### 功能
 
 - Markdown 編輯器（GFM、程式碼高亮、數學公式）
-- 分類管理
+- Taxonomy：legacy `categories` + taxonomy v2（Groups/Topics/Tags）
 - 可見性控制（draft/private/public）
 - 估算閱讀時間
 - 自動產生 SEO metadata
@@ -118,14 +118,23 @@
 | 路由                               | 說明                                                                                                                |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `/[locale]/blog`                   | 部落格列表（支援 `?q=<q>&sort=<...>`；legacy `?category=<slug>` 會 redirect 到 `/[locale]/blog/categories/[slug]`） |
-| `/[locale]/blog/categories/[slug]` | 分類列表（支援 `?q=<q>&sort=<...>`）                                                                                |
+| `/[locale]/blog/groups/[slug]`     | 群組頁（taxonomy v2；支援 `?q=<q>&sort=<...>`）                                                                     |
+| `/[locale]/blog/categories/[slug]` | 分類頁（legacy；同時作為 taxonomy v2 的 topic canonical path）                                                      |
+| `/[locale]/blog/tags/[slug]`       | 標籤頁（taxonomy v2；支援 `?sort=<...>`）                                                                           |
 | `/[locale]/blog/posts/[slug]`      | 文章頁（v2 canonical）                                                                                              |
 | `/[locale]/blog/[category]/[slug]` | legacy（301 → `/[locale]/blog/posts/[slug]`）                                                                       |
 
 ### 資料模型
 
-- `categories`：文章分類
-- `posts`：文章內容
+- legacy：
+  - `categories`：文章分類（single category per post）
+  - `posts`：文章內容
+- taxonomy v2：
+  - `blog_groups`：部落格群組
+  - `blog_topics`：部落格主題
+  - `blog_tags`：部落格標籤
+  - `post_topics`：post-topic relations
+  - `post_tags`：post-tag relations
 
 ### 實作備註
 
@@ -438,7 +447,10 @@
 | `/admin/posts`           | 文章列表 |
 | `/admin/posts/new`       | 新增文章 |
 | `/admin/posts/[id]/edit` | 編輯文章 |
-| `/admin/categories`      | 分類管理 |
+| `/admin/categories`      | 分類管理（legacy `categories`） |
+| `/admin/groups`          | 群組管理（taxonomy v2） |
+| `/admin/topics`          | 主題管理（taxonomy v2） |
+| `/admin/tags`            | 標籤管理（taxonomy v2） |
 
 **Events（活動）**
 
@@ -648,15 +660,10 @@
 
 ### CMS vNext（Nav / Blog taxonomy / Events / Pages）
 
-> 本項為 planned work（未落地）；規格與落地步驟以 PRD/step plan 為準，避免把「想做」誤讀成「已實作」。
-
-- PRD（planned）：`specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`
-- 落地步驟（PR-by-PR）：`meta/STEP_PLAN.md`（PR-32+）
+- PRD（reference）：`specs/proposed/CMS_NAV_BLOG_TAXONOMY_EVENTS.md`
+- 落地步驟（active drift only）：`meta/STEP_PLAN.md`（V15 snapshot：`archive/2026-01-28-step-plan-v15-cms-vnext-nav-blog-taxonomy-events-pages.md`）
 - 主要缺口（現況 → 目標）：
-  - ~~Hamburger menu 後台仍為 JSON editor → 需補「可視化 editor」~~（已完成：`/admin/settings/navigation`；PR-32）
-  - Blog taxonomy：`categories` 單選 → 需升級為 Group/Topics/Tags（多選）
-  - Events：尚無 `events` domain（DB + public `/events` + admin CRUD）
-  - ~~FAQ/Contact form：尚未落地（FAQPage JSON-LD 已有 helper，但缺資料來源與頁面）~~（已完成：`/faq` + `/admin/faqs`；PR-38；contact 改為 mailto CTA；PR-41 移除 contact_messages）
+  - Blog taxonomy：legacy `categories` 仍存在；taxonomy v2（groups/topics/tags）需進一步收斂與去除雙來源（以 `doc/ROADMAP.md` 為準）。
 
 ### Data Intelligence（後台）
 
