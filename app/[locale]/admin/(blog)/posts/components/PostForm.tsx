@@ -33,7 +33,7 @@ import {
   updatePostAction,
   type PostActionInput,
 } from "../actions";
-import { getErrorLabel } from "@/lib/types/action-result";
+import { ADMIN_ERROR_CODES, getErrorLabel } from "@/lib/types/action-result";
 
 interface PostFormProps {
   routeLocale: string;
@@ -230,7 +230,8 @@ function PostFormContent({
       router.push(`/${routeLocale}/admin/posts`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "發生錯誤");
+      console.error(err);
+      setError(getErrorLabel(ADMIN_ERROR_CODES.INTERNAL_ERROR, routeLocale));
     } finally {
       setLoading(false);
     }
@@ -340,7 +341,6 @@ function PostFormContent({
           onChange={(url) =>
             setFormData({ ...formData, cover_image_url_zh: url })
           }
-          locale={routeLocale}
           label={t("zh.coverImage")}
         />
 
@@ -494,7 +494,7 @@ function PostFormContent({
             value={formData.slug}
             onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="my-post-url"
+            placeholder={t("slugPlaceholder")}
           />
           <p className="mt-1 text-xs text-gray-500">{t("slugHint")}</p>
         </div>

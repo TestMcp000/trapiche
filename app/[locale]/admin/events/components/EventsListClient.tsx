@@ -26,7 +26,6 @@ import {
   deleteEventTypeAction,
   toggleEventTypeVisibilityAction,
   reorderEventTypesAction,
-  type EventActionInput,
 } from "../actions";
 
 interface EventsListClientProps {

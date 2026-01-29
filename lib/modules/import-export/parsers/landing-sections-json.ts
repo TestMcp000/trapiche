@@ -43,12 +43,12 @@ export function validateLandingSectionFields(
   const errors: string[] = [];
 
   if (!isNonEmptyString(data.section_key)) {
-    errors.push('section_key is required');
+    errors.push('section_key 為必填');
   }
   if (!isNonEmptyString(data.section_type)) {
-    errors.push('section_type is required');
+    errors.push('section_type 為必填');
   } else if (!VALID_SECTION_TYPES.includes(data.section_type as string)) {
-    errors.push(`section_type must be one of: ${VALID_SECTION_TYPES.join(', ')}`);
+    errors.push(`section_type 必須是以下其中之一：${VALID_SECTION_TYPES.join(', ')}`);
   }
 
   return errors;
@@ -100,7 +100,7 @@ export function parseLandingSectionsJson(
 
     // Validate envelope structure
     if (typeof parsed !== 'object' || parsed === null) {
-      return { success: false, error: 'Invalid JSON: expected object' };
+      return { success: false, error: 'JSON 格式無效：預期為物件' };
     }
 
     const envelope = parsed as Record<string, unknown>;
@@ -108,12 +108,12 @@ export function parseLandingSectionsJson(
     if (envelope.type !== 'landing_sections') {
       return {
         success: false,
-        error: `Invalid type: expected 'landing_sections', got '${envelope.type}'`,
+        error: `type 無效：預期為 'landing_sections'，實際為 '${envelope.type}'`,
       };
     }
 
     if (!Array.isArray(envelope.data)) {
-      return { success: false, error: 'Invalid data: expected array' };
+      return { success: false, error: 'data 欄位無效：預期為陣列' };
     }
 
     // Validate and transform each item
@@ -126,7 +126,7 @@ export function parseLandingSectionsJson(
       if (errors.length > 0) {
         return {
           success: false,
-          error: `Section ${i + 1}: ${errors.join('; ')}`,
+          error: `第 ${i + 1} 個區塊：${errors.join('；')}`,
         };
       }
 
@@ -137,7 +137,7 @@ export function parseLandingSectionsJson(
   } catch (error) {
     return {
       success: false,
-      error: `JSON parse error: ${error instanceof Error ? error.message : String(error)}`,
+      error: `JSON 解析失敗：${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -152,7 +152,7 @@ export function parseLandingSectionsObject(
   data: unknown
 ): ParseResult<LandingSectionImportData[]> {
   if (typeof data !== 'object' || data === null) {
-    return { success: false, error: 'Invalid input: expected object' };
+    return { success: false, error: '輸入格式無效：預期為物件' };
   }
 
   const envelope = data as LandingSectionsExport;
@@ -160,12 +160,12 @@ export function parseLandingSectionsObject(
   if (envelope.type !== 'landing_sections') {
     return {
       success: false,
-      error: `Invalid type: expected 'landing_sections', got '${envelope.type}'`,
+      error: `type 無效：預期為 'landing_sections'，實際為 '${envelope.type}'`,
     };
   }
 
   if (!Array.isArray(envelope.data)) {
-    return { success: false, error: 'Invalid data: expected array' };
+    return { success: false, error: 'data 欄位無效：預期為陣列' };
   }
 
   const sections: LandingSectionImportData[] = [];
@@ -177,7 +177,7 @@ export function parseLandingSectionsObject(
     if (errors.length > 0) {
       return {
         success: false,
-        error: `Section ${i + 1}: ${errors.join('; ')}`,
+        error: `第 ${i + 1} 個區塊：${errors.join('；')}`,
       };
     }
 

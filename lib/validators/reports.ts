@@ -17,14 +17,14 @@ import { type RunReportRequest, type ReportType, isValidReportType } from '@/lib
  */
 export function validateRunReportRequest(body: unknown): ValidationResult<RunReportRequest> {
   if (!body || typeof body !== 'object') {
-    return invalidResult('Request body must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const { type } = body as Record<string, unknown>;
 
   // Validate type
   if (!isValidReportType(type)) {
-    return invalidResult('type must be "lighthouse", "schema", or "links"');
+    return invalidResult('type 必須是 "lighthouse"、"schema" 或 "links"');
   }
 
   return validResult({

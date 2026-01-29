@@ -9,7 +9,9 @@
 
 import { useState, useEffect, type DragEvent } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useDebounce } from '@/hooks/useDebounce';
+import { getErrorLabel } from '@/lib/types/action-result';
 import {
   loadFeaturedPins,
   addFeaturedPin,
@@ -38,6 +40,7 @@ export default function GalleryFeaturedClient({
   limits,
   locale,
 }: GalleryFeaturedClientProps) {
+  const t = useTranslations('admin.gallery.featured');
   const [activeTab, setActiveTab] = useState<GalleryPinSurface>('home');
   const [pinsByTab, setPinsByTab] = useState<Record<GalleryPinSurface, PinWithItem[]>>({
     home: initialPins.home,
@@ -62,7 +65,7 @@ export default function GalleryFeaturedClient({
   // Current pins for active tab
   const pins = pinsByTab[activeTab];
   const currentLimit = activeTab === 'home' ? limits.home : limits.gallery;
-  const surfaceLabel = activeTab === 'home' ? '首頁' : '畫廊';
+  const surfaceLabel = activeTab === 'home' ? t('surfaces.home') : t('surfaces.gallery');
 
   // Refetch pins for active tab
   const refetchPins = async () => {
@@ -138,21 +141,21 @@ export default function GalleryFeaturedClient({
 
   const handleAddPin = async (item: GalleryItemWithCategory) => {
     if (pins.length >= currentLimit) {
-      setError(`「${surfaceLabel}」最多只能設定 ${currentLimit} 個置頂項目，請先移除部分置頂後再新增。`);
+      setError(t('errors.limitReached', { surface: surfaceLabel, limit: currentLimit }));
       return;
     }
 
     const result = await addFeaturedPin(activeTab, item.id, locale);
     
     if (!result.success) {
-      setError(result.error || '新增置頂失敗');
+      setError(getErrorLabel(result.errorCode, locale));
       return;
     }
 
     setSearchQuery('');
     setSearchResults([]);
     await refetchPins();
-    setSuccess('已新增置頂');
+    setSuccess(t('toast.added'));
     setTimeout(() => setSuccess(null), 2000);
   };
 
@@ -160,12 +163,12 @@ export default function GalleryFeaturedClient({
     const result = await removeFeaturedPin(pinId, locale);
     
     if (!result.success) {
-      setError(result.error || '移除置頂失敗');
+      setError(getErrorLabel(result.errorCode, locale));
       return;
     }
 
     await refetchPins();
-    setSuccess('已移除置頂');
+    setSuccess(t('toast.removed'));
     setTimeout(() => setSuccess(null), 2000);
   };
 
@@ -181,7 +184,7 @@ export default function GalleryFeaturedClient({
 
   const handleSaveOrder = async () => {
     if (pins.length > currentLimit) {
-      setError(`無法儲存：目前有 ${pins.length} 個置頂，但上限為 ${currentLimit} 個，請先移除部分置頂後再儲存。`);
+      setError(t('errors.cannotSaveOverLimit', { count: pins.length, limit: currentLimit }));
       return;
     }
 
@@ -192,13 +195,13 @@ export default function GalleryFeaturedClient({
     const result = await saveFeaturedPinOrder(activeTab, orderedPinIds, locale);
 
     if (!result.success) {
-      setError(result.error || '儲存排序失敗');
+      setError(getErrorLabel(result.errorCode, locale));
       setSaving(false);
       return;
     }
 
     setSaving(false);
-    setSuccess('已儲存排序');
+    setSuccess(t('toast.savedOrder'));
     setTimeout(() => setSuccess(null), 2000);
     await refetchPins();
   };
@@ -206,9 +209,9 @@ export default function GalleryFeaturedClient({
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">精選置頂</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          管理首頁與畫廊頁面的精選置頂作品
+          {t('description')}
         </p>
       </div>
 
@@ -222,7 +225,7 @@ export default function GalleryFeaturedClient({
               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
-          首頁置頂 ({pinsByTab.home.length}/{limits.home})
+          {t('tabs.home', { count: pinsByTab.home.length, limit: limits.home })}
         </button>
         <button
           onClick={() => setActiveTab('gallery')}
@@ -232,7 +235,7 @@ export default function GalleryFeaturedClient({
               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
-          畫廊置頂 ({pinsByTab.gallery.length}/{limits.gallery})
+          {t('tabs.gallery', { count: pinsByTab.gallery.length, limit: limits.gallery })}
         </button>
       </div>
 
@@ -240,7 +243,7 @@ export default function GalleryFeaturedClient({
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           <button onClick={() => setError(null)} className="text-xs text-red-500 hover:text-red-700 mt-1">
-            關閉
+            {t('close')}
           </button>
         </div>
       )}
@@ -255,7 +258,7 @@ export default function GalleryFeaturedClient({
         {/* Left: Search and Add */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            搜尋作品並加入置頂
+            {t('search.title')}
           </h2>
 
           <div className="mb-4">
@@ -263,14 +266,14 @@ export default function GalleryFeaturedClient({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="依標題搜尋..."
+              placeholder={t('search.placeholder')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
 
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {searching ? (
-              <p className="text-gray-500 text-center py-4">搜尋中...</p>
+              <p className="text-gray-500 text-center py-4">{t('search.searching')}</p>
             ) : searchResults.length > 0 ? (
               searchResults.map((item) => (
                 <div
@@ -300,14 +303,14 @@ export default function GalleryFeaturedClient({
                     disabled={pins.length >= currentLimit}
                     className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    新增
+                    {t('search.add')}
                   </button>
                 </div>
               ))
             ) : debouncedSearchQuery.trim() ? (
-              <p className="text-gray-500 text-center py-4">找不到作品</p>
+              <p className="text-gray-500 text-center py-4">{t('search.noResults')}</p>
             ) : (
-              <p className="text-gray-500 text-center py-4">輸入關鍵字以搜尋作品</p>
+              <p className="text-gray-500 text-center py-4">{t('search.hint')}</p>
             )}
           </div>
         </div>
@@ -316,19 +319,19 @@ export default function GalleryFeaturedClient({
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              目前置頂 ({pins.length}/{currentLimit})
+              {t('current.title', { count: pins.length, limit: currentLimit })}
             </h2>
             <button
               onClick={handleSaveOrder}
               disabled={saving}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {saving ? '儲存中...' : '儲存排序'}
+              {saving ? t('current.saving') : t('current.saveOrder')}
             </button>
           </div>
 
           {loading ? (
-            <p className="text-gray-500 text-center py-8">載入中...</p>
+            <p className="text-gray-500 text-center py-8">{t('loading')}</p>
           ) : pins.length > 0 ? (
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {pins.map((pin, index) => (
@@ -347,8 +350,8 @@ export default function GalleryFeaturedClient({
                     onDragStart={(e) => handleDragStart(e, index)}
                     onDragEnd={handleDragEnd}
                     className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                    title="拖曳以重新排序"
-                    aria-label="拖曳以重新排序"
+                    title={t('current.dragReorder')}
+                    aria-label={t('current.dragReorder')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01" />
@@ -360,7 +363,7 @@ export default function GalleryFeaturedClient({
                       onClick={() => handleMoveUp(index)}
                       disabled={index === 0}
                       className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                      title="上移"
+                      title={t('current.moveUp')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -370,7 +373,7 @@ export default function GalleryFeaturedClient({
                       onClick={() => handleMoveDown(index)}
                       disabled={index === pins.length - 1}
                       className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                      title="下移"
+                      title={t('current.moveDown')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -403,7 +406,7 @@ export default function GalleryFeaturedClient({
                   <button
                     onClick={() => handleRemovePin(pin.id)}
                     className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                    title="移除"
+                    title={t('current.remove')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -417,8 +420,8 @@ export default function GalleryFeaturedClient({
               <svg className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
               </svg>
-              <p className="text-gray-500 dark:text-gray-400">No pins yet</p>
-              <p className="text-sm text-gray-400">搜尋並新增作品以設為精選置頂</p>
+              <p className="text-gray-500 dark:text-gray-400">{t('empty.title')}</p>
+              <p className="text-sm text-gray-400">{t('empty.hint')}</p>
             </div>
           )}
         </div>

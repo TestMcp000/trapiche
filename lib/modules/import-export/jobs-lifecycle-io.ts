@@ -38,7 +38,8 @@ export async function createJob(params: CreateJobParams): Promise<string> {
     .single();
 
   if (error) {
-    throw new Error(`Failed to create job: ${error.message}`);
+    console.error('[jobs-lifecycle-io] createJob failed:', error);
+    throw new Error('建立任務失敗');
   }
 
   return data.id;
@@ -59,7 +60,8 @@ export async function markJobProcessing(jobId: string): Promise<void> {
     .eq('id', jobId);
 
   if (error) {
-    throw new Error(`Failed to mark job as processing: ${error.message}`);
+    console.error('[jobs-lifecycle-io] markJobProcessing failed:', error);
+    throw new Error('更新任務狀態失敗');
   }
 }
 
@@ -85,7 +87,8 @@ export async function markJobCompleted(
     .eq('id', jobId);
 
   if (error) {
-    throw new Error(`Failed to mark job as completed: ${error.message}`);
+    console.error('[jobs-lifecycle-io] markJobCompleted failed:', error);
+    throw new Error('更新任務完成狀態失敗');
   }
 }
 
@@ -108,7 +111,8 @@ export async function markJobFailed(
     .eq('id', jobId);
 
   if (error) {
-    throw new Error(`Failed to mark job as failed: ${error.message}`);
+    console.error('[jobs-lifecycle-io] markJobFailed failed:', error);
+    throw new Error('更新任務失敗狀態失敗');
   }
 }
 
@@ -126,7 +130,8 @@ export async function getJob(jobId: string): Promise<ImportExportJobRow | null> 
 
   if (error) {
     if (error.code === 'PGRST116') return null;
-    throw new Error(`Failed to get job: ${error.message}`);
+    console.error('[jobs-lifecycle-io] getJob failed:', error);
+    throw new Error('讀取任務失敗');
   }
 
   return data as ImportExportJobRow;
@@ -163,7 +168,8 @@ export async function listJobs(options: {
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(`Failed to list jobs: ${error.message}`);
+    console.error('[jobs-lifecycle-io] listJobs failed:', error);
+    throw new Error('讀取任務列表失敗');
   }
 
   return (data ?? []) as ImportExportJobListItem[];
@@ -187,6 +193,7 @@ export async function deleteJob(jobId: string): Promise<void> {
     .eq('id', jobId);
 
   if (error) {
-    throw new Error(`Failed to delete job: ${error.message}`);
+    console.error('[jobs-lifecycle-io] deleteJob failed:', error);
+    throw new Error('刪除任務失敗');
   }
 }

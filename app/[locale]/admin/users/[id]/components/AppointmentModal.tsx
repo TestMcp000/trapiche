@@ -13,6 +13,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { useTranslations } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import type { UserAppointmentSummary } from '@/lib/types/user';
 import {
   createAppointmentAction,
@@ -93,7 +94,7 @@ export default function AppointmentModal({
           routeLocale
         );
         if (!result.success) {
-          setError(result.error || t('updateFailed'));
+          setError(getErrorLabel(result.errorCode, routeLocale));
           return;
         }
       } else {
@@ -103,14 +104,14 @@ export default function AppointmentModal({
           routeLocale
         );
         if (!result.success) {
-          setError(result.error || t('createFailed'));
+          setError(getErrorLabel(result.errorCode, routeLocale));
           return;
         }
       }
 
       onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('error'));
+    } catch (_err) {
+      setError(t('error'));
     } finally {
       setSaving(false);
     }
@@ -125,12 +126,12 @@ export default function AppointmentModal({
     try {
       const result = await deleteAppointmentAction(appointment.id, userId, routeLocale);
       if (!result.success) {
-        setError(result.error || t('deleteFailed'));
+        setError(getErrorLabel(result.errorCode, routeLocale));
         return;
       }
       onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('error'));
+    } catch (_err) {
+      setError(t('error'));
     } finally {
       setDeleting(false);
     }

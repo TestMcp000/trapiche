@@ -11,22 +11,20 @@
  */
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
-import { isOwner } from '@/lib/modules/auth';
+import { requireOwner } from '@/lib/modules/auth/admin-guard';
 import {
   getEmbeddingStats,
   getPendingQueueItems,
   initializeAllEmbeddings,
   retryFailedEmbeddings,
 } from '@/lib/modules/embedding/io';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import type { EmbeddingStats, EmbeddingTargetType } from '@/lib/types/embedding';
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
 
 export interface InitializeResult {
   posts: { queued: number; skipped: number };
@@ -48,19 +46,18 @@ export interface QueueItem {
  * Get embedding statistics.
  */
 export async function getEmbeddingStatsAction(): Promise<ActionResult<EmbeddingStats>> {
-  // Owner-only gate
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const stats = await getEmbeddingStats();
-    return { success: true, data: stats };
+    return actionSuccess(stats);
   } catch (error) {
     console.error('[getEmbeddingStatsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch statistics.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -70,19 +67,18 @@ export async function getEmbeddingStatsAction(): Promise<ActionResult<EmbeddingS
 export async function getQueueItemsAction(
   limit: number = 10
 ): Promise<ActionResult<QueueItem[]>> {
-  // Owner-only gate
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const items = await getPendingQueueItems(limit);
-    return { success: true, data: items };
+    return actionSuccess(items);
   } catch (error) {
     console.error('[getQueueItemsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch queue items.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -90,31 +86,28 @@ export async function getQueueItemsAction(
  * Initialize embeddings for all content types.
  */
 export async function initializeAllEmbeddingsAction(): Promise<ActionResult<InitializeResult>> {
-  // Owner-only gate
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const result = await initializeAllEmbeddings();
     
     if (result.error) {
-      return { success: false, error: result.error };
+      console.error('[initializeAllEmbeddingsAction] initializeAllEmbeddings error:', result.error);
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
-    return {
-      success: true,
-      data: {
-        posts: result.posts,
-        galleryItems: result.galleryItems,
-        comments: result.comments,
-      },
-    };
+    return actionSuccess({
+      posts: result.posts,
+      galleryItems: result.galleryItems,
+      comments: result.comments,
+    });
   } catch (error) {
     console.error('[initializeAllEmbeddingsAction] Error:', error);
-    return { success: false, error: 'Failed to initialize embeddings.' };
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
   }
 }
 
@@ -122,24 +115,24 @@ export async function initializeAllEmbeddingsAction(): Promise<ActionResult<Init
  * Retry failed embedding queue items.
  */
 export async function retryFailedEmbeddingsAction(): Promise<ActionResult<{ retried: number }>> {
-  // Owner-only gate
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const result = await retryFailedEmbeddings();
     
     if (result.error) {
-      return { success: false, error: result.error };
+      console.error('[retryFailedEmbeddingsAction] retryFailedEmbeddings error:', result.error);
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
-    return { success: true, data: { retried: result.retried } };
+    return actionSuccess({ retried: result.retried });
   } catch (error) {
     console.error('[retryFailedEmbeddingsAction] Error:', error);
-    return { success: false, error: 'Failed to retry embeddings.' };
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
   }
 }
 
@@ -159,20 +152,19 @@ export async function getQualityMetricsAction(): Promise<ActionResult<{
   averageScore: number | null;
   passRate: number;
 }>> {
-  // Owner-only gate
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const { getQualityMetrics } = await import('@/lib/modules/preprocessing/judge-io');
     const metrics = await getQualityMetrics();
-    return { success: true, data: metrics };
+    return actionSuccess(metrics);
   } catch (error) {
     console.error('[getQualityMetricsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch quality metrics.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -189,20 +181,18 @@ export async function getFailedSamplesAction(
   qualityScore: number | null;
   preprocessingMetadata: Record<string, unknown> | null;
 }>>> {
-  // Owner-only gate
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const { getFailedSamples } = await import('@/lib/modules/preprocessing/judge-io');
     const samples = await getFailedSamples(limit);
-    return { success: true, data: samples };
+    return actionSuccess(samples);
   } catch (error) {
     console.error('[getFailedSamplesAction] Error:', error);
-    return { success: false, error: 'Failed to fetch failed samples.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
-

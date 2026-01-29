@@ -57,7 +57,7 @@ test('validateName: too long fails', () => {
     const longName = 'a'.repeat(MAX_NAME_LENGTH + 1);
     const result = validateName(longName);
     assert.ok(!result.valid);
-    assert.ok(result.error?.includes('at most'));
+    assert.ok(result.error?.includes('不得超過'));
 });
 
 test('validateName: max length succeeds', () => {
@@ -87,7 +87,7 @@ test('validatePromptText: preserves formatting', () => {
 test('validatePromptText: empty string fails', () => {
     const result = validatePromptText('');
     assert.ok(!result.valid);
-    assert.ok(result.error?.includes('required'));
+    assert.ok(result.error?.includes('必填'));
 });
 
 test('validatePromptText: non-string fails', () => {
@@ -100,7 +100,7 @@ test('validatePromptText: too long fails', () => {
     const longPrompt = 'a'.repeat(MAX_PROMPT_LENGTH + 1);
     const result = validatePromptText(longPrompt);
     assert.ok(!result.valid);
-    assert.ok(result.error?.includes('at most'));
+    assert.ok(result.error?.includes('不得超過'));
 });
 
 // =============================================================================
@@ -218,7 +218,7 @@ test('validateUpdateCustomTemplateInput: valid full update', () => {
 test('validateUpdateCustomTemplateInput: empty object fails', () => {
     const result = validateUpdateCustomTemplateInput({});
     assert.ok(!result.valid);
-    assert.ok(result.error?.includes('At least one field'));
+    assert.ok(result.error?.includes('至少需要提供'));
 });
 
 test('validateUpdateCustomTemplateInput: invalid name fails', () => {

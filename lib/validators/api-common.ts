@@ -54,27 +54,27 @@ export function validatePagination(
   // Parse limit
   const limit = limitStr ? parseInt(limitStr, 10) : defaultLimit;
   if (isNaN(limit) || limit < 1) {
-    return { valid: false, error: 'limit must be a positive integer' };
+    return { valid: false, error: 'limit 必須為正整數' };
   }
 
   // Check allowed limits
   if (allowedLimit !== undefined) {
     if (Array.isArray(allowedLimit)) {
       if (!allowedLimit.includes(limit)) {
-        return { valid: false, error: `limit must be one of: ${allowedLimit.join(', ')}` };
+        return { valid: false, error: `limit 必須是以下其中之一：${allowedLimit.join(', ')}` };
       }
     } else if (limit !== allowedLimit) {
-      return { valid: false, error: `limit must be ${allowedLimit}` };
+      return { valid: false, error: `limit 必須是 ${allowedLimit}` };
     }
   }
 
   // Parse offset
   const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
   if (isNaN(offset) || offset < 0) {
-    return { valid: false, error: 'offset must be a non-negative integer' };
+    return { valid: false, error: 'offset 必須為非負整數' };
   }
   if (offset > maxOffset) {
-    return { valid: false, error: `offset must not exceed ${maxOffset}` };
+    return { valid: false, error: `offset 不得超過 ${maxOffset}` };
   }
 
   return { valid: true, limit, offset };

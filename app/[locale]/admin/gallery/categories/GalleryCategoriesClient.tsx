@@ -8,7 +8,9 @@
  */
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { generateSlug } from '@/lib/utils/slug';
+import { getErrorLabel } from '@/lib/types/action-result';
 import {
   loadGalleryCategories,
   createGalleryCategory,
@@ -27,6 +29,7 @@ export default function GalleryCategoriesClient({
   initialCategories,
   locale,
 }: GalleryCategoriesClientProps) {
+  const t = useTranslations('admin.gallery.categories');
   const [categories, setCategories] = useState<CategoryWithCount[]>(initialCategories);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -104,7 +107,7 @@ export default function GalleryCategoriesClient({
     }
 
     if (!result.success) {
-      setError(result.error || '發生錯誤，請稍後再試。');
+      setError(getErrorLabel(result.errorCode, locale));
       return;
     }
 
@@ -115,17 +118,20 @@ export default function GalleryCategoriesClient({
   const handleDelete = async (category: CategoryWithCount) => {
     if (category.item_count > 0) {
       setError(
-        `無法刪除分類「${category.name_zh || category.name_en}」，因為此分類仍有 ${category.item_count} 件作品。請先移動或刪除作品。`
+        t('cannotDeleteHasItems', {
+          name: category.name_zh || category.name_en,
+          count: category.item_count,
+        })
       );
       return;
     }
 
-    if (!confirm(`確定要刪除分類「${category.name_zh || category.name_en}」嗎？`)) return;
+    if (!confirm(t('confirmDelete', { name: category.name_zh || category.name_en }))) return;
 
     const result = await deleteGalleryCategory(category.id, locale);
 
     if (!result.success) {
-      setError(result.error || '發生錯誤，請稍後再試。');
+      setError(getErrorLabel(result.errorCode, locale));
       return;
     }
 
@@ -136,8 +142,8 @@ export default function GalleryCategoriesClient({
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">畫廊分類</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">管理畫廊作品分類</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">{t('description')}</p>
         </div>
         <button
           onClick={() => {
@@ -149,7 +155,7 @@ export default function GalleryCategoriesClient({
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          新增分類
+          {t('addCategory')}
         </button>
       </div>
 
@@ -160,7 +166,7 @@ export default function GalleryCategoriesClient({
             onClick={() => setError(null)}
             className="text-xs text-red-500 hover:text-red-700 mt-1"
           >
-            關閉
+            {t('close')}
           </button>
         </div>
       )}
@@ -168,13 +174,13 @@ export default function GalleryCategoriesClient({
       {showForm && (
         <div className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {editingId ? '編輯分類' : '新增分類'}
+            {editingId ? t('editCategory') : t('addCategory')}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                分類名稱 *
+                {t('name')} *
               </label>
               <input
                 type="text"
@@ -186,11 +192,11 @@ export default function GalleryCategoriesClient({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Slug *
-                </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('slug')} *
+                  </label>
                 <input
                   type="text"
                   required
@@ -200,10 +206,10 @@ export default function GalleryCategoriesClient({
                   placeholder="paintings"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  排序
-                </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('sortOrder')}
+                  </label>
                 <input
                   type="number"
                   value={formData.sort_order}
@@ -221,7 +227,7 @@ export default function GalleryCategoriesClient({
                     onChange={(e) => setFormData({ ...formData, is_visible: e.target.checked })}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">顯示</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('visible')}</span>
                 </label>
               </div>
             </div>
@@ -232,13 +238,13 @@ export default function GalleryCategoriesClient({
                 onClick={resetForm}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                {editingId ? '更新' : '新增'}分類
+                {editingId ? t('updateCategory') : t('createCategory')}
               </button>
             </div>
           </form>
@@ -247,28 +253,28 @@ export default function GalleryCategoriesClient({
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">載入中...</div>
+          <div className="p-8 text-center text-gray-500">{t('loading')}</div>
         ) : categories.length > 0 ? (
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  排序
+                  {t('sortOrder')}
                 </th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  名稱
+                  {t('name')}
                 </th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Slug
+                  {t('slug')}
                 </th>
                 <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  作品
+                  {t('items')}
                 </th>
                 <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  顯示
+                  {t('visible')}
                 </th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  操作
+                  {t('actions')}
                 </th>
               </tr>
             </thead>
@@ -304,7 +310,7 @@ export default function GalleryCategoriesClient({
                       <button
                         onClick={() => handleEdit(category)}
                         className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
-                        title="編輯"
+                        title={t('edit')}
                       >
                         <svg
                           className="w-5 h-5"
@@ -323,7 +329,7 @@ export default function GalleryCategoriesClient({
                       <button
                         onClick={() => handleDelete(category)}
                         className="p-2 text-gray-500 hover:text-red-600 transition-colors"
-                        title="刪除"
+                        title={t('delete')}
                       >
                         <svg
                           className="w-5 h-5"
@@ -361,10 +367,10 @@ export default function GalleryCategoriesClient({
               />
             </svg>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-              尚無分類
+              {t('emptyTitle')}
             </h3>
             <p className="text-gray-500 dark:text-gray-400">
-              建立第一個分類來整理畫廊作品。
+              {t('emptyDescription')}
             </p>
           </div>
         )}

@@ -7,6 +7,8 @@
  */
 
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
   createLandingSection as createSection,
   updateLandingSection as updateSection,
@@ -15,6 +17,13 @@ import {
   updateSectionSortOrders,
 } from '@/lib/modules/landing/admin-io';
 import type { LandingSectionInput, LandingSectionType } from '@/lib/types/landing';
+import { LOCALES } from '@/lib/i18n/locales';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 
 /**
  * Revalidate all landing-related caches
@@ -22,10 +31,17 @@ import type { LandingSectionInput, LandingSectionType } from '@/lib/types/landin
 function revalidateLandingCaches() {
   // Invalidate cached landing section data
   revalidateTag('landing-sections', { expire: 0 });
-  
-  // Single-language site (zh)
-  revalidatePath('/zh');
+
+  // Public pages
+  for (const locale of LOCALES) {
+    revalidatePath(`/${locale}`);
+  }
   revalidatePath('/sitemap.xml');
+
+  // Admin pages
+  for (const locale of LOCALES) {
+    revalidatePath(`/${locale}/admin/landing`);
+  }
 }
 
 /**
@@ -34,14 +50,24 @@ function revalidateLandingCaches() {
 export async function toggleSectionVisibility(
   sectionKey: string,
   isVisible: boolean
-): Promise<{ success: boolean; error?: string }> {
-  const result = await updateSection(sectionKey, { is_visible: isVisible });
-  
-  if (result.success) {
-    revalidateLandingCaches();
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
-  
-  return { success: result.success, error: result.error };
+
+  if (!sectionKey) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const result = await updateSection(sectionKey, { is_visible: isVisible });
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  revalidateLandingCaches();
+  return actionSuccess();
 }
 
 /**
@@ -50,14 +76,24 @@ export async function toggleSectionVisibility(
 export async function updateSectionOrder(
   sectionKey: string,
   sortOrder: number
-): Promise<{ success: boolean; error?: string }> {
-  const result = await updateSection(sectionKey, { sort_order: sortOrder });
-  
-  if (result.success) {
-    revalidateLandingCaches();
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
-  
-  return { success: result.success, error: result.error };
+
+  if (!sectionKey) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const result = await updateSection(sectionKey, { sort_order: sortOrder });
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  revalidateLandingCaches();
+  return actionSuccess();
 }
 
 /**
@@ -65,14 +101,24 @@ export async function updateSectionOrder(
  */
 export async function batchUpdateSortOrders(
   updates: Array<{ section_key: string; sort_order: number }>
-): Promise<{ success: boolean; error?: string }> {
-  const result = await updateSectionSortOrders(updates);
-  
-  if (result.success) {
-    revalidateLandingCaches();
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
-  
-  return { success: result.success, error: result.error };
+
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const result = await updateSectionSortOrders(updates);
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  revalidateLandingCaches();
+  return actionSuccess();
 }
 
 /**
@@ -81,21 +127,26 @@ export async function batchUpdateSortOrders(
 export async function createCustomSection(input: {
   section_type: LandingSectionType;
   title_zh?: string;
-}): Promise<{ success: boolean; sectionKey?: string; error?: string }> {
+}): Promise<ActionResult<{ sectionKey: string }>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   // Get next available custom key
   const nextKey = await getNextAvailableCustomKey();
   
   if (!nextKey) {
-    return { success: false, error: '自訂區塊已達上限（10）' };
+    return actionError(ADMIN_ERROR_CODES.LIMIT_REACHED);
   }
   
-  const titleZh = input.title_zh || '新區塊';
   const sectionInput: LandingSectionInput = {
     section_key: nextKey,
     section_type: input.section_type,
-    // DB schema still has title_en/title_zh; keep them identical for single-language site.
-    title_en: titleZh,
-    title_zh: titleZh,
+    // Let admin set title later; avoid hard-coded default strings.
+    title_en: input.title_zh,
+    title_zh: input.title_zh,
     is_visible: false, // Start hidden
   };
   
@@ -103,10 +154,10 @@ export async function createCustomSection(input: {
   
   if (result.success) {
     revalidateLandingCaches();
-    return { success: true, sectionKey: nextKey };
+    return actionSuccess({ sectionKey: nextKey });
   }
   
-  return { success: false, error: result.error };
+  return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
 }
 
 /**
@@ -115,14 +166,24 @@ export async function createCustomSection(input: {
 export async function updateSectionAction(
   sectionKey: string,
   input: LandingSectionInput
-): Promise<{ success: boolean; error?: string }> {
-  const result = await updateSection(sectionKey, input);
-  
-  if (result.success) {
-    revalidateLandingCaches();
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
-  
-  return { success: result.success, error: result.error };
+
+  if (!sectionKey) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const result = await updateSection(sectionKey, input);
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  revalidateLandingCaches();
+  return actionSuccess();
 }
 
 /**
@@ -130,12 +191,22 @@ export async function updateSectionAction(
  */
 export async function deleteSectionAction(
   sectionKey: string
-): Promise<{ success: boolean; error?: string }> {
-  const result = await deleteSection(sectionKey);
-  
-  if (result.success) {
-    revalidateLandingCaches();
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
-  
-  return { success: result.success, error: result.error };
+
+  if (!sectionKey) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const result = await deleteSection(sectionKey);
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
+  }
+
+  revalidateLandingCaches();
+  return actionSuccess();
 }

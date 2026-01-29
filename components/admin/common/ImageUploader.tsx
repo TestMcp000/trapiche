@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import RawImg from './RawImg';
 import type { UploadSignatureResponse, UploadSignatureErrorResponse } from '@/lib/types/content';
 
@@ -13,7 +14,6 @@ interface ImageUploaderProps {
   value: string;
   onChange: (url: string) => void;
   onUploadComplete?: (result: { url: string; width: number; height: number }) => void;
-  locale: string;
   className?: string;
   label?: string;
 }
@@ -24,13 +24,7 @@ interface ImageUploaderProps {
 
 const ImageCropper = dynamic(() => import('./ImageCropper'), {
   ssr: false,
-  loading: () => (
-    <div className="space-y-4">
-      <div className="relative bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center" style={{ minHeight: '300px' }}>
-        <div className="animate-pulse text-gray-400">Loading cropper...</div>
-      </div>
-    </div>
-  ),
+  loading: () => <ImageCropperLoading />,
 });
 
 // =============================================================================
@@ -41,10 +35,11 @@ export default function ImageUploader({
   value, 
   onChange, 
   onUploadComplete,
-  locale, 
   className = '',
   label
 }: ImageUploaderProps) {
+  const t = useTranslations('admin.media.uploader');
+
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -53,40 +48,15 @@ export default function ImageUploader({
   // Cropper state
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
-  const labels = {
-    en: {
-      dropzone: 'Drag and drop an image, or click to select',
-      uploading: 'Uploading...',
-      change: 'Change',
-      remove: 'Remove',
-      urlPlaceholder: 'Or paste image URL',
-      errorUpload: 'Upload failed. Please try again.',
-      errorType: 'Invalid file type. Use JPEG, PNG, GIF, WebP.',
-      errorSize: 'File too large. Maximum 100MB.',
-    },
-    zh: {
-      dropzone: '拖放圖片至此，或點擊選擇檔案',
-      uploading: '上傳中...',
-      change: '更換',
-      remove: '移除',
-      urlPlaceholder: '或貼上圖片網址',
-      errorUpload: '上傳失敗，請重試。',
-      errorType: '不支援的檔案格式。請使用 JPEG、PNG、GIF、WebP。',
-      errorSize: '檔案過大，最大 100MB。',
-    },
-  };
-
-  const t = labels[locale as keyof typeof labels] || labels.en;
-
   const handleFileSelect = (file: File) => {
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      setError(`${t.errorType} (${file.type})`);
+      setError(t('errorType', { type: file.type }));
       return;
     }
 
     if (file.size > 100 * 1024 * 1024) {
-      setError(t.errorSize);
+      setError(t('errorSize'));
       return;
     }
 
@@ -106,7 +76,7 @@ export default function ImageUploader({
 
       if (!signatureResponse.ok) {
         const data: UploadSignatureErrorResponse = await signatureResponse.json();
-        throw new Error(data.error || 'Failed to get upload signature');
+        throw new Error(data.error || t('errorSignature'));
       }
 
       const { signature, timestamp, cloudName, folder }: UploadSignatureResponse = await signatureResponse.json();
@@ -129,7 +99,7 @@ export default function ImageUploader({
 
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json();
-        throw new Error(errorData.error?.message || 'Upload to Cloudinary failed');
+        throw new Error(errorData.error?.message || t('errorCloudinary'));
       }
 
       const result = await uploadResponse.json();
@@ -146,7 +116,7 @@ export default function ImageUploader({
       setImageToCrop(null);
     } catch (err) {
       console.error('Upload error:', err);
-      const message = err instanceof Error ? err.message : t.errorUpload;
+      const message = err instanceof Error ? err.message : t('errorUpload');
       setError(message);
     } finally {
       setUploading(false);
@@ -197,7 +167,6 @@ export default function ImageUploader({
     return (
       <ImageCropper
         imageToCrop={imageToCrop}
-        locale={locale}
         label={label}
         className={className}
         onApply={uploadToCloudinary}
@@ -219,7 +188,7 @@ export default function ImageUploader({
         <div className="relative group">
           <RawImg
             src={value}
-            alt="Preview"
+            alt={t('previewAlt')}
             className="w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
           />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-3">
@@ -228,14 +197,14 @@ export default function ImageUploader({
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
             >
-              {t.change}
+              {t('change')}
             </button>
             <button
               type="button"
               onClick={() => onChange('')}
               className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
             >
-              {t.remove}
+              {t('remove')}
             </button>
           </div>
         </div>
@@ -259,7 +228,7 @@ export default function ImageUploader({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <span className="text-sm text-gray-500 dark:text-gray-400 text-center px-4">
-            {t.dropzone}
+            {t('dropzone')}
           </span>
         </div>
       )}
@@ -278,7 +247,7 @@ export default function ImageUploader({
         type="url"
         value={value}
         onChange={handleUrlChange}
-        placeholder={t.urlPlaceholder}
+        placeholder={t('urlPlaceholder')}
         className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       />
 
@@ -289,8 +258,23 @@ export default function ImageUploader({
 
       {/* Loading indicator */}
       {uploading && (
-        <p className="text-sm text-blue-500">{t.uploading}</p>
+        <p className="text-sm text-blue-500">{t('uploading')}</p>
       )}
+    </div>
+  );
+}
+
+function ImageCropperLoading() {
+  const t = useTranslations('admin.media.uploader');
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="relative bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center"
+        style={{ minHeight: '300px' }}
+      >
+        <div className="animate-pulse text-gray-400">{t('loadingCropper')}</div>
+      </div>
     </div>
   );
 }

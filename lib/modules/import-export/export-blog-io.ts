@@ -147,7 +147,8 @@ export async function uploadExportToStorage(
     });
 
   if (uploadError) {
-    return { error: `Upload failed: ${uploadError.message}` };
+    console.error('[export-blog-io] uploadExportToStorage upload failed:', uploadError);
+    return { error: '上傳失敗' };
   }
 
   // Create signed URL
@@ -156,7 +157,8 @@ export async function uploadExportToStorage(
     .createSignedUrl(filename, SIGNED_URL_EXPIRY);
 
   if (signedError || !signedData?.signedUrl) {
-    return { error: `Failed to create download URL: ${signedError?.message ?? 'Unknown error'}` };
+    console.error('[export-blog-io] uploadExportToStorage createSignedUrl failed:', signedError);
+    return { error: '建立下載連結失敗' };
   }
 
   return { url: signedData.signedUrl };
@@ -201,9 +203,10 @@ export async function exportBlogBundle(): Promise<BlogExportResult> {
       },
     };
   } catch (error) {
+    console.error('[export-blog-io] exportBlogBundle failed:', error);
     return {
       success: false,
-      error: `Export failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: '匯出失敗',
     };
   }
 }
@@ -221,8 +224,9 @@ export async function exportSinglePost(
     const markdown = formatBlogPostToMarkdown(post);
     return { markdown };
   } catch (error) {
+    console.error('[export-blog-io] exportSinglePost failed:', error);
     return {
-      error: `Failed to format post: ${error instanceof Error ? error.message : String(error)}`,
+      error: '文章格式化失敗',
     };
   }
 }

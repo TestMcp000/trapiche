@@ -14,6 +14,7 @@ import { revalidatePath } from 'next/cache';
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
 import { getAdminRole } from '@/lib/modules/auth';
+import { requireOwner, requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
     listTemplates,
     getTemplate,
@@ -26,21 +27,17 @@ import {
     validateCreateCustomTemplateInput,
     validateUpdateCustomTemplateInput,
 } from '@/lib/validators/custom-template';
+import {
+    ADMIN_ERROR_CODES,
+    actionError,
+    actionSuccess,
+    type ActionResult,
+} from '@/lib/types/action-result';
 
 import type {
     AnalysisCustomTemplate,
     AnalysisCustomTemplateListItem,
 } from '@/lib/types/ai-analysis';
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface ActionResult<T> {
-    success: boolean;
-    data?: T;
-    error?: string;
-}
 
 // =============================================================================
 // Read Actions
@@ -55,20 +52,22 @@ export async function listTemplatesAction(): Promise<
 > {
     try {
         const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
         const role = await getAdminRole(supabase);
 
         if (!role) {
-            return { success: false, error: 'Unauthorized' };
+            return actionError(ADMIN_ERROR_CODES.FORBIDDEN);
         }
 
         const templates = await listTemplates(role);
-        return { success: true, data: templates };
+        return actionSuccess(templates);
     } catch (error) {
         console.error('[templates-action] listTemplatesAction error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to list templates',
-        };
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 }
 
@@ -80,29 +79,35 @@ export async function getTemplateAction(
 ): Promise<ActionResult<AnalysisCustomTemplate>> {
     try {
         const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
         const role = await getAdminRole(supabase);
 
         if (!role) {
-            return { success: false, error: 'Unauthorized' };
+            return actionError(ADMIN_ERROR_CODES.FORBIDDEN);
         }
 
         const template = await getTemplate(id);
         if (!template) {
-            return { success: false, error: 'Template not found' };
+            return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
         }
 
         // Editor can only view enabled templates
         if (role === 'editor' && !template.isEnabled) {
-            return { success: false, error: 'Template not found' };
+            return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
         }
 
-        return { success: true, data: template };
+        return actionSuccess(template);
     } catch (error) {
         console.error('[templates-action] getTemplateAction error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to get template',
-        };
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 }
 
@@ -115,44 +120,33 @@ export async function getTemplateAction(
  * Owner only.
  */
 export async function createTemplateAction(
-    input: unknown
+    input: unknown,
+    locale: string
 ): Promise<ActionResult<AnalysisCustomTemplate>> {
     try {
         const supabase = await createClient();
-        const role = await getAdminRole(supabase);
-
-        if (role !== 'owner') {
-            return { success: false, error: 'Only owner can create templates' };
-        }
-
-        // Get user ID
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-            return { success: false, error: 'User not found' };
+        const guard = await requireOwner(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
         }
 
         // Validate input
         const validation = validateCreateCustomTemplateInput(input);
         if (!validation.valid) {
-            return { success: false, error: validation.error };
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
         }
 
         // Create template
-        const template = await createTemplate(validation.data!, user.id);
+        const template = await createTemplate(validation.data!, guard.userId);
 
         // Revalidate cache
-        revalidatePath('/[locale]/admin/(data)/ai-analysis/templates', 'page');
-        revalidatePath('/[locale]/admin/(data)/ai-analysis', 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis/templates`, 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis`, 'page');
 
-        return { success: true, data: template };
+        return actionSuccess(template);
     } catch (error) {
         console.error('[templates-action] createTemplateAction error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to create template',
-        };
+        return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
     }
 }
 
@@ -162,36 +156,43 @@ export async function createTemplateAction(
  */
 export async function updateTemplateAction(
     id: string,
-    input: unknown
+    input: unknown,
+    locale: string
 ): Promise<ActionResult<AnalysisCustomTemplate>> {
     try {
         const supabase = await createClient();
-        const role = await getAdminRole(supabase);
+        const guard = await requireOwner(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
 
-        if (role !== 'owner') {
-            return { success: false, error: 'Only owner can update templates' };
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
         }
 
         // Validate input
         const validation = validateUpdateCustomTemplateInput(input);
         if (!validation.valid) {
-            return { success: false, error: validation.error };
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        // Ensure template exists (better error code)
+        const existing = await getTemplate(id);
+        if (!existing) {
+            return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
         }
 
         // Update template
         const template = await updateTemplate(id, validation.data!);
 
         // Revalidate cache
-        revalidatePath('/[locale]/admin/(data)/ai-analysis/templates', 'page');
-        revalidatePath('/[locale]/admin/(data)/ai-analysis', 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis/templates`, 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis`, 'page');
 
-        return { success: true, data: template };
+        return actionSuccess(template);
     } catch (error) {
         console.error('[templates-action] updateTemplateAction error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to update template',
-        };
+        return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 }
 
@@ -200,29 +201,35 @@ export async function updateTemplateAction(
  * Owner only.
  */
 export async function deleteTemplateAction(
-    id: string
+    id: string,
+    locale: string
 ): Promise<ActionResult<void>> {
     try {
         const supabase = await createClient();
-        const role = await getAdminRole(supabase);
+        const guard = await requireOwner(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
 
-        if (role !== 'owner') {
-            return { success: false, error: 'Only owner can delete templates' };
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const existing = await getTemplate(id);
+        if (!existing) {
+            return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
         }
 
         await deleteTemplate(id);
 
         // Revalidate cache
-        revalidatePath('/[locale]/admin/(data)/ai-analysis/templates', 'page');
-        revalidatePath('/[locale]/admin/(data)/ai-analysis', 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis/templates`, 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis`, 'page');
 
-        return { success: true };
+        return actionSuccess();
     } catch (error) {
         console.error('[templates-action] deleteTemplateAction error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to delete template',
-        };
+        return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
     }
 }
 
@@ -232,28 +239,34 @@ export async function deleteTemplateAction(
  */
 export async function toggleTemplateEnabledAction(
     id: string,
-    isEnabled: boolean
+    isEnabled: boolean,
+    locale: string
 ): Promise<ActionResult<AnalysisCustomTemplate>> {
     try {
         const supabase = await createClient();
-        const role = await getAdminRole(supabase);
+        const guard = await requireOwner(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
 
-        if (role !== 'owner') {
-            return { success: false, error: 'Only owner can toggle templates' };
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const existing = await getTemplate(id);
+        if (!existing) {
+            return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
         }
 
         const template = await toggleTemplateEnabled(id, isEnabled);
 
         // Revalidate cache
-        revalidatePath('/[locale]/admin/(data)/ai-analysis/templates', 'page');
-        revalidatePath('/[locale]/admin/(data)/ai-analysis', 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis/templates`, 'page');
+        revalidatePath(`/${locale}/admin/ai-analysis`, 'page');
 
-        return { success: true, data: template };
+        return actionSuccess(template);
     } catch (error) {
         console.error('[templates-action] toggleTemplateEnabledAction error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to toggle template',
-        };
+        return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 }

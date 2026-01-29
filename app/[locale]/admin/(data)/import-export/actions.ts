@@ -10,8 +10,8 @@
  */
 
 import { revalidateTag, revalidatePath } from 'next/cache';
-import { getAdminRole } from '@/lib/modules/auth';
 import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireOwner, requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import { exportBlogBundle, type BlogExportResult } from '@/lib/modules/import-export/export-blog-io';
 import {
   previewBlogImport,
@@ -49,6 +49,23 @@ import {
   exportCommentsBundle,
   type CommentsExportFormat,
 } from '@/lib/modules/import-export/export-comments-io';
+import {
+  listJobs,
+  createJobDownloadUrl,
+  deleteJob,
+  createJob,
+  markJobProcessing,
+  markJobCompleted,
+  markJobFailed,
+  writeAuditLog,
+} from '@/lib/modules/import-export/jobs-io';
+import type { ImportExportJobListItem } from '@/lib/types/import-export';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 
 /** Export format type alias for actions */
 export type ExportFormat = 'json' | 'csv';
@@ -57,88 +74,39 @@ export type ExportFormat = 'json' | 'csv';
 // Types
 // =============================================================================
 
-/** Export blog action result */
-export interface ExportBlogActionResult {
-  success: boolean;
-  downloadUrl?: string;
-  stats?: {
-    postsCount: number;
-    categoriesCount: number;
-    bundleSizeBytes: number;
-  };
-  error?: string;
-}
+export type ExportBlogActionResult = ActionResult<{
+  downloadUrl: string;
+  stats: NonNullable<BlogExportResult['stats']>;
+}>;
 
-/** Import preview action result */
-export interface ImportPreviewActionResult {
-  success: boolean;
-  preview?: BlogImportPreview;
-  error?: string;
-}
+export type ImportPreviewActionResult = ActionResult<BlogImportPreview>;
+export type ImportApplyActionResult = ActionResult<BlogImportResult>;
 
-/** Import apply action result */
-export interface ImportApplyActionResult {
-  success: boolean;
-  result?: BlogImportResult;
-  error?: string;
-}
+export type GenericExportResult = ActionResult<{
+  downloadUrl: string;
+  stats?: { count: number; bundleSizeBytes: number };
+}>;
 
-/** Generic export action result */
-export interface GenericExportResult {
-  success: boolean;
-  downloadUrl?: string;
-  stats?: {
-    count: number;
-    bundleSizeBytes: number;
-  };
-  error?: string;
-}
+export type GenericImportPreviewResult = ActionResult<{
+  total: number;
+  valid: number;
+  items: Array<{ slug: string; valid: boolean; errors?: Record<string, string> }>;
+}>;
 
-/** Generic import preview result */
-export interface GenericImportPreviewResult {
-  success: boolean;
-  preview?: {
-    total: number;
-    valid: number;
-    items: Array<{ slug: string; valid: boolean; errors?: Record<string, string> }>;
-  };
-  error?: string;
-}
-
-/** Generic import apply result */
-export interface GenericImportApplyResult {
-  success: boolean;
-  imported?: number;
+export type GenericImportApplyResult = ActionResult<{
+  imported: number;
   errors?: Array<{ slug: string; error: string }>;
-  error?: string;
-}
+}>;
 
-// =============================================================================
-// RBAC Helpers
-// =============================================================================
+export type JobListActionResult = ActionResult<ImportExportJobListItem[]>;
+export type RedownloadActionResult = ActionResult<{ downloadUrl: string }>;
+export type DeleteJobActionResult = ActionResult<void>;
 
-/** Require owner role (for Import operations) */
-async function requireOwner(): Promise<{ userId: string }> {
-  const supabase = await createClient();
-  const role = await getAdminRole(supabase);
-  if (role !== 'owner') {
-    throw new Error('Permission denied: owner only');
-  }
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('Not authenticated');
-  }
-  return { userId: user.id };
-}
-
-/** Require editor or owner role (for Export operations) */
-async function requireEditorOrOwner(): Promise<void> {
-  const supabase = await createClient();
-  const role = await getAdminRole(supabase);
-  if (role !== 'owner' && role !== 'editor') {
-    throw new Error('Permission denied: admin only');
-  }
-}
+export type ExportCommentsWithJobResult = ActionResult<{
+  downloadUrl: string;
+  stats?: { count: number; bundleSizeBytes: number };
+  jobId: string;
+}>;
 
 // =============================================================================
 // Export Actions (owner/editor allowed)
@@ -150,25 +118,26 @@ async function requireEditorOrOwner(): Promise<void> {
  * @returns Export result with download URL
  */
 export async function exportBlog(): Promise<ExportBlogActionResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
-
     const result: BlogExportResult = await exportBlogBundle();
-
-    if (!result.success) {
-      return { success: false, error: result.error };
+    if (!result.success || !result.downloadUrl || !result.stats) {
+      console.error('[exportBlog] Export failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 
-    return {
-      success: true,
+    return actionSuccess({
       downloadUrl: result.downloadUrl,
       stats: result.stats,
-    };
+    });
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    console.error('[exportBlog] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -186,31 +155,28 @@ export async function exportBlog(): Promise<ExportBlogActionResult> {
 export async function previewBlogImportAction(
   formData: FormData
 ): Promise<ImportPreviewActionResult> {
-  try {
-    await requireOwner();
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
 
+  try {
     const file = formData.get('file') as File | null;
     if (!file) {
-      return { success: false, error: 'No file uploaded' };
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
     }
 
-    // Validate file type
     if (!file.name.endsWith('.zip')) {
-      return { success: false, error: 'Invalid file type. Please upload a ZIP file.' };
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
     }
 
-    // Read file as ArrayBuffer
     const buffer = await file.arrayBuffer();
-
-    // Run preview (dry run)
     const preview = await previewBlogImport(buffer);
-
-    return { success: true, preview };
+    return actionSuccess(preview);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    console.error('[previewBlogImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -223,37 +189,34 @@ export async function previewBlogImportAction(
 export async function applyBlogImportAction(
   formData: FormData
 ): Promise<ImportApplyActionResult> {
-  try {
-    const { userId } = await requireOwner();
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
 
+  try {
     const file = formData.get('file') as File | null;
     if (!file) {
-      return { success: false, error: 'No file uploaded' };
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
     }
 
-    // Validate file type
     if (!file.name.endsWith('.zip')) {
-      return { success: false, error: 'Invalid file type. Please upload a ZIP file.' };
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
     }
 
-    // Read file as ArrayBuffer
     const buffer = await file.arrayBuffer();
+    const result = await applyBlogImport(buffer, guard.userId);
 
-    // Apply import
-    const result = await applyBlogImport(buffer, userId);
-
-    // Revalidate caches on success
     if (result.success || result.postsImported > 0 || result.categoriesImported > 0) {
       revalidateTag('blog', { expire: 0 });
       revalidatePath('/sitemap.xml');
     }
 
-    return { success: true, result };
+    return actionSuccess(result);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    console.error('[applyBlogImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -263,33 +226,55 @@ export async function applyBlogImportAction(
 
 /** Export gallery items */
 export async function exportGalleryItems(): Promise<GenericExportResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
     const result = await exportGalleryItemsBundle();
-    if (!result.success) return { success: false, error: result.error };
-    return {
-      success: true,
+    if (!result.success || !result.downloadUrl) {
+      console.error('[exportGalleryItems] Export failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    return actionSuccess({
       downloadUrl: result.downloadUrl,
-      stats: result.stats ? { count: result.stats.itemsCount, bundleSizeBytes: result.stats.bundleSizeBytes } : undefined,
-    };
+      stats: result.stats
+        ? { count: result.stats.itemsCount, bundleSizeBytes: result.stats.bundleSizeBytes }
+        : undefined,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[exportGalleryItems] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
 /** Export gallery categories */
 export async function exportGalleryCategories(): Promise<GenericExportResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
     const result = await exportGalleryCategoriesBundle();
-    if (!result.success) return { success: false, error: result.error };
-    return {
-      success: true,
+    if (!result.success || !result.downloadUrl) {
+      console.error('[exportGalleryCategories] Export failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    return actionSuccess({
       downloadUrl: result.downloadUrl,
-      stats: result.stats ? { count: result.stats.categoriesCount, bundleSizeBytes: result.stats.bundleSizeBytes } : undefined,
-    };
+      stats: result.stats
+        ? { count: result.stats.categoriesCount, bundleSizeBytes: result.stats.bundleSizeBytes }
+        : undefined,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[exportGalleryCategories] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -297,17 +282,29 @@ export async function exportGalleryCategories(): Promise<GenericExportResult> {
 export async function previewGalleryItemsImportAction(
   formData: FormData
 ): Promise<GenericImportPreviewResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
-    if (!file.name.endsWith('.json')) return { success: false, error: 'Please upload a JSON file.' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await previewGalleryItemsImport(text);
-    if (!result.success) return { success: false, error: result.error };
-    return { success: true, preview: result.items };
+    if (!result.success) {
+      console.error('[previewGalleryItemsImportAction] Preview failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    return actionSuccess(result.items);
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[previewGalleryItemsImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -315,16 +312,29 @@ export async function previewGalleryItemsImportAction(
 export async function applyGalleryItemsImportAction(
   formData: FormData
 ): Promise<GenericImportApplyResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await applyGalleryItemsImport(text);
     if (result.itemsImported > 0) revalidateTag('gallery', { expire: 0 });
-    return { success: result.success, imported: result.itemsImported, errors: result.errors };
+
+    return actionSuccess({
+      imported: result.itemsImported,
+      errors: result.errors,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[applyGalleryItemsImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -332,17 +342,29 @@ export async function applyGalleryItemsImportAction(
 export async function previewGalleryCategoriesImportAction(
   formData: FormData
 ): Promise<GenericImportPreviewResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
-    if (!file.name.endsWith('.json')) return { success: false, error: 'Please upload a JSON file.' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await previewGalleryCategoriesImport(text);
-    if (!result.success) return { success: false, error: result.error };
-    return { success: true, preview: result.items };
+    if (!result.success) {
+      console.error('[previewGalleryCategoriesImportAction] Preview failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    return actionSuccess(result.items);
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[previewGalleryCategoriesImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -350,16 +372,29 @@ export async function previewGalleryCategoriesImportAction(
 export async function applyGalleryCategoriesImportAction(
   formData: FormData
 ): Promise<GenericImportApplyResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await applyGalleryCategoriesImport(text);
     if (result.categoriesImported > 0) revalidateTag('gallery', { expire: 0 });
-    return { success: result.success, imported: result.categoriesImported, errors: result.errors };
+
+    return actionSuccess({
+      imported: result.categoriesImported,
+      errors: result.errors,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[applyGalleryCategoriesImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -369,25 +404,51 @@ export async function applyGalleryCategoriesImportAction(
 
 /** Export site content */
 export async function exportSiteContent(): Promise<GenericExportResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
     const result = await exportSiteContentBundle();
-    if (!result.success) return { success: false, error: result.error };
-    return { success: true, downloadUrl: result.downloadUrl, stats: result.stats };
+    if (!result.success || !result.downloadUrl) {
+      console.error('[exportSiteContent] Export failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    return actionSuccess({
+      downloadUrl: result.downloadUrl,
+      stats: result.stats,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[exportSiteContent] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
 /** Export landing sections */
 export async function exportLandingSections(): Promise<GenericExportResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
     const result = await exportLandingSectionsBundle();
-    if (!result.success) return { success: false, error: result.error };
-    return { success: true, downloadUrl: result.downloadUrl, stats: result.stats };
+    if (!result.success || !result.downloadUrl) {
+      console.error('[exportLandingSections] Export failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    return actionSuccess({
+      downloadUrl: result.downloadUrl,
+      stats: result.stats,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[exportLandingSections] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -395,17 +456,29 @@ export async function exportLandingSections(): Promise<GenericExportResult> {
 export async function previewSiteContentImportAction(
   formData: FormData
 ): Promise<GenericImportPreviewResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
-    if (!file.name.endsWith('.json')) return { success: false, error: 'Please upload a JSON file.' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await previewSiteContentImport(text);
-    if (!result.success) return { success: false, error: result.error };
-    return { success: true, preview: result.items };
+    if (!result.success) {
+      console.error('[previewSiteContentImportAction] Preview failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    return actionSuccess(result.items);
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[previewSiteContentImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -413,16 +486,29 @@ export async function previewSiteContentImportAction(
 export async function applySiteContentImportAction(
   formData: FormData
 ): Promise<GenericImportApplyResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await applySiteContentImport(text);
     if (result.imported > 0) revalidateTag('content', { expire: 0 });
-    return { success: result.success, imported: result.imported, errors: result.errors };
+
+    return actionSuccess({
+      imported: result.imported,
+      errors: result.errors,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[applySiteContentImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -430,17 +516,29 @@ export async function applySiteContentImportAction(
 export async function previewLandingSectionsImportAction(
   formData: FormData
 ): Promise<GenericImportPreviewResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
-    if (!file.name.endsWith('.json')) return { success: false, error: 'Please upload a JSON file.' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await previewLandingSectionsImport(text);
-    if (!result.success) return { success: false, error: result.error };
-    return { success: true, preview: result.items };
+    if (!result.success) {
+      console.error('[previewLandingSectionsImportAction] Preview failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    return actionSuccess(result.items);
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[previewLandingSectionsImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -448,16 +546,29 @@ export async function previewLandingSectionsImportAction(
 export async function applyLandingSectionsImportAction(
   formData: FormData
 ): Promise<GenericImportApplyResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireOwner();
     const file = formData.get('file') as File | null;
-    if (!file) return { success: false, error: 'No file uploaded' };
+    if (!file || !file.name.endsWith('.json')) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     const text = await file.text();
     const result = await applyLandingSectionsImport(text);
     if (result.imported > 0) revalidateTag('landing', { expire: 0 });
-    return { success: result.success, imported: result.imported, errors: result.errors };
+
+    return actionSuccess({
+      imported: result.imported,
+      errors: result.errors,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[applyLandingSectionsImportAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -469,16 +580,29 @@ export async function applyLandingSectionsImportAction(
 export async function exportComments(
   options: { format?: CommentsExportFormat; includeSensitive?: boolean } = {}
 ): Promise<GenericExportResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
     const result = await exportCommentsBundle({
       format: options.format ?? 'json',
       includeSensitive: options.includeSensitive,
     });
-    if (!result.success) return { success: false, error: result.error };
-    return { success: true, downloadUrl: result.downloadUrl, stats: result.stats };
+    if (!result.success || !result.downloadUrl) {
+      console.error('[exportComments] Export failed:', result.error);
+      return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+
+    return actionSuccess({
+      downloadUrl: result.downloadUrl,
+      stats: result.stats,
+    });
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('[exportComments] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -486,52 +610,8 @@ export async function exportComments(
 // Job History Actions
 // =============================================================================
 
-import {
-  listJobs,
-  createJobDownloadUrl,
-  deleteJob,
-  createJob,
-  markJobProcessing,
-  markJobCompleted,
-  markJobFailed,
-  writeAuditLog,
-} from '@/lib/modules/import-export/jobs-io';
-import type {
-  ImportExportJobListItem,
-} from '@/lib/types/import-export';
-
 /** Storage bucket constant */
 const EXPORTS_BUCKET = 'exports';
-
-/** Result type for job list action */
-export interface JobListActionResult {
-  success: boolean;
-  jobs?: ImportExportJobListItem[];
-  error?: string;
-}
-
-/** Result type for re-download action */
-export interface RedownloadActionResult {
-  success: boolean;
-  downloadUrl?: string;
-  error?: string;
-}
-
-/** Result type for delete action */
-export interface DeleteJobActionResult {
-  success: boolean;
-  error?: string;
-}
-
-/** Helper to get current user info */
-async function getCurrentUser(): Promise<{ userId: string; email: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('Not authenticated');
-  }
-  return { userId: user.id, email: user.email ?? '' };
-}
 
 /**
  * List recent import/export jobs.
@@ -540,19 +620,22 @@ async function getCurrentUser(): Promise<{ userId: string; email: string }> {
 export async function listJobsAction(
   options: { limit?: number; kind?: 'import' | 'export'; entity?: string } = {}
 ): Promise<JobListActionResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
     const jobs = await listJobs({
       limit: options.limit ?? 20,
       kind: options.kind,
       entity: options.entity,
     });
-    return { success: true, jobs };
+    return actionSuccess(jobs);
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    console.error('[listJobsAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -561,18 +644,21 @@ export async function listJobsAction(
  * Called when user wants to re-download an expired export.
  */
 export async function redownloadJobAction(jobId: string): Promise<RedownloadActionResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   try {
-    await requireEditorOrOwner();
     const downloadUrl = await createJobDownloadUrl(jobId);
     if (!downloadUrl) {
-      return { success: false, error: 'Job not found or not completed' };
+      return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
     }
-    return { success: true, downloadUrl };
+    return actionSuccess({ downloadUrl });
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    console.error('[redownloadJobAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -581,17 +667,24 @@ export async function redownloadJobAction(jobId: string): Promise<RedownloadActi
  * Also deletes the associated storage file if exists.
  */
 export async function deleteJobAction(jobId: string): Promise<DeleteJobActionResult> {
+  const supabase = await createClient();
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return actionError(ADMIN_ERROR_CODES.UNAUTHORIZED);
+  }
+
   try {
-    await requireOwner();
-    const { email } = await getCurrentUser();
     await deleteJob(jobId);
-    await writeAuditLog('delete_job', jobId, email, { action: 'delete' });
-    return { success: true };
+    await writeAuditLog('delete_job', jobId, user.email ?? '', { action: 'delete' });
+    return actionSuccess();
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    console.error('[deleteJobAction] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -604,19 +697,27 @@ export async function deleteJobAction(jobId: string): Promise<DeleteJobActionRes
  */
 export async function exportCommentsWithJob(
   options: { format?: CommentsExportFormat; includeSensitive?: boolean } = {}
-): Promise<GenericExportResult & { jobId?: string }> {
+): Promise<ExportCommentsWithJobResult> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return actionError(ADMIN_ERROR_CODES.UNAUTHORIZED);
+  }
+
   const format = options.format ?? 'json';
   let jobId: string | undefined;
 
   try {
-    await requireEditorOrOwner();
-    const { userId, email } = await getCurrentUser();
-
     jobId = await createJob({
       kind: 'export',
       entity: 'comments',
       format,
-      requested_by: userId,
+      requested_by: guard.userId,
       metadata: { includeSensitive: options.includeSensitive ?? false },
     });
     await markJobProcessing(jobId);
@@ -626,9 +727,9 @@ export async function exportCommentsWithJob(
       includeSensitive: options.includeSensitive,
     });
 
-    if (!result.success) {
-      await markJobFailed(jobId, result.error ?? 'Export failed');
-      return { success: false, error: result.error, jobId };
+    if (!result.success || !result.downloadUrl) {
+      await markJobFailed(jobId, '匯出失敗');
+      return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 
     // Note: exportCommentsBundle already uploads to storage with timestamp path.
@@ -641,20 +742,20 @@ export async function exportCommentsWithJob(
       row_count: result.stats?.count ?? 0,
     });
 
-    await writeAuditLog('export', jobId, email, {
+    await writeAuditLog('export', jobId, user.email ?? '', {
       entity: 'comments',
       format,
       rowCount: result.stats?.count ?? 0,
     });
 
-    return {
-      success: true,
+    return actionSuccess({
       downloadUrl: result.downloadUrl,
       stats: result.stats,
       jobId,
-    };
+    });
   } catch (error) {
-    if (jobId) await markJobFailed(jobId, error instanceof Error ? error.message : 'Unknown error');
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error', jobId };
+    if (jobId) await markJobFailed(jobId, '匯出失敗');
+    console.error('[exportCommentsWithJob] Error:', error);
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }

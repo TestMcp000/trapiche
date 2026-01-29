@@ -16,12 +16,17 @@ import { EMBEDDING_TARGET_TYPES } from '@/lib/validators/embedding';
 
 import { ControlCenterClient } from './ControlCenterClient';
 
-export default async function ControlCenterPage() {
+interface PageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function ControlCenterPage({ params }: PageProps) {
+  const { locale: routeLocale } = await params;
   const supabase = await createClient();
   const role = await getAdminRole(supabase);
 
   if (!role) {
-    redirect('/');
+    redirect(`/${routeLocale}`);
   }
 
   // Check if semantic search is available
@@ -33,5 +38,5 @@ export default async function ControlCenterPage() {
     targetTypes: [...EMBEDDING_TARGET_TYPES],
   };
 
-  return <ControlCenterClient initialData={initialData} />;
+  return <ControlCenterClient routeLocale={routeLocale} initialData={initialData} />;
 }

@@ -1,7 +1,7 @@
 # 功能規格（已實作行為 / SSoT）
 
 > 已落地功能與技術細節（Single Source of Truth）  
-> 最後更新: 2026-01-28  
+> 最後更新: 2026-01-29  
 > 狀態: Active
 
 本文件描述「**已實作**」的行為與其技術細節（以本檔為準）。
@@ -509,7 +509,7 @@
 ### 內容來源（Public Navigation / Landing）
 
 - Header nav labels（Legacy Header）：`site_content(section_key='nav')`（fallback：`messages/*`）
-- Hamburger nav（Home v2 HeaderBar）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：built-in default）
+- Hamburger nav（Home v2 HeaderBar）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）
   - 後台可視化編輯器：`/admin/settings/navigation`（支援 groups/items 拖曳排序、target picker、draft/publish 兩段式驗證）
   - **Nav Target Allowlist（PR-42）**：
     | Target Type | 必填欄位 | 選填欄位 | 說明 |

@@ -72,7 +72,8 @@ async function uploadTextToStorage(
     });
 
   if (uploadError) {
-    return { error: `Upload failed: ${uploadError.message}` };
+    console.error('[export-comments-io] uploadContentToStorage upload failed:', uploadError);
+    return { error: '上傳失敗' };
   }
 
   const { data: signedData, error: signedError } = await supabase.storage
@@ -80,7 +81,8 @@ async function uploadTextToStorage(
     .createSignedUrl(filename, SIGNED_URL_EXPIRY);
 
   if (signedError || !signedData?.signedUrl) {
-    return { error: `Failed to create download URL: ${signedError?.message ?? 'Unknown error'}` };
+    console.error('[export-comments-io] uploadContentToStorage createSignedUrl failed:', signedError);
+    return { error: '建立下載連結失敗' };
   }
 
   return { url: signedData.signedUrl, sizeBytes: buffer.length };
@@ -210,9 +212,10 @@ export async function exportCommentsBundle(
       },
     };
   } catch (error) {
+    console.error('[export-comments-io] exportCommentsBundle failed:', error);
     return {
       success: false,
-      error: `Export failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: '匯出失敗',
     };
   }
 }

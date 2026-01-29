@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import RawImg from '../common/RawImg';
 import type { UploadSignatureResponse, UploadSignatureErrorResponse } from '@/lib/types/content';
 
@@ -17,6 +18,8 @@ interface MarkdownToolbarProps {
 }
 
 export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownToolbarProps) {
+  const t = useTranslations('admin.markdownToolbar');
+
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [imageAlt, setImageAlt] = useState('');
@@ -27,12 +30,12 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
   const handleImageUpload = async (file: File) => {
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      setUploadError(`Invalid file type: ${file.type}`);
+      setUploadError(t('errors.invalidType', { type: file.type }));
       return;
     }
 
     if (file.size > 100 * 1024 * 1024) {
-      setUploadError('File too large (max 100MB)');
+      setUploadError(t('errors.fileTooLarge'));
       return;
     }
 
@@ -47,7 +50,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
 
       if (!signatureResponse.ok) {
         const data: UploadSignatureErrorResponse = await signatureResponse.json();
-        throw new Error(data.error || 'Failed to get upload signature');
+        throw new Error(data.error || t('errors.signatureFailed'));
       }
 
       const { signature, timestamp, cloudName, folder }: UploadSignatureResponse = await signatureResponse.json();
@@ -71,14 +74,14 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
 
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json();
-        throw new Error(errorData.error?.message || 'Upload to Cloudinary failed');
+        throw new Error(errorData.error?.message || t('errors.cloudinaryFailed'));
       }
 
       const result = await uploadResponse.json();
       setImageUrl(result.secure_url);
     } catch (err) {
       console.error('Upload error:', err);
-      const message = err instanceof Error ? err.message : 'Upload failed';
+      const message = err instanceof Error ? err.message : t('errors.uploadFailed');
       setUploadError(message);
     } finally {
       setUploading(false);
@@ -88,7 +91,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
   const handleInsertImage = () => {
     // Require alt text for accessibility and SEO
     if (!imageAlt.trim()) {
-      setUploadError('Alt text is required for accessibility and SEO');
+      setUploadError(t('errors.altRequired'));
       return;
     }
     if (imageUrl) {
@@ -102,7 +105,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
 
   const actions: ToolbarAction[] = [
     {
-      label: 'Bold',
+      label: t('actions.bold'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
@@ -112,7 +115,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('**', '**'),
     },
     {
-      label: 'Italic',
+      label: t('actions.italic'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="19" y1="4" x2="10" y2="4"></line>
@@ -123,7 +126,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('*', '*'),
     },
     {
-      label: 'Strikethrough',
+      label: t('actions.strikethrough'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17.3 4.9c-2.3-.6-4.4-1-6.2-.9-2.7.1-5.3.6-7 1.6C2.6 6.8 2 8 2 9.6c0 1.7.8 2.9 2.2 3.7 1.6 1 4.3 1.6 7.1 1.7 4.5.2 6.6-1.5 6.6-2.8 0-1.4-1.6-2.4-3.5-2.8"></path>
@@ -134,28 +137,28 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('~~', '~~'),
     },
     {
-      label: 'Heading 1',
+      label: t('actions.heading1'),
       icon: (
         <span className="font-bold text-[10px] leading-none">H1</span>
       ),
       action: (insert) => insert('# '),
     },
     {
-      label: 'Heading 2',
+      label: t('actions.heading2'),
       icon: (
           <span className="font-bold text-[10px] leading-none">H2</span>
       ),
       action: (insert) => insert('## '),
     },
     {
-        label: 'Heading 3',
+        label: t('actions.heading3'),
         icon: (
             <span className="font-bold text-[10px] leading-none">H3</span>
         ),
         action: (insert) => insert('### '),
       },
     {
-      label: 'Link',
+      label: t('actions.link'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
@@ -165,7 +168,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('[', '](url)'),
     },
     {
-      label: 'Image',
+      label: t('actions.image'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -177,7 +180,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       isSpecial: true,
     },
     {
-      label: 'Blockquote',
+      label: t('actions.blockquote'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -186,7 +189,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('> '),
     },
     {
-      label: 'Code',
+      label: t('actions.code'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="16 18 22 12 16 6"></polyline>
@@ -196,7 +199,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('`', '`'),
     },
     {
-      label: 'Code Block',
+      label: t('actions.codeBlock'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="16 18 22 12 16 6"></polyline>
@@ -207,7 +210,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('```\n', '\n```'),
     },
     {
-      label: 'Bullet List',
+      label: t('actions.bulletList'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="8" y1="6" x2="21" y2="6"></line>
@@ -221,7 +224,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('- '),
     },
     {
-      label: 'Numbered List',
+      label: t('actions.numberedList'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="10" y1="6" x2="21" y2="6"></line>
@@ -235,7 +238,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('1. '),
     },
     {
-      label: 'Task List',
+      label: t('actions.taskList'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 11 12 14 22 4"></polyline>
@@ -245,7 +248,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
       action: (insert) => insert('- [ ] '),
     },
     {
-        label: 'Table',
+        label: t('actions.table'),
         icon: (
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -254,17 +257,17 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
             <line x1="12" y1="3" x2="12" y2="21"></line>
           </svg>
         ),
-        action: (insert) => insert('\n| Col 1 | Col 2 |\n| --- | --- |\n| Val 1 | Val 2 |\n'),
+        action: (insert) => insert(t('templates.table')),
     },
     {
-      label: 'Inline Math',
+      label: t('actions.inlineMath'),
       icon: (
         <span className="font-serif italic text-sm">∑</span>
       ),
       action: (insert) => insert('$', '$'),
     },
     {
-        label: 'Block Math',
+        label: t('actions.blockMath'),
         icon: (
           <span className="font-serif italic text-sm font-bold">∑∑</span>
         ),
@@ -297,7 +300,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Insert Image
+              {t('imageModal.title')}
             </h3>
 
             {/* Upload Area */}
@@ -323,14 +326,14 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span className="text-sm text-gray-500">Uploading...</span>
+                  <span className="text-sm text-gray-500">{t('imageModal.uploading')}</span>
                 </div>
               ) : (
                 <>
                   <svg className="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-sm text-gray-500">Drop image here or click to upload</p>
+                  <p className="text-sm text-gray-500">{t('imageModal.dropOrClick')}</p>
                 </>
               )}
             </div>
@@ -346,13 +349,13 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
             {/* Or URL Input */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Image URL
+                {t('imageModal.imageUrl')}
               </label>
               <input
                 type="url"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder={t('imageModal.imageUrlPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               />
             </div>
@@ -360,13 +363,13 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
             {/* Alt Text */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Alt Text <span className="text-red-500">*</span>
+                {t('imageModal.altText')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={imageAlt}
                 onChange={(e) => setImageAlt(e.target.value)}
-                placeholder="Description of the image (required)"
+                placeholder={t('imageModal.altTextPlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               />
             </div>
@@ -376,7 +379,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
               <div className="mb-4">
                 <RawImg
                   src={imageUrl}
-                  alt={imageAlt || 'Preview'}
+                  alt={imageAlt || t('imageModal.previewAlt')}
                   className="max-h-32 rounded-lg mx-auto"
                   onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                 />
@@ -400,7 +403,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
                 }}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                Cancel
+                {t('imageModal.cancel')}
               </button>
               <button
                 type="button"
@@ -408,7 +411,7 @@ export default function MarkdownToolbar({ onInsert, className = '' }: MarkdownTo
                 disabled={!imageUrl}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Insert
+                {t('imageModal.insert')}
               </button>
             </div>
           </div>

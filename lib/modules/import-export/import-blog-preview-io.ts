@@ -107,7 +107,7 @@ export async function extractPosts(
     if (parseResult.success && parseResult.data) {
       posts.push(parseResult.data);
     } else {
-      errors.push({ path: file.name, error: parseResult.error ?? 'Unknown parse error' });
+      errors.push({ path: file.name, error: parseResult.error ?? '未知的解析錯誤' });
     }
   }
 
@@ -228,7 +228,7 @@ export async function previewBlogImport(
   } catch (error) {
     return {
       success: false,
-      error: `Failed to process ZIP: ${error instanceof Error ? error.message : String(error)}`,
+      error: `處理 ZIP 失敗：${error instanceof Error ? error.message : String(error)}`,
       categories: { total: 0, valid: 0, items: [] },
       posts: { total: 0, valid: 0, items: [] },
       missingCategories: [],

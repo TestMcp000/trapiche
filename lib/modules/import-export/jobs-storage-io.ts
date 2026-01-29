@@ -50,7 +50,8 @@ export async function uploadToStorageWithJob(
     });
 
   if (uploadError) {
-    throw new Error(`Upload failed: ${uploadError.message}`);
+    console.error('[jobs-storage-io] uploadToStorageWithJob failed:', uploadError);
+    throw new Error('上傳失敗');
   }
 
   return { storagePath, sizeBytes: buffer.length };
@@ -71,7 +72,8 @@ export async function createSignedUrl(
     .createSignedUrl(path, expirySeconds);
 
   if (error || !data?.signedUrl) {
-    throw new Error(`Failed to create signed URL: ${error?.message ?? 'Unknown error'}`);
+    console.error('[jobs-storage-io] createSignedUrl failed:', error);
+    throw new Error('建立簽名連結失敗');
   }
 
   return data.signedUrl;
@@ -98,7 +100,8 @@ export async function createJobDownloadUrl(jobId: string): Promise<string | null
     .createSignedUrl(job.storage_path, SIGNED_URL_EXPIRY);
 
   if (error || !data?.signedUrl) {
-    throw new Error(`Failed to create download URL: ${error?.message ?? 'Unknown error'}`);
+    console.error('[jobs-storage-io] createJobDownloadUrl failed:', error);
+    throw new Error('建立下載連結失敗');
   }
 
   return data.signedUrl;

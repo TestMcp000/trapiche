@@ -10,9 +10,17 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import type { LandingSection, LandingSectionType } from '@/lib/types/landing';
 import type { GalleryCategory } from '@/lib/types/gallery';
-import { SECTION_TYPES, PRESET_SECTION_KEYS } from '@/lib/modules/landing/constants';
+import {
+  SECTION_TYPES,
+  PRESET_SECTION_KEYS,
+  DEFAULT_GALLERY_LIMIT,
+  GALLERY_LIMIT_MIN,
+  GALLERY_LIMIT_MAX,
+} from '@/lib/modules/landing/constants';
 import { updateSectionAction } from '../actions';
 
 interface Props {
@@ -30,6 +38,7 @@ const REDIRECT_FOR_CONTENT = ['about', 'platforms'];
 
 export default function SectionEditorClient({ section, categories, locale }: Props) {
   const router = useRouter();
+  const t = useTranslations('admin.landing.editor');
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -50,7 +59,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
   const [galleryCategoryId, setGalleryCategoryId] = useState(section.gallery_category_id || '');
   const [gallerySurface, setGallerySurface] = useState<'home' | 'gallery' | ''>(section.gallery_surface || '');
   const [galleryLimit, setGalleryLimit] = useState(
-    (section.content_zh as { limit?: number })?.limit || 12
+    (section.content_zh as { limit?: number })?.limit || DEFAULT_GALLERY_LIMIT
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,28 +100,9 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
         setSuccess(true);
         router.refresh();
       } else {
-        setError(result.error || '儲存失敗');
+        setError(getErrorLabel(result.errorCode, locale));
       }
     });
-  };
-
-  const labels = {
-    title: '編輯區塊',
-    back: '← 返回列表',
-    sectionKey: '區塊 Key',
-    sortOrder: '排序順序',
-    visible: '顯示',
-    titleZh: '標題',
-    subtitleZh: '副標題',
-    type: '區塊類型',
-    gallerySource: '圖庫來源',
-    galleryLimit: '顯示數量',
-    useCategory: '使用分類',
-    useFeatured: '使用精選',
-    save: '儲存',
-    saving: '儲存中...',
-    saved: '已儲存！',
-    contentNote: '此區塊的內容在 Content 管理頁面編輯。',
   };
 
   return (
@@ -121,23 +111,23 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
         href={`/${locale}/admin/landing`}
         className="text-primary hover:underline mb-4 inline-block"
       >
-        {labels.back}
+        ← {t('back')}
       </Link>
 
       <h1 className="text-2xl font-bold text-foreground mb-6">
-        {labels.title}: {section.section_key}
+        {t('title')}: {section.section_key}
       </h1>
 
       {error && (
         <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">{error}</div>
       )}
       {success && (
-        <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">{labels.saved}</div>
+        <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">{t('saved')}</div>
       )}
 
       {(isRedirectForContent || isSortOnly) && (
         <div className="mb-6 p-4 bg-amber-50 text-amber-800 rounded-lg text-sm">
-          {labels.contentNote}
+          {t('contentNote')}
         </div>
       )}
 
@@ -145,7 +135,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
         {/* Section Key (read-only) */}
         <div>
           <label className="block text-sm font-medium text-secondary mb-1">
-            {labels.sectionKey}
+            {t('sectionKey')}
           </label>
           <input
             type="text"
@@ -158,7 +148,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
         {/* Sort Order */}
         <div>
           <label className="block text-sm font-medium text-secondary mb-1">
-            {labels.sortOrder}
+            {t('sortOrder')}
           </label>
           <input
             type="number"
@@ -179,7 +169,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
               className="w-4 h-4 text-primary rounded"
             />
             <label htmlFor="visible" className="text-sm font-medium text-foreground">
-              {labels.visible}
+              {t('visible')}
             </label>
           </div>
         )}
@@ -188,9 +178,9 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
         {(isTitleEditable || isCustom) && (
           <>
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">
-                {labels.titleZh}
-              </label>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  {t('titleZh')}
+                </label>
               <input
                 type="text"
                 value={titleZh}
@@ -200,9 +190,9 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">
-                {labels.subtitleZh}
-              </label>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  {t('subtitleZh')}
+                </label>
               <input
                 type="text"
                 value={subtitleZh}
@@ -217,7 +207,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
         {isCustom && (
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">
-              {labels.type}
+              {t('type')}
             </label>
             <select
               value={sectionType}
@@ -236,11 +226,11 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
           <>
             <div>
               <label className="block text-sm font-medium text-secondary mb-2">
-                {labels.gallerySource}
+                {t('gallerySource')}
               </label>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm text-secondary">{labels.useCategory}</label>
+                  <label className="text-sm text-secondary">{t('useCategory')}</label>
                   <select
                     value={galleryCategoryId}
                     onChange={(e) => {
@@ -249,7 +239,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
                     }}
                     className="w-full px-3 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary bg-background mt-1"
                   >
-                    <option value="">-- 不使用分類 --</option>
+                    <option value="">{t('noCategory')}</option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name_zh}
@@ -258,7 +248,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-secondary">{labels.useFeatured}</label>
+                  <label className="text-sm text-secondary">{t('useFeatured')}</label>
                   <select
                     value={gallerySurface}
                     onChange={(e) => {
@@ -267,9 +257,9 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
                     }}
                     className="w-full px-3 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary bg-background mt-1"
                   >
-                    <option value="">-- 不使用精選 --</option>
-                    <option value="home">首頁</option>
-                    <option value="gallery">畫廊</option>
+                    <option value="">{t('noFeatured')}</option>
+                    <option value="home">{t('surfaces.home')}</option>
+                    <option value="gallery">{t('surfaces.gallery')}</option>
                   </select>
                 </div>
               </div>
@@ -277,14 +267,14 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
 
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                {labels.galleryLimit} (1-12)
+                {t('galleryLimit')} ({GALLERY_LIMIT_MIN}-{GALLERY_LIMIT_MAX})
               </label>
               <input
                 type="number"
-                min={1}
-                max={12}
+                min={GALLERY_LIMIT_MIN}
+                max={GALLERY_LIMIT_MAX}
                 value={galleryLimit}
-                onChange={(e) => setGalleryLimit(parseInt(e.target.value) || 12)}
+                onChange={(e) => setGalleryLimit(parseInt(e.target.value) || DEFAULT_GALLERY_LIMIT)}
                 className="w-full px-3 py-2 border border-border-light rounded-lg focus:ring-2 focus:ring-primary bg-background"
               />
             </div>
@@ -297,7 +287,7 @@ export default function SectionEditorClient({ section, categories, locale }: Pro
           disabled={isPending}
           className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors"
         >
-          {isPending ? labels.saving : labels.save}
+          {isPending ? t('saving') : t('save')}
         </button>
       </form>
     </div>

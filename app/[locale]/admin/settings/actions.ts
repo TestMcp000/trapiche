@@ -3,18 +3,14 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { updateCompanySetting } from '@/lib/modules/content/io';
 import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import { incrementGlobalCacheVersion } from '@/lib/system/cache-io';
-
-export type SaveSettingResult = {
-  success: boolean;
-  error?: string;
-};
-
-export type PurgeCacheResult = {
-  success: boolean;
-  newVersion?: number;
-  error?: string;
-};
 
 /**
  * Server action to save a company setting.
@@ -23,29 +19,32 @@ export async function saveSettingAction(
   key: string,
   value: string,
   locale: string
-): Promise<SaveSettingResult> {
+): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
-    const result = await updateCompanySetting(key, value, user.id);
+    if (!key) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    const result = await updateCompanySetting(key, value, guard.userId);
 
     if (!result.success) {
-      return { success: false, error: result.error || '儲存失敗' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Revalidate relevant paths
     revalidatePath(`/${locale}/admin/settings`);
     revalidatePath(`/${locale}`); // Home page may use settings
 
-    return { success: true };
+    return actionSuccess();
   } catch (err) {
     console.error('Save setting action error:', err);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -53,19 +52,12 @@ export async function saveSettingAction(
  * Server action to purge all cached data.
  * Increments the global cache version and revalidates all tags.
  */
-export async function purgeAllCache(): Promise<PurgeCacheResult> {
+export async function purgeAllCache(): Promise<ActionResult<{ newVersion: number }>> {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
-    }
-
-    // Check admin role via JWT claims
-    const role = user.app_metadata?.role;
-    if (role !== 'owner' && role !== 'editor') {
-      return { success: false, error: '權限不足' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
     // Increment global cache version to invalidate all cached queries
@@ -78,9 +70,9 @@ export async function purgeAllCache(): Promise<PurgeCacheResult> {
     // Note: revalidateTag not used because cache versioning handles invalidation via key changes
     revalidatePath('/', 'layout');
 
-    return { success: true, newVersion };
+    return actionSuccess({ newVersion });
   } catch (err) {
     console.error('Purge cache action error:', err);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }

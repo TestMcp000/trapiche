@@ -40,6 +40,7 @@ export default async function TemplatesPage({ params }: PageProps) {
       <TemplatesClient
         role={role}
         initialTemplates={templates}
+        routeLocale={routeLocale}
       />
     </NextIntlClientProvider>
   );

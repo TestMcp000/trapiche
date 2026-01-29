@@ -46,16 +46,16 @@ const MAX_PROMPT_LENGTH = 10000;
  */
 function validateName(name: unknown): ValidationResult<string> {
     if (typeof name !== 'string') {
-        return invalidResult('Name must be a string');
+        return invalidResult('名稱必須為字串');
     }
 
     const trimmed = name.trim();
     if (trimmed.length < MIN_NAME_LENGTH) {
-        return invalidResult('Name is required');
+        return invalidResult('名稱為必填');
     }
 
     if (trimmed.length > MAX_NAME_LENGTH) {
-        return invalidResult(`Name must be at most ${MAX_NAME_LENGTH} characters`);
+        return invalidResult(`名稱長度不得超過 ${MAX_NAME_LENGTH} 個字元`);
     }
 
     return validResult(trimmed);
@@ -67,16 +67,16 @@ function validateName(name: unknown): ValidationResult<string> {
  */
 function validatePromptText(promptText: unknown): ValidationResult<string> {
     if (typeof promptText !== 'string') {
-        return invalidResult('Prompt text must be a string');
+        return invalidResult('Prompt 內容必須為字串');
     }
 
     // Don't trim prompt text - preserve formatting
     if (promptText.length < MIN_PROMPT_LENGTH) {
-        return invalidResult('Prompt text is required');
+        return invalidResult('Prompt 內容為必填');
     }
 
     if (promptText.length > MAX_PROMPT_LENGTH) {
-        return invalidResult(`Prompt text must be at most ${MAX_PROMPT_LENGTH} characters`);
+        return invalidResult(`Prompt 內容長度不得超過 ${MAX_PROMPT_LENGTH} 個字元`);
     }
 
     return validResult(promptText);
@@ -87,7 +87,7 @@ function validatePromptText(promptText: unknown): ValidationResult<string> {
  */
 function validateIsEnabled(isEnabled: unknown): ValidationResult<boolean> {
     if (typeof isEnabled !== 'boolean') {
-        return invalidResult('isEnabled must be a boolean');
+        return invalidResult('isEnabled 必須為布林值');
     }
     return validResult(isEnabled);
 }
@@ -132,7 +132,7 @@ export function validateCreateCustomTemplateInput(
     input: unknown
 ): ValidationResult<CreateCustomTemplateRequest> {
     if (typeof input !== 'object' || input === null) {
-        return invalidResult('Request must be an object');
+        return invalidResult('請求內容必須是物件');
     }
 
     const req = input as Record<string, unknown>;
@@ -176,7 +176,7 @@ export function validateUpdateCustomTemplateInput(
     input: unknown
 ): ValidationResult<UpdateCustomTemplateRequest> {
     if (typeof input !== 'object' || input === null) {
-        return invalidResult('Request must be an object');
+        return invalidResult('請求內容必須是物件');
     }
 
     const req = input as Record<string, unknown>;
@@ -224,7 +224,7 @@ export function validateUpdateCustomTemplateInput(
 
     // Check that at least one field is provided
     if (Object.keys(result).length === 0) {
-        return invalidResult('At least one field to update is required');
+        return invalidResult('至少需要提供一個要更新的欄位');
     }
 
     return validResult(result);

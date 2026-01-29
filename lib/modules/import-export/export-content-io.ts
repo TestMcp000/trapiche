@@ -55,7 +55,8 @@ async function uploadJsonToStorage(
     });
 
   if (uploadError) {
-    return { error: `Upload failed: ${uploadError.message}` };
+    console.error('[export-content-io] uploadJsonToStorage upload failed:', uploadError);
+    return { error: '上傳失敗' };
   }
 
   const { data: signedData, error: signedError } = await supabase.storage
@@ -63,7 +64,8 @@ async function uploadJsonToStorage(
     .createSignedUrl(filename, SIGNED_URL_EXPIRY);
 
   if (signedError || !signedData?.signedUrl) {
-    return { error: `Failed to create download URL: ${signedError?.message ?? 'Unknown error'}` };
+    console.error('[export-content-io] uploadJsonToStorage createSignedUrl failed:', signedError);
+    return { error: '建立下載連結失敗' };
   }
 
   return { url: signedData.signedUrl, sizeBytes: buffer.length };
@@ -108,9 +110,10 @@ export async function exportSiteContentBundle(): Promise<ContentExportResult> {
       },
     };
   } catch (error) {
+    console.error('[export-content-io] exportSiteContentBundle failed:', error);
     return {
       success: false,
-      error: `Export failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: '匯出失敗',
     };
   }
 }
@@ -151,9 +154,10 @@ export async function exportLandingSectionsBundle(): Promise<ContentExportResult
       },
     };
   } catch (error) {
+    console.error('[export-content-io] exportLandingSectionsBundle failed:', error);
     return {
       success: false,
-      error: `Export failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: '匯出失敗',
     };
   }
 }

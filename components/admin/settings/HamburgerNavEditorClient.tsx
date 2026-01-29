@@ -13,6 +13,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getErrorLabel } from "@/lib/types/action-result";
 import type {
   HamburgerNavV2,
   HamburgerNavGroup,
@@ -85,6 +86,14 @@ export default function HamburgerNavEditorClient({
     setMessage(null);
     setValidationErrors([]);
   }, []);
+
+  const readValidationErrors = (
+    details: unknown,
+  ): Array<{ path: string; message: string }> => {
+    if (!details || typeof details !== "object") return [];
+    const maybe = details as { validationErrors?: Array<{ path: string; message: string }> };
+    return Array.isArray(maybe.validationErrors) ? maybe.validationErrors : [];
+  };
 
   // Group operations
   const addGroup = useCallback(() => {
@@ -241,10 +250,9 @@ export default function HamburgerNavEditorClient({
     const result = await saveNavDraft(nav, locale);
 
     if (!result.success) {
-      if (result.validationErrors && result.validationErrors.length > 0) {
-        setValidationErrors(result.validationErrors);
-      }
-      setMessage({ type: "error", text: result.error || t("saveFailed") });
+      const errors = readValidationErrors(result.details);
+      if (errors.length > 0) setValidationErrors(errors);
+      setMessage({ type: "error", text: getErrorLabel(result.errorCode, locale) });
     } else {
       setMessage({ type: "success", text: t("draftSaved") });
       setHasChanges(false);
@@ -261,12 +269,11 @@ export default function HamburgerNavEditorClient({
       setSaving(true);
       const saveResult = await saveNavDraft(nav, locale);
       if (!saveResult.success) {
-        if (saveResult.validationErrors) {
-          setValidationErrors(saveResult.validationErrors);
-        }
+        const errors = readValidationErrors(saveResult.details);
+        if (errors.length > 0) setValidationErrors(errors);
         setMessage({
           type: "error",
-          text: saveResult.error || t("saveFailed"),
+          text: getErrorLabel(saveResult.errorCode, locale),
         });
         setSaving(false);
         return;
@@ -280,10 +287,9 @@ export default function HamburgerNavEditorClient({
     const result = await publishNav(locale);
 
     if (!result.success) {
-      if (result.validationErrors && result.validationErrors.length > 0) {
-        setValidationErrors(result.validationErrors);
-      }
-      setMessage({ type: "error", text: result.error || t("publishFailed") });
+      const errors = readValidationErrors(result.details);
+      if (errors.length > 0) setValidationErrors(errors);
+      setMessage({ type: "error", text: getErrorLabel(result.errorCode, locale) });
     } else {
       setMessage({ type: "success", text: t("published") });
       setIsPublished(true);
@@ -302,7 +308,7 @@ export default function HamburgerNavEditorClient({
     const result = await unpublishNav(locale);
 
     if (!result.success) {
-      setMessage({ type: "error", text: result.error || t("unpublishFailed") });
+      setMessage({ type: "error", text: getErrorLabel(result.errorCode, locale) });
     } else {
       setMessage({ type: "success", text: t("unpublished") });
       setIsPublished(false);

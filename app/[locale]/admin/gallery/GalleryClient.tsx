@@ -11,9 +11,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { NextIntlClientProvider } from 'next-intl';
+import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import type { AbstractIntlMessages } from 'next-intl';
 import { generateSlug } from '@/lib/utils/slug';
+import { getErrorLabel } from '@/lib/types/action-result';
 import ImageUploader from '@/components/admin/common/ImageUploader';
 import type { GalleryItem, GalleryCategory } from '@/lib/types/gallery';
 import { saveGalleryItemAction, deleteGalleryItemAction } from './actions';
@@ -43,6 +44,7 @@ function GalleryClientContent({
   initialCategories,
   routeLocale,
 }: GalleryClientProps) {
+  const t = useTranslations('admin.gallery');
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -148,20 +150,20 @@ function GalleryClientContent({
     setSaving(true);
 
     if (!formData.category_id) {
-      setError('請選擇分類');
+      setError(t('pleaseSelectCategory'));
       setSaving(false);
       return;
     }
 
     if (!formData.image_url) {
-      setError('請上傳圖片');
+      setError(t('pleaseUploadImage'));
       setSaving(false);
       return;
     }
 
     const titleZh = formData.title_zh.trim();
     if (!titleZh) {
-      setError('請填寫作品標題');
+      setError(t('pleaseEnterTitle'));
       setSaving(false);
       return;
     }
@@ -202,7 +204,7 @@ function GalleryClientContent({
     setSaving(false);
 
     if (!result.success) {
-      setError(result.error || '儲存失敗');
+      setError(getErrorLabel(result.errorCode, routeLocale));
       return;
     }
 
@@ -213,7 +215,7 @@ function GalleryClientContent({
   const handleDelete = async (item: GalleryItemWithCategory) => {
     if (
       !confirm(
-        `確定要刪除「${item.title_zh || item.title_en}」嗎？此操作也會一併移除相關按讚與留言。`
+        t('confirmDelete', { title: item.title_zh || item.title_en })
       )
     )
       return;
@@ -221,7 +223,7 @@ function GalleryClientContent({
     const result = await deleteGalleryItemAction(item.id, routeLocale);
 
     if (!result.success) {
-      setError(result.error || '刪除失敗');
+      setError(getErrorLabel(result.errorCode, routeLocale));
       return;
     }
 
@@ -250,8 +252,8 @@ function GalleryClientContent({
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">畫廊作品</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">管理畫廊作品</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">{t('description')}</p>
         </div>
         <button
           onClick={() => {
@@ -264,7 +266,7 @@ function GalleryClientContent({
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          新增作品
+          {t('newItem')}
         </button>
       </div>
 
@@ -276,7 +278,7 @@ function GalleryClientContent({
             onChange={(e) => setFilterCategory(e.target.value)}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
-            <option value="">全部分類</option>
+            <option value="">{t('allCategories')}</option>
             {initialCategories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name_zh || cat.name_en}
@@ -290,9 +292,9 @@ function GalleryClientContent({
             onChange={(e) => setFilterVisible(e.target.value as 'all' | 'visible' | 'hidden')}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
-            <option value="all">全部顯示狀態</option>
-            <option value="visible">僅顯示</option>
-            <option value="hidden">僅隱藏</option>
+            <option value="all">{t('allVisibility')}</option>
+            <option value="visible">{t('visibleOnly')}</option>
+            <option value="hidden">{t('hiddenOnly')}</option>
           </select>
         </div>
         <div className="flex-1 min-w-[200px]">
@@ -300,7 +302,7 @@ function GalleryClientContent({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="依標題搜尋..."
+            placeholder={t('searchByTitle')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
         </div>
@@ -310,7 +312,7 @@ function GalleryClientContent({
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           <button onClick={() => setError(null)} className="text-xs text-red-500 hover:text-red-700 mt-1">
-            關閉
+            {t('dismiss')}
           </button>
         </div>
       )}
@@ -318,7 +320,7 @@ function GalleryClientContent({
       {showForm && (
         <div className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {editingId ? '編輯作品' : '新增作品'}
+            {editingId ? t('editItem') : t('addItem')}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -326,7 +328,7 @@ function GalleryClientContent({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  分類 *
+                  {t('category')} *
                 </label>
                 <select
                   required
@@ -334,7 +336,7 @@ function GalleryClientContent({
                   onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">請選擇分類</option>
+                  <option value="">{t('selectCategory')}</option>
                   {initialCategories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name_zh || cat.name_en}
@@ -344,7 +346,7 @@ function GalleryClientContent({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  OG 圖片格式
+                  {t('ogImageFormat')}
                 </label>
                 <select
                   value={formData.og_image_format}
@@ -353,8 +355,8 @@ function GalleryClientContent({
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="jpg">JPEG（預設）</option>
-                  <option value="png">PNG（透明背景）</option>
+                  <option value="jpg">{t('jpegDefault')}</option>
+                  <option value="png">{t('pngTransparency')}</option>
                 </select>
               </div>
               <div className="flex items-center pt-6">
@@ -365,7 +367,7 @@ function GalleryClientContent({
                     onChange={(e) => setFormData({ ...formData, is_visible: e.target.checked })}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">顯示</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('visible')}</span>
                 </label>
               </div>
             </div>
@@ -373,7 +375,7 @@ function GalleryClientContent({
             {/* Titles */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                標題 *
+                {t('titleZh')} *
               </label>
               <input
                 type="text"
@@ -381,14 +383,14 @@ function GalleryClientContent({
                 value={formData.title_zh}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="我的作品"
+                placeholder={t('titlePlaceholder')}
               />
             </div>
 
             {/* Slug */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Slug *
+                {t('slug')} *
               </label>
               <input
                 type="text"
@@ -396,76 +398,75 @@ function GalleryClientContent({
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
-                placeholder="my-artwork"
+                placeholder={t('slugPlaceholder')}
               />
             </div>
 
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                圖片 *
+                {t('image')} *
               </label>
               <ImageUploader
                 value={formData.image_url}
                 onChange={handleImageUpload}
                 onUploadComplete={handleImageUploadComplete}
-                locale="zh"
               />
             </div>
 
             {/* Image Alts */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                圖片替代文字（Alt）
+                {t('imageAltZh')}
               </label>
               <input
                 type="text"
                 value={formData.image_alt_zh}
                 onChange={(e) => setFormData({ ...formData, image_alt_zh: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="無障礙描述"
+                placeholder={t('imageAltPlaceholder')}
               />
             </div>
 
             {/* Descriptions */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                作品描述
+                {t('descriptionZh')}
               </label>
               <textarea
                 rows={3}
                 value={formData.description_zh}
                 onChange={(e) => setFormData({ ...formData, description_zh: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="描述作品..."
+                placeholder={t('descriptionPlaceholder')}
               />
             </div>
 
             {/* Materials */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                材質
+                {t('materialZh')}
               </label>
               <input
                 type="text"
                 value={formData.material_zh}
                 onChange={(e) => setFormData({ ...formData, material_zh: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="油畫布"
+                placeholder={t('materialPlaceholder')}
               />
             </div>
 
             {/* Tags */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                標籤 <span className="text-gray-400 text-xs">以逗號分隔</span>
+                {t('tagsZh')} <span className="text-gray-400 text-xs">{t('commaSeparated')}</span>
               </label>
               <input
                 type="text"
                 value={formData.tags_zh}
                 onChange={(e) => setFormData({ ...formData, tags_zh: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="抽象, 現代, 彩色"
+                placeholder={t('tagsPlaceholder')}
               />
             </div>
 
@@ -476,14 +477,14 @@ function GalleryClientContent({
                 onClick={resetForm}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 type="submit"
                 disabled={saving}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {saving ? '儲存中...' : editingId ? '更新' : '新增'}作品
+                {saving ? t('saving') : editingId ? `${t('update')}${t('item')}` : `${t('add')}${t('item')}`}
               </button>
             </div>
           </form>
@@ -497,12 +498,24 @@ function GalleryClientContent({
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">圖片</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">標題</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">分類</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">喜歡</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">顯示</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">操作</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {t('image')}
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {t('titleZh')}
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {t('category')}
+                  </th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {t('likes')}
+                  </th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {t('visible')}
+                  </th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {t('actions')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -548,7 +561,7 @@ function GalleryClientContent({
                         <button
                           onClick={() => router.push(`/${routeLocale}/admin/gallery/${item.id}`)}
                           className="p-2 text-gray-500 hover:text-indigo-600 transition-colors"
-                          title="Hotspots / 主視覺"
+                          title={t('hotspots')}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
@@ -563,7 +576,7 @@ function GalleryClientContent({
                         <button
                           onClick={() => handleEdit(item)}
                           className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
-                          title="編輯"
+                          title={t('edit')}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
@@ -577,7 +590,7 @@ function GalleryClientContent({
                         <button
                           onClick={() => handleDelete(item)}
                           className="p-2 text-gray-500 hover:text-red-600 transition-colors"
-                          title="刪除"
+                          title={t('delete')}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
@@ -610,8 +623,8 @@ function GalleryClientContent({
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">尚無作品</h3>
-            <p className="text-gray-500 dark:text-gray-400">建立第一個畫廊作品。</p>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">{t('noItemsYet')}</h3>
+            <p className="text-gray-500 dark:text-gray-400">{t('createFirst')}</p>
           </div>
         )}
       </div>

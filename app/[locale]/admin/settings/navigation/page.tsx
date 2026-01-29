@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Default hamburger nav structure (matches cached.ts DEFAULT_HAMBURGER_NAV)
+ * Empty fallback hamburger nav (no built-in content defaults; seed lives in DB).
  */
 const DEFAULT_NAV: HamburgerNavV2 = {
   version: 2,

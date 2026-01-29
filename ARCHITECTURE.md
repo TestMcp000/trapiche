@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-> Last Updated: 2026-01-28
+> Last Updated: 2026-01-29
 > Status: Enforced
 > Role: Single source of truth for architecture and global constraints.
 
@@ -85,6 +85,7 @@ doc/           # documentation
 - 路由與資料讀取集中在 server components。
 - API routes 一律使用資料夾結構 `app/api/<domain>/route.ts`。
 - admin 寫入必須透過 server actions。
+- Server actions 回傳必須使用 `lib/types/action-result.ts` 的 `ActionResult`（errorCode）；禁止回傳 free-form error 字串或內部錯誤細節到 client。
 - Theme 套用點：`app/[locale]/layout.tsx` 注入全域主題；`app/[locale]/page.tsx` 與 `app/[locale]/{blog,gallery}/layout.tsx` 透過 `components/theme/ThemeScope.tsx` 套用 scope 主題覆寫。
 
 ### 3.2 components/
@@ -374,6 +375,7 @@ interface ApiErrorResponse {
 
 - `lib/i18n/locales.ts` 是唯一 locale 來源，禁止硬編。
 - 主要路由以 `/[locale]/*` 為準；預設以 `lib/i18n/locales.ts` 的 `DEFAULT_LOCALE` 為準（目前 `zh`）。
+- Admin UI 顯示語言以 `zh` 為主：任何後台可見字串一律使用 next-intl (`messages/*.json`)，禁止在 component 內 hardcode（包含英文與測試用文案）。
 
 ## 9. UI 組成與導覽
 
@@ -381,7 +383,7 @@ interface ApiErrorResponse {
 - Home v2（`app/[locale]/page.tsx`）：允許使用 `components/home/*`（`MarqueeNotice` / `HeaderBarV2Client` / `HeroStageClient` 等）+ `components/Footer.tsx`。
 - Admin 頁面僅使用 `app/[locale]/admin/layout.tsx` (AdminSidebar)。
 - Legacy Header/Footer 標籤來源：`site_content(section_key='nav')` + `messages/*.json` fallback。
-- Home v2 hamburger nav IA 來源：`site_content(section_key='hamburger_nav')`（typed targets；resolver 單一真相來源：`lib/site/nav-resolver.ts`；invalid → fallback default）。
+- Home v2 hamburger nav IA 來源：`site_content(section_key='hamburger_nav')`（typed targets；resolver 單一真相來源：`lib/site/nav-resolver.ts`；invalid/empty → empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）。
 
 ## 10. 資料一致性與安全
 

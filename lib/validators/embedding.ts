@@ -83,9 +83,9 @@ export const embeddingPrioritySchema = z.enum(EMBEDDING_PRIORITIES);
  * Generate embedding request schema.
  */
 export const generateEmbeddingRequestSchema = z.object({
-  content: z.string().min(1, 'Content is required').max(100000, 'Content too long'),
+  content: z.string().min(1, '內容為必填').max(100000, '內容過長'),
   targetType: embeddingTargetTypeSchema,
-  targetId: z.string().uuid('Invalid target ID'),
+  targetId: z.string().uuid('targetId 無效'),
   chunkIndex: z.number().int().min(0).optional(),
   chunkTotal: z.number().int().min(1).optional(),
 });
@@ -95,7 +95,7 @@ export const generateEmbeddingRequestSchema = z.object({
  * @see SUPABASE_AI.md §3.1.1
  */
 export const semanticSearchParamsSchema = z.object({
-  query: z.string().min(1, 'Query is required').max(1000, 'Query too long'),
+  query: z.string().min(1, 'query 為必填').max(1000, 'query 過長'),
   targetTypes: z.array(embeddingTargetTypeSchema).optional(),
   limit: z.number().int().min(1).max(100).optional().default(SEMANTIC_SEARCH_DEFAULTS.limit),
   threshold: z.number().min(0).max(1).optional().default(SEMANTIC_SEARCH_DEFAULTS.threshold),
@@ -107,7 +107,7 @@ export const semanticSearchParamsSchema = z.object({
  */
 export const getSimilarItemsParamsSchema = z.object({
   sourceType: similarItemTargetTypeSchema,
-  sourceId: z.string().uuid('Invalid source ID'),
+  sourceId: z.string().uuid('sourceId 無效'),
   limit: z.number().int().min(1).max(10).optional().default(SIMILAR_ITEMS_DEFAULTS.limit),
 });
 
@@ -116,7 +116,7 @@ export const getSimilarItemsParamsSchema = z.object({
  */
 export const enqueueEmbeddingRequestSchema = z.object({
   targetType: embeddingTargetTypeSchema,
-  targetId: z.string().uuid('Invalid target ID'),
+  targetId: z.string().uuid('targetId 無效'),
   priority: embeddingPrioritySchema.optional().default('normal'),
 });
 
@@ -130,7 +130,7 @@ export const searchModeSchema = z.enum(SEARCH_MODES);
  * @see SUPABASE_AI.md Phase 7
  */
 export const keywordSearchParamsSchema = z.object({
-  query: z.string().min(1, 'Query is required').max(1000, 'Query too long'),
+  query: z.string().min(1, 'query 為必填').max(1000, 'query 過長'),
   targetTypes: z.array(embeddingTargetTypeSchema).optional(),
   limit: z.number().int().min(1).max(100).optional().default(SEMANTIC_SEARCH_DEFAULTS.limit),
 });
@@ -140,7 +140,7 @@ export const keywordSearchParamsSchema = z.object({
  * @see SUPABASE_AI.md Phase 7
  */
 export const hybridSearchParamsSchema = z.object({
-  query: z.string().min(1, 'Query is required').max(1000, 'Query too long'),
+  query: z.string().min(1, 'query 為必填').max(1000, 'query 過長'),
   targetTypes: z.array(embeddingTargetTypeSchema).optional(),
   limit: z.number().int().min(1).max(100).optional().default(HYBRID_SEARCH_DEFAULTS.limit),
   semanticWeight: z.number().min(0).max(1).optional().default(HYBRID_SEARCH_DEFAULTS.semanticWeight),
@@ -217,7 +217,7 @@ export const searchLogModeSchema = z.enum(SEARCH_MODES);
  * @see SUPABASE_AI.md Phase 8
  */
 export const createSearchLogRequestSchema = z.object({
-  query: z.string().min(1, 'Query is required'),
+  query: z.string().min(1, 'query 為必填'),
   mode: searchLogModeSchema,
   weights: z.object({
     semanticWeight: z.number().min(0).max(1).optional(),

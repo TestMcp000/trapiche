@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
     fetchCorpusItemsAction,
     createCorpusItemAction,
@@ -10,12 +10,15 @@ import {
     deleteCorpusItemAction,
 } from './actions';
 import type { SafetyCorpusItem, SafetyCorpusKind, SafetyCorpusStatus } from '@/lib/types/safety-risk-engine';
+import { getErrorLabel } from '@/lib/types/action-result';
 
 export default function SafetyCorpusClient() {
     const t = useTranslations('admin.safety.corpus');
+    const locale = useLocale();
 
     const [items, setItems] = useState<SafetyCorpusItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState<SafetyCorpusItem | null>(null);
     const [filters, setFilters] = useState<{ kind?: SafetyCorpusKind; status?: SafetyCorpusStatus; search?: string }>({});
@@ -27,15 +30,22 @@ export default function SafetyCorpusClient() {
 
     const fetchItems = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const result = await fetchCorpusItemsAction(filters);
-            setItems(result);
+            if (!result.success) {
+                setError(getErrorLabel(result.errorCode, locale));
+                setItems([]);
+                return;
+            }
+            setItems(result.data ?? []);
         } catch (error) {
             console.error('Failed to fetch corpus items:', error);
+            setError(getErrorLabel('internal_error', locale));
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters, locale]);
 
     useEffect(() => {
         fetchItems();
@@ -59,11 +69,20 @@ export default function SafetyCorpusClient() {
 
     const handleSave = async () => {
         if (!formLabel || !formContent) return;
+        setError(null);
 
         if (editItem) {
-            await updateCorpusItemAction(editItem.id, { label: formLabel, content: formContent });
+            const result = await updateCorpusItemAction(editItem.id, { label: formLabel, content: formContent });
+            if (!result.success) {
+                setError(getErrorLabel(result.errorCode, locale));
+                return;
+            }
         } else {
-            await createCorpusItemAction({ kind: formKind, label: formLabel, content: formContent });
+            const result = await createCorpusItemAction({ kind: formKind, label: formLabel, content: formContent });
+            if (!result.success) {
+                setError(getErrorLabel(result.errorCode, locale));
+                return;
+            }
         }
 
         setShowModal(false);
@@ -72,17 +91,21 @@ export default function SafetyCorpusClient() {
 
     const handleStatusChange = async (id: string, status: SafetyCorpusStatus) => {
         const result = await updateCorpusStatusAction(id, status);
-        if (result.success) {
-            fetchItems();
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, locale));
+            return;
         }
+        fetchItems();
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm(t('confirmDelete'))) return;
         const result = await deleteCorpusItemAction(id);
-        if (result.success) {
-            fetchItems();
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, locale));
+            return;
         }
+        fetchItems();
     };
 
     const getStatusBadgeColor = (status: SafetyCorpusStatus) => {
@@ -108,6 +131,12 @@ export default function SafetyCorpusClient() {
                     {t('addItem')}
                 </button>
             </div>
+
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+                    {error}
+                </div>
+            )}
 
             {/* Filters */}
             <div className="flex flex-wrap gap-4">
@@ -184,7 +213,7 @@ export default function SafetyCorpusClient() {
                                             onClick={() => openEditModal(item)}
                                             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 mr-3"
                                         >
-                                            編輯
+                                            {t('edit')}
                                         </button>
                                         {item.status === 'draft' && (
                                             <button
@@ -222,7 +251,7 @@ export default function SafetyCorpusClient() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            {editItem ? '編輯項目' : t('addItem')}
+                            {editItem ? t('editItem') : t('addItem')}
                         </h3>
 
                         <div className="space-y-4">

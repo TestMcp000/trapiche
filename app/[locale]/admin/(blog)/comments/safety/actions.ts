@@ -17,15 +17,12 @@ import type {
     SafetyHumanLabel,
     SafetyCorpusKind,
 } from '@/lib/types/safety-risk-engine';
-
-async function checkAdmin() {
-    const supabase = await createClient();
-    const guard = await requireSiteAdmin(supabase);
-    if (!guard.ok) {
-        throw new Error(guard.errorCode);
-    }
-    return { id: guard.userId };
-}
+import {
+    ADMIN_ERROR_CODES,
+    actionError,
+    actionSuccess,
+    type ActionResult,
+} from '@/lib/types/action-result';
 
 // =============================================================================
 // Queue Actions
@@ -36,9 +33,20 @@ async function checkAdmin() {
  */
 export async function fetchSafetyQueueAction(
     filters: SafetyQueueFilters = {}
-): Promise<{ items: SafetyQueueItem[]; total: number }> {
-    await checkAdmin();
-    return getSafetyQueueItems(filters);
+): Promise<ActionResult<{ items: SafetyQueueItem[]; total: number }>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const result = await getSafetyQueueItems(filters);
+        return actionSuccess(result);
+    } catch (error) {
+        console.error('[fetchSafetyQueueAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -46,9 +54,20 @@ export async function fetchSafetyQueueAction(
  */
 export async function fetchSafetyAssessmentAction(
     assessmentId: string
-): Promise<SafetyAssessmentDetail | null> {
-    await checkAdmin();
-    return getSafetyAssessmentDetail(assessmentId);
+): Promise<ActionResult<SafetyAssessmentDetail | null>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const result = await getSafetyAssessmentDetail(assessmentId);
+        return actionSuccess(result);
+    } catch (error) {
+        console.error('[fetchSafetyAssessmentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 // =============================================================================
@@ -61,10 +80,24 @@ export async function fetchSafetyAssessmentAction(
 export async function labelAssessmentAction(
     assessmentId: string,
     label: SafetyHumanLabel
-): Promise<{ success: boolean }> {
-    const user = await checkAdmin();
-    const success = await labelSafetyAssessment(assessmentId, label, user.id);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await labelSafetyAssessment(assessmentId, label, guard.userId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[labelAssessmentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -72,10 +105,24 @@ export async function labelAssessmentAction(
  */
 export async function approveCommentAction(
     commentId: string
-): Promise<{ success: boolean }> {
-    await checkAdmin();
-    const success = await approveSafetyComment(commentId);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await approveSafetyComment(commentId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[approveCommentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -83,10 +130,24 @@ export async function approveCommentAction(
  */
 export async function rejectCommentAction(
     commentId: string
-): Promise<{ success: boolean }> {
-    await checkAdmin();
-    const success = await rejectSafetyComment(commentId);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await rejectSafetyComment(commentId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[rejectCommentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -97,8 +158,22 @@ export async function promoteToCorpusAction(data: {
     label: string;
     kind: SafetyCorpusKind;
     activate?: boolean;
-}): Promise<{ success: boolean; itemId?: string }> {
-    const user = await checkAdmin();
-    const itemId = await promoteToCorpus(data, user.id);
-    return { success: !!itemId, itemId: itemId ?? undefined };
+}): Promise<ActionResult<{ itemId: string }>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const itemId = await promoteToCorpus(data, guard.userId);
+        if (!itemId) {
+            return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
+        }
+
+        return actionSuccess({ itemId });
+    } catch (error) {
+        console.error('[promoteToCorpusAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }

@@ -289,7 +289,7 @@ describe('hamburger-nav-validator target types', () => {
             const result = parseHamburgerNav(nav);
             assert.ok(result.errors.length > 0, 'Should reject unknown properties');
             assert.ok(
-                result.errors.some(e => e.message.includes('Unknown property')),
+                result.errors.some(e => e.message.includes('未知屬性')),
                 'Error should mention unknown property'
             );
         });

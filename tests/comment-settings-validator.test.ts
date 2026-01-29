@@ -180,7 +180,7 @@ test('validateMaxLinks rejects out of range values', () => {
 test('validateSettingValue rejects unknown keys', () => {
   const result = validateSettingValue('unknown_key', 'value');
   assert.equal(result.valid, false);
-  assert.ok(result.error?.includes('Unknown setting key'));
+  assert.ok(result.error?.includes('unknown_key'));
 });
 
 test('validateSettingValue routes to correct validator', () => {

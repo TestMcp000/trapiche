@@ -30,9 +30,10 @@ import {
 interface TemplatesClientProps {
   role: 'owner' | 'editor';
   initialTemplates: AnalysisCustomTemplateListItem[];
+  routeLocale: string;
 }
 
-export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps) {
+export function TemplatesClient({ role, initialTemplates, routeLocale }: TemplatesClientProps) {
   const t = useTranslations('admin.data.aiAnalysis.templates');
   const tCommon = useTranslations('admin.data.common');
 
@@ -59,7 +60,7 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
 
   // Format date
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString();
+    return new Date(dateStr).toLocaleDateString('zh-TW');
   };
 
   // Open create modal
@@ -86,7 +87,8 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
         setShowModal(true);
         setError(null);
       } else {
-        setError(result.error || 'Failed to load template');
+        console.error('[TemplatesClient] Failed to load template:', result);
+        setError(t('errors.loadFailed'));
       }
     });
   };
@@ -105,12 +107,12 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
     setError(null);
 
     if (!formName.trim()) {
-      setError('Name is required');
+      setError(t('errors.nameRequired'));
       return;
     }
 
     if (!formPromptText.trim()) {
-      setError('Prompt text is required');
+      setError(t('errors.promptRequired'));
       return;
     }
 
@@ -119,7 +121,7 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
         const result = await createTemplateAction({
           name: formName.trim(),
           promptText: formPromptText,
-        });
+        }, routeLocale);
 
         if (result.success && result.data) {
           setTemplates((prev) => [
@@ -131,10 +133,11 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
             },
             ...prev,
           ]);
-          setSuccessMessage('Template created successfully');
+          setSuccessMessage(t('toast.created'));
           closeModal();
         } else {
-          setError(result.error || 'Failed to create template');
+          console.error('[TemplatesClient] Failed to create template:', result);
+          setError(t('errors.createFailed'));
         }
       } else {
         if (!editingTemplate) return;
@@ -143,7 +146,7 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
           name: formName.trim(),
           promptText: formPromptText,
           isEnabled: formIsEnabled,
-        });
+        }, routeLocale);
 
         if (result.success && result.data) {
           setTemplates((prev) =>
@@ -157,10 +160,11 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
                 : t
             )
           );
-          setSuccessMessage('Template updated successfully');
+          setSuccessMessage(t('toast.updated'));
           closeModal();
         } else {
-          setError(result.error || 'Failed to update template');
+          console.error('[TemplatesClient] Failed to update template:', result);
+          setError(t('errors.updateFailed'));
         }
       }
     });
@@ -173,12 +177,13 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
     }
 
     startTransition(async () => {
-      const result = await deleteTemplateAction(templateId);
+      const result = await deleteTemplateAction(templateId, routeLocale);
       if (result.success) {
         setTemplates((prev) => prev.filter((t) => t.id !== templateId));
-        setSuccessMessage('Template deleted');
+        setSuccessMessage(t('toast.deleted'));
       } else {
-        setError(result.error || 'Failed to delete template');
+        console.error('[TemplatesClient] Failed to delete template:', result);
+        setError(t('errors.deleteFailed'));
       }
     });
   };
@@ -186,15 +191,17 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
   // Handle toggle enabled
   const handleToggleEnabled = (templateId: string, currentEnabled: boolean) => {
     startTransition(async () => {
-      const result = await toggleTemplateEnabledAction(templateId, !currentEnabled);
+      const result = await toggleTemplateEnabledAction(templateId, !currentEnabled, routeLocale);
       if (result.success) {
         setTemplates((prev) =>
           prev.map((t) =>
             t.id === templateId ? { ...t, isEnabled: !currentEnabled } : t
           )
         );
+        setSuccessMessage(!currentEnabled ? t('toast.enabled') : t('toast.disabled'));
       } else {
-        setError(result.error || 'Failed to toggle template');
+        console.error('[TemplatesClient] Failed to toggle template:', result);
+        setError(t('errors.toggleFailed'));
       }
     });
   };
@@ -208,7 +215,7 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
             href="../ai-analysis"
             className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block"
           >
-            ← Back to AI Analysis
+            ← {t('backToAiAnalysis')}
           </Link>
           <h1 className="text-2xl font-bold">{t('title')}</h1>
         </div>
@@ -260,7 +267,7 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
                   {t('createdAt')}
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                  Status
+                  {tCommon('status')}
                 </th>
                 {isOwner && (
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
@@ -296,7 +303,7 @@ export function TemplatesClient({ role, initialTemplates }: TemplatesClientProps
                         disabled={isPending}
                         className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
                       >
-                        {template.isEnabled ? 'Disable' : 'Enable'}
+                        {template.isEnabled ? t('disableAction') : t('enableAction')}
                       </button>
                       <button
                         onClick={() => openEditModal(template.id)}

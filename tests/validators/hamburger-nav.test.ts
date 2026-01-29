@@ -420,7 +420,7 @@ describe('validateHamburgerNav', () => {
             };
             const result = validateHamburgerNav(nav);
             assert.equal(result.valid, false);
-            assert.ok(result.errors.some(e => e.message.includes('Duplicate')));
+            assert.ok(result.errors.some(e => e.message.includes('重複')));
         });
 
         it('rejects page path without leading slash', () => {

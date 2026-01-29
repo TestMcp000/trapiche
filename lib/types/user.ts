@@ -123,16 +123,4 @@ export interface UpdateAppointmentInput {
 }
 
 // =============================================================================
-// Action Result Types
-// =============================================================================
-
-/** Server action 成功/失敗結果 */
-export interface UserActionResult {
-  success: boolean;
-  error?: string;
-}
-
-/** Server action 成功結果（附帶 ID） */
-export interface UserActionResultWithId extends UserActionResult {
-  id?: string;
-}
+// Note: Server actions use ActionResult<T> from lib/types/action-result.ts

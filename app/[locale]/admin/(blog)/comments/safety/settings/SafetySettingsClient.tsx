@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { fetchSafetySettingsAction, updateSafetySettingsAction } from './actions';
 import type { SafetyEngineSettings } from '@/lib/types/safety-risk-engine';
+import { getErrorLabel } from '@/lib/types/action-result';
 
 export default function SafetySettingsClient() {
     const t = useTranslations('admin.safety.settings');
+    const locale = useLocale();
 
     const [settings, setSettings] = useState<SafetyEngineSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Form state
     const [isEnabled, setIsEnabled] = useState(false);
@@ -26,28 +29,37 @@ export default function SafetySettingsClient() {
         async function fetchData() {
             try {
                 const result = await fetchSafetySettingsAction();
-                if (result) {
-                    setSettings(result);
-                    setIsEnabled(result.isEnabled);
-                    setModelId(result.modelId);
-                    setTimeoutMs(result.timeoutMs);
-                    setRiskThreshold(result.riskThreshold);
-                    setTrainingActiveBatch(result.trainingActiveBatch);
-                    setHeldMessage(result.heldMessage || '');
-                    setRejectedMessage(result.rejectedMessage || '');
+                if (!result.success) {
+                    setError(getErrorLabel(result.errorCode, locale));
+                    setSettings(null);
+                    return;
+                }
+
+                const data = result.data ?? null;
+                if (data) {
+                    setSettings(data);
+                    setIsEnabled(data.isEnabled);
+                    setModelId(data.modelId);
+                    setTimeoutMs(data.timeoutMs);
+                    setRiskThreshold(data.riskThreshold);
+                    setTrainingActiveBatch(data.trainingActiveBatch);
+                    setHeldMessage(data.heldMessage || '');
+                    setRejectedMessage(data.rejectedMessage || '');
                 }
             } catch (error) {
                 console.error('Failed to fetch settings:', error);
+                setError(getErrorLabel('internal_error', locale));
             } finally {
                 setLoading(false);
             }
         }
         fetchData();
-    }, []);
+    }, [locale]);
 
     const handleSave = async () => {
         setSaving(true);
         setSaved(false);
+        setError(null);
 
         try {
             const result = await updateSafetySettingsAction({
@@ -60,12 +72,16 @@ export default function SafetySettingsClient() {
                 rejectedMessage,
             });
 
-            if (result.success) {
-                setSaved(true);
-                setTimeout(() => setSaved(false), 3000);
+            if (!result.success) {
+                setError(getErrorLabel(result.errorCode, locale));
+                return;
             }
+
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
         } catch (error) {
             console.error('Failed to save settings:', error);
+            setError(getErrorLabel('internal_error', locale));
         } finally {
             setSaving(false);
         }
@@ -83,7 +99,7 @@ export default function SafetySettingsClient() {
         return (
             <div className="p-6">
                 <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-gray-500 dark:text-gray-400">Settings not found. Please run database migrations.</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t('notFound')}</p>
                 </div>
             </div>
         );
@@ -96,6 +112,12 @@ export default function SafetySettingsClient() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
             </div>
+
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+                    {error}
+                </div>
+            )}
 
             {/* Settings Form */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">

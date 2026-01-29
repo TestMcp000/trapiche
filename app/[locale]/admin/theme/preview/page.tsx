@@ -80,7 +80,7 @@ export default async function ThemePreviewPage({ params, searchParams }: PagePro
                 {pageName}
               </h1>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-border">
-                <span className="text-sm text-secondary">Theme:</span>
+                <span className="text-sm text-secondary">{t('theme.themeLabel')}：</span>
                 <code className="text-sm font-mono text-primary">{themeKey}</code>
               </div>
             </div>

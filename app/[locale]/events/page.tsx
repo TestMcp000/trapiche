@@ -9,6 +9,7 @@
 
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
+import Image from "next/image";
 import {
   getPublicEventsCached,
   getEventTypesWithCountsCached,
@@ -109,10 +110,12 @@ function EventCard({
         <a
           href={eventUrl}
           className="block aspect-video relative overflow-hidden">
-          <img
+          <Image
             src={event.cover_image_url}
             alt={event.cover_image_alt_zh || event.title_zh}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         </a>
       )}

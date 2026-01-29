@@ -11,11 +11,12 @@
  */
 
 import { useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type {
   EmbeddingStats,
   EmbeddingTargetType,
 } from "@/lib/types/embedding";
+import { getErrorLabel } from "@/lib/types/action-result";
 import {
   getEmbeddingStatsAction,
   initializeAllEmbeddingsAction,
@@ -38,15 +39,6 @@ interface EmbeddingsClientProps {
   };
 }
 
-/** Target type display labels */
-const TYPE_LABELS: Record<EmbeddingTargetType, string> = {
-  post: "Blog Posts",
-  gallery_item: "Gallery Items",
-  comment: "Comments",
-  safety_slang: "Safety Slang",
-  safety_case: "Safety Cases",
-};
-
 // =============================================================================
 // Component
 // =============================================================================
@@ -54,6 +46,8 @@ const TYPE_LABELS: Record<EmbeddingTargetType, string> = {
 export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
   // Translations via next-intl
   const te = useTranslations("admin.data.embeddings");
+  const tc = useTranslations("admin.data.common");
+  const routeLocale = useLocale();
 
   const [isPending, startTransition] = useTransition();
 
@@ -104,39 +98,30 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
       const result = await getEmbeddingStatsAction();
       if (result.success) {
         setStats(result.data);
-        showMessage("success", "Statistics refreshed.");
+        showMessage("success", te("statisticsRefreshed"));
       } else {
-        showMessage("error", result.error);
+        showMessage("error", getErrorLabel(result.errorCode, routeLocale));
       }
     });
   };
 
   // Initialize all embeddings
   const handleInitialize = () => {
-    if (
-      !confirm(
-        "This will scan all content and enqueue items without embeddings. Continue?"
-      )
-    ) {
-      return;
-    }
+    if (!confirm(te("initConfirm"))) return;
 
     startTransition(async () => {
       setInitResult(null);
       const result = await initializeAllEmbeddingsAction();
       if (result.success) {
         setInitResult(result.data);
-        showMessage(
-          "success",
-          "Embeddings initialization queued successfully."
-        );
+        showMessage("success", te("initQueued"));
         // Refresh stats
         const statsResult = await getEmbeddingStatsAction();
         if (statsResult.success) {
           setStats(statsResult.data);
         }
       } else {
-        showMessage("error", result.error);
+        showMessage("error", getErrorLabel(result.errorCode, routeLocale));
       }
     });
   };
@@ -146,14 +131,14 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
     startTransition(async () => {
       const result = await retryFailedEmbeddingsAction();
       if (result.success) {
-        showMessage("success", `Retried ${result.data.retried} failed items.`);
+        showMessage("success", te("retriedItems", { count: result.data.retried }));
         // Refresh stats
         const statsResult = await getEmbeddingStatsAction();
         if (statsResult.success) {
           setStats(statsResult.data);
         }
       } else {
-        showMessage("error", result.error);
+        showMessage("error", getErrorLabel(result.errorCode, routeLocale));
       }
     });
   };
@@ -164,9 +149,9 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
       const result = await getQualityMetricsAction();
       if (result.success) {
         setQualityMetrics(result.data);
-        showMessage("success", "Quality metrics loaded.");
+        showMessage("success", te("qualityMetricsLoaded"));
       } else {
-        showMessage("error", result.error);
+        showMessage("error", getErrorLabel(result.errorCode, routeLocale));
       }
     });
   };
@@ -179,7 +164,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
         setFailedSamples(result.data);
         setShowFailedSamples(true);
       } else {
-        showMessage("error", result.error);
+        showMessage("error", getErrorLabel(result.errorCode, routeLocale));
       }
     });
   };
@@ -192,18 +177,13 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <p className="text-yellow-800 font-medium">
-            Embeddings Not Available
+            {te("notAvailable")}
           </p>
           <p className="text-yellow-700 text-sm mt-2">
-            No embeddings have been generated yet. Use the &quot;Initialize
-            All&quot; button below to scan content and enqueue embedding
-            generation.
+            {te("notAvailableDesc")}
           </p>
           <p className="text-yellow-600 text-xs mt-2">
-            Ensure the{" "}
-            <code className="bg-yellow-100 px-1 rounded">OPENAI_API_KEY</code>{" "}
-            is set in Supabase secrets and the embedding Edge Function is
-            deployed.
+            {te("ensureApiKey", { key: "OPENAI_API_KEY" })}
           </p>
         </div>
 
@@ -213,7 +193,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
             onClick={handleInitialize}
             disabled={isPending}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-            {isPending ? "Processing..." : "Initialize All Embeddings"}
+            {isPending ? tc("processing") : te("initializeAll")}
           </button>
         </div>
 
@@ -249,44 +229,56 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
       )}
 
       {/* Stats Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <StatCard
-          title="Blog Posts"
+          title={te("typeLabels.post")}
           total={stats.posts.total}
           withEmbedding={stats.posts.withEmbedding}
           failed={stats.posts.failed}
         />
         <StatCard
-          title="Gallery Items"
+          title={te("typeLabels.gallery_item")}
           total={stats.galleryItems.total}
           withEmbedding={stats.galleryItems.withEmbedding}
           failed={stats.galleryItems.failed}
         />
         <StatCard
-          title="Comments"
+          title={te("typeLabels.comment")}
           total={stats.comments.total}
           withEmbedding={stats.comments.withEmbedding}
           failed={stats.comments.failed}
+        />
+        <StatCard
+          title={te("typeLabels.safety_slang")}
+          total={stats.safetySlang.total}
+          withEmbedding={stats.safetySlang.withEmbedding}
+          failed={stats.safetySlang.failed}
+        />
+        <StatCard
+          title={te("typeLabels.safety_case")}
+          total={stats.safetyCase.total}
+          withEmbedding={stats.safetyCase.withEmbedding}
+          failed={stats.safetyCase.failed}
         />
       </div>
 
       {/* Queue Status */}
       <div className="border rounded-lg mb-6">
         <div className="bg-gray-50 px-4 py-3 border-b">
-          <h2 className="font-semibold">Queue Status</h2>
+          <h2 className="font-semibold">{te("queueStatus")}</h2>
         </div>
         <div className="p-4">
           <div className="flex gap-6 mb-4">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-yellow-400" />
               <span className="text-sm text-gray-700">
-                Pending: <strong>{stats.queuePending}</strong>
+                {te("pendingStats")}: <strong>{stats.queuePending}</strong>
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-red-400" />
               <span className="text-sm text-gray-700">
-                Failed: <strong>{stats.queueFailed}</strong>
+                {te("failed")}: <strong>{stats.queueFailed}</strong>
               </span>
             </div>
           </div>
@@ -295,15 +287,15 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
           {queueItems.length > 0 && (
             <div className="mt-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Pending Items Preview (first {queueItems.length})
+                {te("pendingItemsPreview")} ({queueItems.length})
               </h3>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {queueItems.map((item, i) => (
                   <div
                     key={`${item.targetType}-${item.targetId}-${i}`}
                     className="text-xs text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
-                    {TYPE_LABELS[item.targetType]} | {item.targetId.slice(0, 8)}
-                    ... | attempts: {item.attempts}
+                    {te(`typeLabels.${item.targetType}`)} | {item.targetId.slice(0, 8)}... |{" "}
+                    {te("attempts")}: {item.attempts}
                   </div>
                 ))}
               </div>
@@ -315,12 +307,12 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
       {/* Quality Metrics (LLM-as-a-Judge) */}
       <div className="border rounded-lg mb-6">
         <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
-          <h2 className="font-semibold">Quality Metrics (LLM-as-a-Judge)</h2>
+          <h2 className="font-semibold">{te("qualityMetrics")}</h2>
           <button
             onClick={handleLoadQualityMetrics}
             disabled={isPending}
             className="text-sm px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50">
-            {isPending ? "Loading..." : "Load Metrics"}
+            {isPending ? tc("loading") : te("loadMetrics")}
           </button>
         </div>
         <div className="p-4">
@@ -329,7 +321,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="bg-green-50 p-3 rounded-lg">
                   <div className="text-xs text-green-600 font-medium">
-                    Pass Rate
+                    {te("passRate")}
                   </div>
                   <div className="text-xl font-bold text-green-700">
                     {(qualityMetrics.passRate * 100).toFixed(1)}%
@@ -337,17 +329,17 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
                 </div>
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <div className="text-xs text-blue-600 font-medium">
-                    Avg Score
+                    {te("avgScore")}
                   </div>
                   <div className="text-xl font-bold text-blue-700">
                     {qualityMetrics.averageScore !== null
                       ? qualityMetrics.averageScore.toFixed(2)
-                      : "N/A"}
+                      : "-"}
                   </div>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-xs text-gray-600 font-medium">
-                    With Score
+                    {te("withScore")}
                   </div>
                   <div className="text-xl font-bold text-gray-700">
                     {qualityMetrics.withQualityScore} /{" "}
@@ -355,7 +347,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
                   </div>
                 </div>
                 <div className="bg-red-50 p-3 rounded-lg">
-                  <div className="text-xs text-red-600 font-medium">Failed</div>
+                  <div className="text-xs text-red-600 font-medium">{te("failed")}</div>
                   <div className="text-xl font-bold text-red-700">
                     {qualityMetrics.failedCount}
                   </div>
@@ -365,13 +357,13 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
               {/* Quality Status Breakdown */}
               <div className="flex gap-4 text-sm">
                 <span className="text-green-600">
-                  ✓ Passed: {qualityMetrics.passedCount}
+                  ✓ {te("passed")}: {qualityMetrics.passedCount}
                 </span>
                 <span className="text-yellow-600">
-                  ⚠ Incomplete: {qualityMetrics.incompleteCount}
+                  ⚠ {te("incomplete")}: {qualityMetrics.incompleteCount}
                 </span>
                 <span className="text-red-600">
-                  ✕ Failed: {qualityMetrics.failedCount}
+                  ✕ {te("failed")}: {qualityMetrics.failedCount}
                 </span>
               </div>
 
@@ -382,7 +374,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
                     onClick={handleLoadFailedSamples}
                     disabled={isPending}
                     className="text-sm text-purple-600 hover:underline">
-                    {showFailedSamples ? "Reload" : "Inspect"} failed samples →
+                    {showFailedSamples ? tc("refresh") : te("inspectFailedSamples")} →
                   </button>
 
                   {showFailedSamples && failedSamples.length > 0 && (
@@ -390,13 +382,13 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
                       {failedSamples.map((sample, i) => (
                         <div key={i} className="bg-red-50 p-2 rounded text-xs">
                           <div className="font-mono text-gray-600">
-                            {TYPE_LABELS[sample.targetType]} |{" "}
-                            {sample.targetId.slice(0, 8)}... | chunk #
+                            {te(`typeLabels.${sample.targetType}`)} |{" "}
+                            {sample.targetId.slice(0, 8)}... | {te("chunk")} #
                             {sample.chunkIndex}
                           </div>
                           {sample.qualityScore !== null && (
                             <div className="text-red-600">
-                              Score: {sample.qualityScore.toFixed(2)}
+                              {te("score")}: {sample.qualityScore.toFixed(2)}
                             </div>
                           )}
                           {sample.chunkContent && (
@@ -407,7 +399,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
                           {typeof sample.preprocessingMetadata?.judge_reason ===
                             "string" && (
                             <div className="text-red-600 mt-1">
-                              Reason:{" "}
+                              {te("reason")}:{" "}
                               {sample.preprocessingMetadata.judge_reason}
                             </div>
                           )}
@@ -420,8 +412,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
             </>
           ) : (
             <p className="text-sm text-gray-500">
-              Click &quot;Load Metrics&quot; to view quality scoring results
-              from LLM-as-a-Judge.
+              {te("clickLoadMetrics")}
             </p>
           )}
         </div>
@@ -430,7 +421,7 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
       {/* Actions Panel */}
       <div className="border rounded-lg">
         <div className="bg-gray-50 px-4 py-3 border-b">
-          <h2 className="font-semibold">Actions</h2>
+          <h2 className="font-semibold">{te("actionsSection")}</h2>
         </div>
         <div className="p-4">
           <div className="flex flex-wrap gap-3">
@@ -438,14 +429,14 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
               onClick={handleRefresh}
               disabled={isPending}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors">
-              {isPending ? "Loading..." : "Refresh Stats"}
+              {isPending ? tc("loading") : te("refreshStats")}
             </button>
 
             <button
               onClick={handleInitialize}
               disabled={isPending}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-              {isPending ? "Processing..." : "Initialize All Embeddings"}
+              {isPending ? tc("processing") : te("initializeAll")}
             </button>
 
             <button
@@ -453,8 +444,8 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
               disabled={isPending || stats.queueFailed === 0}
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors">
               {isPending
-                ? "Processing..."
-                : `Retry Failed (${stats.queueFailed})`}
+                ? tc("processing")
+                : `${te("retryFailed")} (${stats.queueFailed})`}
             </button>
           </div>
 
@@ -462,29 +453,27 @@ export function EmbeddingsClient({ initialData }: EmbeddingsClientProps) {
           {initResult && (
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <h4 className="text-sm font-medium text-blue-800 mb-2">
-                Initialization Result
+                {te("initResult")}
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-blue-700">
                 <div>
-                  Posts: {initResult.posts.queued} queued,{" "}
-                  {initResult.posts.skipped} skipped
+                  {te("typeLabels.post")}: {initResult.posts.queued} {te("queued")},{" "}
+                  {initResult.posts.skipped} {te("skipped")}
                 </div>
                 <div>
-                  Gallery: {initResult.galleryItems.queued} queued,{" "}
-                  {initResult.galleryItems.skipped} skipped
+                  {te("typeLabels.gallery_item")}: {initResult.galleryItems.queued}{" "}
+                  {te("queued")}, {initResult.galleryItems.skipped} {te("skipped")}
                 </div>
                 <div>
-                  Comments: {initResult.comments.queued} queued,{" "}
-                  {initResult.comments.skipped} skipped
+                  {te("typeLabels.comment")}: {initResult.comments.queued} {te("queued")},{" "}
+                  {initResult.comments.skipped} {te("skipped")}
                 </div>
               </div>
             </div>
           )}
 
           <p className="mt-4 text-xs text-gray-500">
-            <strong>Note:</strong> Embedding generation requires the Edge
-            Function to be deployed and queued items are processed by the
-            embedding queue worker.
+            <strong>{te("note")}</strong> {te("embeddingNote")}
           </p>
         </div>
       </div>
@@ -507,6 +496,8 @@ function StatCard({
   withEmbedding: number;
   failed: number;
 }) {
+  const te = useTranslations("admin.data.embeddings");
+
   const coverage = total > 0 ? Math.round((withEmbedding / total) * 100) : 0;
   const missing = total - withEmbedding - failed;
 
@@ -518,7 +509,9 @@ function StatCard({
           {withEmbedding}{" "}
           <span className="text-sm font-normal text-gray-500">/ {total}</span>
         </div>
-        <div className="mt-1 text-sm text-gray-600">{coverage}% coverage</div>
+        <div className="mt-1 text-sm text-gray-600">
+          {coverage}% {te("coverage")}
+        </div>
 
         {/* Progress bar */}
         <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -538,8 +531,16 @@ function StatCard({
 
         {/* Details */}
         <div className="mt-2 flex gap-3 text-xs text-gray-500">
-          {failed > 0 && <span className="text-red-600">{failed} failed</span>}
-          {missing > 0 && <span>{missing} pending</span>}
+          {failed > 0 && (
+            <span className="text-red-600">
+              {failed} {te("failed")}
+            </span>
+          )}
+          {missing > 0 && (
+            <span>
+              {missing} {te("pendingStats")}
+            </span>
+          )}
         </div>
       </div>
     </div>

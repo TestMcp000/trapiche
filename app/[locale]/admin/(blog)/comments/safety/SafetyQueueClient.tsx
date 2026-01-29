@@ -1,18 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { fetchSafetyQueueAction, approveCommentAction, rejectCommentAction } from './actions';
 import type { SafetyQueueItem, SafetyQueueFilters, SafetyRiskLevel } from '@/lib/types/safety-risk-engine';
+import { getErrorLabel } from '@/lib/types/action-result';
 
 export default function SafetyQueueClient() {
     const t = useTranslations('admin.safety');
+    const routeLocale = useLocale();
     const router = useRouter();
 
     const [items, setItems] = useState<SafetyQueueItem[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [filters, setFilters] = useState<SafetyQueueFilters>({
         limit: 20,
         offset: 0,
@@ -21,19 +24,28 @@ export default function SafetyQueueClient() {
 
     const fetchQueue = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const result = await fetchSafetyQueueAction({
                 ...filters,
                 search: search || undefined,
             });
-            setItems(result.items);
-            setTotal(result.total);
+            if (!result.success) {
+                setItems([]);
+                setTotal(0);
+                setError(getErrorLabel(result.errorCode, routeLocale));
+                return;
+            }
+
+            setItems(result.data?.items ?? []);
+            setTotal(result.data?.total ?? 0);
         } catch (error) {
             console.error('Failed to fetch safety queue:', error);
+            setError(getErrorLabel('internal_error', routeLocale));
         } finally {
             setLoading(false);
         }
-    }, [filters, search]);
+    }, [filters, search, routeLocale]);
 
     useEffect(() => {
         fetchQueue();
@@ -41,22 +53,28 @@ export default function SafetyQueueClient() {
 
     const handleApprove = async (commentId: string) => {
         const result = await approveCommentAction(commentId);
-        if (result.success) {
-            fetchQueue();
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, routeLocale));
+            return;
         }
+
+        fetchQueue();
     };
 
     const handleReject = async (commentId: string) => {
-        if (!confirm('確定要拒絕此留言嗎？')) return;
+        if (!confirm(t('confirmReject'))) return;
         const result = await rejectCommentAction(commentId);
-        if (result.success) {
-            fetchQueue();
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, routeLocale));
+            return;
         }
+
+        fetchQueue();
     };
 
     const handleViewDetail = (commentId: string, assessmentId: string | null) => {
         if (assessmentId) {
-            router.push(`/admin/comments/safety/${commentId}`);
+            router.push(`/${routeLocale}/admin/comments/safety/${commentId}`);
         }
     };
 
@@ -79,10 +97,10 @@ export default function SafetyQueueClient() {
 
     const formatRiskLevel = (level: SafetyRiskLevel | null) => {
         switch (level) {
-            case 'High_Risk': return '高風險';
-            case 'Uncertain': return '不確定';
-            case 'Safe': return '安全';
-            default: return 'N/A';
+            case 'High_Risk': return t('riskLevels.High_Risk');
+            case 'Uncertain': return t('riskLevels.Uncertain');
+            case 'Safe': return t('riskLevels.Safe');
+            default: return t('riskLevels.unknown');
         }
     };
 
@@ -93,6 +111,12 @@ export default function SafetyQueueClient() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
             </div>
+
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+                    {error}
+                </div>
+            )}
 
             {/* Filters */}
             <div className="flex flex-wrap gap-4 items-center">
@@ -110,9 +134,9 @@ export default function SafetyQueueClient() {
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                     <option value="">{t('filters.riskLevel')}</option>
-                    <option value="High_Risk">高風險</option>
-                    <option value="Uncertain">不確定</option>
-                    <option value="Safe">安全</option>
+                    <option value="High_Risk">{t('riskLevels.High_Risk')}</option>
+                    <option value="Uncertain">{t('riskLevels.Uncertain')}</option>
+                    <option value="Safe">{t('riskLevels.Safe')}</option>
                 </select>
 
                 <select
@@ -121,12 +145,12 @@ export default function SafetyQueueClient() {
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
                     <option value="">{t('filters.targetType')}</option>
-                    <option value="post">文章</option>
-                    <option value="gallery_item">畫廊</option>
+                    <option value="post">{t('targetTypes.post')}</option>
+                    <option value="gallery_item">{t('targetTypes.gallery_item')}</option>
                 </select>
 
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {total} 則
+                    {t('totalCount', { count: total })}
                 </span>
             </div>
 
@@ -148,11 +172,11 @@ export default function SafetyQueueClient() {
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-900">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">內容</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">風險</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">作者</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">日期</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('table.content')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('table.risk')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('table.author')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('table.date')}</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -186,7 +210,7 @@ export default function SafetyQueueClient() {
                                         {item.authorName}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        {new Date(item.createdAt).toLocaleDateString()}
+                                        {new Date(item.createdAt).toLocaleDateString('zh-TW')}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button
@@ -217,17 +241,20 @@ export default function SafetyQueueClient() {
                         disabled={(filters.offset || 0) === 0}
                         className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                     >
-                        Previous
+                        {t('pagination.previous')}
                     </button>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Page {Math.floor((filters.offset || 0) / filters.limit!) + 1} of {Math.ceil(total / filters.limit!)}
+                        {t('pagination.pageOf', {
+                            page: Math.floor((filters.offset || 0) / filters.limit!) + 1,
+                            total: Math.ceil(total / filters.limit!),
+                        })}
                     </span>
                     <button
                         onClick={() => handleFilterChange('offset', (filters.offset || 0) + filters.limit!)}
                         disabled={(filters.offset || 0) + filters.limit! >= total}
                         className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                     >
-                        Next
+                        {t('pagination.next')}
                     </button>
                 </div>
             )}

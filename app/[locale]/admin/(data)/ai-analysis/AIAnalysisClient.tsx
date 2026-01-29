@@ -12,7 +12,7 @@
  */
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import MarkdownContent from "@/components/blog/MarkdownContent";
 import type {
   AnalysisReportListItem,
@@ -48,6 +48,7 @@ import {
   getShareStatusAction,
   type AnalysisReportDetail,
 } from "./actions";
+import { getErrorLabel } from "@/lib/types/action-result";
 
 // Print styles for report export (admin-only)
 import "./print.css";
@@ -72,6 +73,8 @@ interface AIAnalysisClientProps {
 export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
   // Translations via next-intl
   const ta = useTranslations("admin.data.aiAnalysis");
+  const tc = useTranslations("admin.data.common");
+  const routeLocale = useLocale();
 
   const [isPending, startTransition] = useTransition();
   const [reports, setReports] = useState(initialData.recentReports);
@@ -184,12 +187,12 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
           }
         }
       } else {
-        setError("Failed to load report details.");
+        setError(ta("errors.loadReportDetailsFailed"));
         setSelectedReportId(null);
       }
       setIsLoadingDetail(false);
     },
-    [initialData.role]
+    [initialData.role, ta]
   );
 
   // Close report detail panel
@@ -281,7 +284,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
     startTransition(async () => {
       // Validate custom template selection
       if (selectedTemplate === 'custom' && !selectedCustomTemplateId) {
-        setError('Please select a custom template.');
+        setError(ta('errors.selectCustomTemplateRequired'));
         return;
       }
 
@@ -304,13 +307,11 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
       const result = await startAnalysis(request);
 
       if (!result.success) {
-        setError("Failed to start analysis. Please check configuration.");
+        setError(ta("errors.startAnalysisFailed"));
         return;
       }
 
-      setSuccessMessage(
-        "Analysis started! It will appear in the list when complete."
-      );
+      setSuccessMessage(ta("analysisStarted"));
 
       // Refresh reports list
       const reportsResult = await listAnalysisReports(10, 0);
@@ -329,7 +330,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
   // Delete report
   const handleDeleteReport = (reportId: string) => {
     if (initialData.role !== "owner") {
-      setError("Only owners can delete reports.");
+      setError(ta("errors.ownerOnlyDeleteReports"));
       return;
     }
 
@@ -337,12 +338,12 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
       const result = await deleteAnalysisReport(reportId);
 
       if (!result.success) {
-        setError("Failed to delete report.");
+        setError(ta("errors.deleteReportFailed"));
         return;
       }
 
       setReports((prev) => prev.filter((r) => r.id !== reportId));
-      setSuccessMessage("Report deleted.");
+      setSuccessMessage(ta("reportDeleted"));
     });
   };
 
@@ -377,21 +378,19 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
       setIsProcessing(false);
 
       if (!result.success) {
-        setError("Failed to process. Please try again later.");
+        setError(getErrorLabel(result.errorCode, routeLocale));
         return;
       }
 
       if (!result.data?.processed) {
-        setError(result.data?.error ?? "No pending reports to process.");
+        setError(ta("errors.noPendingReports"));
         return;
       }
 
       if (result.data.status === "failed") {
-        setError(`Report failed: ${result.data.error ?? "Unknown error"}`);
+        setError(ta("errors.reportFailed"));
       } else {
-        setSuccessMessage(
-          `Report processed successfully (${result.data.status}).`
-        );
+        setSuccessMessage(ta("reportProcessed"));
       }
 
       await refreshReports();
@@ -457,7 +456,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
   // Create schedule
   const handleCreateSchedule = () => {
     if (!scheduleFormName.trim()) {
-      setError("Please enter a schedule name.");
+      setError(ta("errors.scheduleNameRequired"));
       return;
     }
 
@@ -474,11 +473,11 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
       const result = await createScheduleAction(request);
 
       if (!result.success) {
-        setError("Failed to create schedule.");
+        setError(ta("errors.createScheduleFailed"));
         return;
       }
 
-      setSuccessMessage("Schedule created successfully.");
+      setSuccessMessage(ta("scheduleCreated"));
       setShowScheduleModal(false);
       resetScheduleForm();
       await loadSchedules();
@@ -494,7 +493,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
       const result = await toggleScheduleAction(scheduleId, !currentEnabled);
 
       if (!result.success) {
-        setError("Failed to toggle schedule.");
+        setError(ta("errors.toggleScheduleFailed"));
         return;
       }
 
@@ -504,15 +503,13 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
           s.id === scheduleId ? { ...s, isEnabled: !currentEnabled } : s
         )
       );
-      setSuccessMessage(
-        `Schedule ${!currentEnabled ? "enabled" : "disabled"}.`
-      );
+      setSuccessMessage(!currentEnabled ? ta("scheduleEnabled") : ta("scheduleDisabled"));
     });
   };
 
   // Delete schedule
   const handleDeleteSchedule = (scheduleId: string) => {
-    if (!window.confirm("Are you sure you want to delete this schedule?")) {
+    if (!window.confirm(ta("errors.deleteScheduleConfirm"))) {
       return;
     }
 
@@ -520,12 +517,12 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
       const result = await deleteScheduleAction(scheduleId);
 
       if (!result.success) {
-        setError("Failed to delete schedule.");
+        setError(ta("errors.deleteScheduleFailed"));
         return;
       }
 
       setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
-      setSuccessMessage("Schedule deleted.");
+      setSuccessMessage(ta("scheduleDeleted"));
     });
   };
 
@@ -533,13 +530,13 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
   const formatCronDisplay = (cron: string) => {
     switch (cron) {
       case "@daily":
-        return "Daily (6:00 AM)";
+        return ta("daily");
       case "@weekly":
-        return "Weekly (Monday 6:00 AM)";
+        return ta("weekly");
       case "@monthly":
-        return "Monthly (1st, 6:00 AM)";
+        return ta("monthly");
       default:
-        return `Custom: ${cron}`;
+        return `${ta("customCron")}: ${cron}`;
     }
   };
 
@@ -551,17 +548,13 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <p className="text-yellow-800 font-medium">
-            OpenRouter API Not Configured
+            {ta("notConfigured")}
           </p>
           <p className="text-yellow-700 text-sm mt-2">
-            To use AI analysis, set the{" "}
-            <code className="bg-yellow-100 px-1 rounded">
-              OPENROUTER_API_KEY
-            </code>{" "}
-            environment variable in your deployment settings.
+            {ta("notConfiguredDesc")}
           </p>
           <p className="text-yellow-600 text-xs mt-2">
-            Get an API key at{" "}
+            {ta("getApiKey")}{" "}
             <a
               href="https://openrouter.ai/"
               target="_blank"
@@ -594,50 +587,46 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
       {/* Cron Status Warning */}
       {!initialData.cronStatus.cronConfigured && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-          <p className="text-amber-800 font-medium">Cron Not Configured</p>
+          <p className="text-amber-800 font-medium">{ta("cronNotConfigured")}</p>
           <p className="text-amber-700 text-sm mt-1">
-            Reports will not be processed automatically. Set{" "}
-            <code className="bg-amber-100 px-1 rounded">CRON_SECRET</code> in
-            your environment and configure Vercel Cron.
+            {ta("cronNotConfiguredDesc")}
           </p>
           {initialData.role === "owner" && hasActiveReports && (
             <button
               onClick={handleManualTrigger}
               disabled={isPending || isProcessing}
               className="mt-3 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {isProcessing ? "Processing..." : "Process Pending Report Now"}
+              {isProcessing ? tc("processing") : ta("processPendingNow")}
             </button>
           )}
         </div>
       )}
       {initialData.cronStatus.cronConfigured &&
         !initialData.cronStatus.cronActive && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-            <p className="text-orange-800 font-medium">
-              Cron May Not Be Running
-            </p>
-            <p className="text-orange-700 text-sm mt-1">
-              {initialData.cronStatus.pendingCount} pending report(s) have been
-              waiting for over 10 minutes. Verify your Vercel Cron
-              configuration.
-            </p>
-            {initialData.role === "owner" && (
-              <button
-                onClick={handleManualTrigger}
-                disabled={isPending || isProcessing}
-                className="mt-3 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                {isProcessing ? "Processing..." : "Process Pending Report Now"}
-              </button>
-            )}
-          </div>
-        )}
+           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+             <p className="text-orange-800 font-medium">
+              {ta("cronMayNotRunning")}
+             </p>
+             <p className="text-orange-700 text-sm mt-1">
+              {ta("cronMayNotRunningDesc", { count: initialData.cronStatus.pendingCount })}
+             </p>
+             {initialData.role === "owner" && (
+               <button
+                 onClick={handleManualTrigger}
+                 disabled={isPending || isProcessing}
+                 className="mt-3 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isProcessing ? tc("processing") : ta("processPendingNow")}
+               </button>
+             )}
+           </div>
+         )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Analysis Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Template Selection */}
           <section className="border rounded-lg p-4">
-            <h2 className="text-lg font-semibold mb-3">Analysis Template</h2>
+            <h2 className="text-lg font-semibold mb-3">{ta("run.analysisTemplate")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {ANALYSIS_TEMPLATES.map((template) => (
                 <button
@@ -648,9 +637,9 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                       ? "border-blue-500 bg-blue-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}>
-                  <p className="font-medium">{template.name.en}</p>
+                  <p className="font-medium">{template.name.zh}</p>
                   <p className="text-sm text-gray-600">
-                    {template.description.en}
+                    {template.description.zh}
                   </p>
                 </button>
               ))}
@@ -700,9 +689,9 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
 
           {/* Data Types */}
           <section className="border rounded-lg p-4">
-            <h2 className="text-lg font-semibold mb-3">Data Types</h2>
+            <h2 className="text-lg font-semibold mb-3">{ta("dataTypes.title")}</h2>
             <p className="text-sm text-gray-600 mb-3">
-              Required types are auto-selected based on template.
+              {ta("dataTypes.requiredHint")}
             </p>
             <div className="flex flex-wrap gap-2">
               {(["comments"] as const).map(
@@ -722,8 +711,8 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                             : "bg-blue-500 text-white hover:bg-blue-600"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}>
-                      {dataType}
-                      {isRequired && " (required)"}
+                      {ta(`dataTypes.${dataType}`)}
+                      {isRequired && ` (${ta("dataTypes.required")})`}
                     </button>
                   );
                 }
@@ -734,7 +723,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
           {/* Analysis Mode (Phase 6+) */}
           {initialData.ragEnabled && (
             <section className="border rounded-lg p-4">
-              <h2 className="text-lg font-semibold mb-3">Analysis Mode</h2>
+              <h2 className="text-lg font-semibold mb-3">{ta("analysisMode")}</h2>
               <div className="flex gap-3 mb-4">
                 <button
                   onClick={() => setSelectedMode("standard")}
@@ -743,9 +732,9 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                       ? "border-blue-500 bg-blue-50 text-blue-700"
                       : "border-gray-200 hover:border-gray-300"
                   }`}>
-                  <p className="font-medium">Standard</p>
+                  <p className="font-medium">{ta("standard")}</p>
                   <p className="text-xs text-gray-500">
-                    Send all filtered data to AI
+                    {ta("standardDesc")}
                   </p>
                 </button>
                 <button
@@ -755,9 +744,9 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                       ? "border-blue-500 bg-blue-50 text-blue-700"
                       : "border-gray-200 hover:border-gray-300"
                   }`}>
-                  <p className="font-medium">RAG (Smart)</p>
+                  <p className="font-medium">{ta("ragSmart")}</p>
                   <p className="text-xs text-gray-500">
-                    Retrieve relevant data only
+                    {ta("ragDesc")}
                   </p>
                 </button>
               </div>
@@ -765,7 +754,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
               {selectedMode === "rag" && (
                 <div className="bg-blue-50 rounded-lg p-3">
                   <label className="block text-sm font-medium text-blue-800 mb-2">
-                    Top-K Chunks: {ragTopK}
+                    {ta("topKChunks")}: {ragTopK}
                   </label>
                   <input
                     type="range"
@@ -780,8 +769,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                     <span>{RAG_DEFAULTS.MAX_TOP_K}</span>
                   </div>
                   <p className="text-xs text-blue-600 mt-2">
-                    💡 RAG mode uses semantic search to find the most relevant
-                    data, potentially reducing cost.
+                    {ta("ragTip")}
                   </p>
                 </div>
               )}
@@ -790,22 +778,21 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
 
           {/* Model Selection */}
           <section className="border rounded-lg p-4">
-            <h2 className="text-lg font-semibold mb-3">AI Model</h2>
+            <h2 className="text-lg font-semibold mb-3">{ta("aiModel")}</h2>
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 bg-white">
               {initialData.models.map((model) => (
                 <option key={model.modelId} value={model.modelId}>
-                  {model.modelName} (${model.inputPricePerMillion.toFixed(2)}/M
-                  input, ${model.outputPricePerMillion.toFixed(2)}/M output)
+                  {model.modelName}（${model.inputPricePerMillion.toFixed(2)}/M 輸入，$
+                  {model.outputPricePerMillion.toFixed(2)}/M 輸出）
                 </option>
               ))}
             </select>
             {currentModelPricing && (
               <p className="text-xs text-gray-500 mt-2">
-                Estimated cost varies by data size. Higher-tier models provide
-                more detailed analysis.
+                {ta("modelCostNote")}
               </p>
             )}
           </section>
@@ -813,11 +800,11 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
           {/* Date Range */}
           <section className="border rounded-lg p-4">
             <h2 className="text-lg font-semibold mb-3">
-              Date Range (Optional)
+              {ta("dateRange")}
             </h2>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm text-gray-600 mb-1">From</label>
+                <label className="block text-sm text-gray-600 mb-1">{ta("from")}</label>
                 <input
                   type="date"
                   value={dateFrom}
@@ -826,7 +813,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-sm text-gray-600 mb-1">To</label>
+                <label className="block text-sm text-gray-600 mb-1">{ta("to")}</label>
                 <input
                   type="date"
                   value={dateTo}
@@ -842,12 +829,10 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
             currentModelPricing.inputPricePerMillion > 1.0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-amber-800 text-sm font-medium">
-                  Cost Warning
+                  {ta("costWarning")}
                 </p>
                 <p className="text-amber-700 text-xs mt-1">
-                  {currentModelPricing.modelName} has higher pricing. Estimated
-                  cost depends on data size. Consider using a more economical
-                  model for routine analyses.
+                  {ta("costWarningDesc")}
                 </p>
               </div>
             )}
@@ -858,10 +843,8 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
             disabled={isPending}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
             {isPending
-              ? "Starting Analysis..."
-              : `Run Analysis with ${
-                  currentModelPricing?.modelName ?? "Selected Model"
-                }`}
+              ? ta("startingAnalysis")
+              : `${ta("runAnalysis")} ${currentModelPricing?.modelName ?? selectedModel}`}
           </button>
         </div>
 
@@ -869,21 +852,21 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
         <div className="space-y-6">
           {/* Usage Stats */}
           <section className="border rounded-lg p-4">
-            <h2 className="text-lg font-semibold mb-2">Monthly Usage</h2>
+            <h2 className="text-lg font-semibold mb-2">{ta("monthlyUsage")}</h2>
             {usage ? (
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Cost</span>
+                  <span className="text-gray-600">{ta("cost")}</span>
                   <span className="font-medium">
                     ${usage.totalCostUsd.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Analyses</span>
+                  <span className="text-gray-600">{ta("analyses")}</span>
                   <span className="font-medium">{usage.analysisCount}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Budget</span>
+                  <span className="text-gray-600">{ta("budget")}</span>
                   <span className="font-medium">
                     ${COST_THRESHOLDS.MONTHLY_BUDGET_LIMIT.toFixed(2)}
                   </span>
@@ -908,15 +891,15 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No usage this month</p>
+              <p className="text-gray-500 text-sm">{ta("noUsageThisMonth")}</p>
             )}
           </section>
 
           {/* Recent Reports */}
           <section className="border rounded-lg p-4">
-            <h2 className="text-lg font-semibold mb-3">Recent Reports</h2>
+            <h2 className="text-lg font-semibold mb-3">{ta("recentReports")}</h2>
             {reports.length === 0 ? (
-              <p className="text-gray-500 text-sm">No reports yet</p>
+              <p className="text-gray-500 text-sm">{ta("noReportsYet")}</p>
             ) : (
               <div className="space-y-2">
                 {reports.map((report) => (
@@ -958,7 +941,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                           }}
                           className="text-red-500 hover:text-red-700 text-xs ml-2 flex-shrink-0"
                           disabled={isPending}>
-                          Delete
+                          {ta("deleteReport")}
                         </button>
                       )}
                     </div>
@@ -972,12 +955,12 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
           {initialData.role === "owner" && (
             <section className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold">Scheduled Reports</h2>
+                <h2 className="text-lg font-semibold">{ta("scheduledReports")}</h2>
                 <button
                   onClick={openCreateScheduleModal}
                   disabled={isPending}
                   className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50">
-                  + New
+                  {ta("createSchedule")}
                 </button>
               </div>
               {isLoadingSchedules ? (
@@ -985,7 +968,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
                 </div>
               ) : schedules.length === 0 ? (
-                <p className="text-gray-500 text-sm">No scheduled reports</p>
+                <p className="text-gray-500 text-sm">{ta("noSchedules")}</p>
               ) : (
                 <div className="space-y-2">
                   {schedules.map((schedule) => (
@@ -1004,9 +987,9 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                           <p className="text-xs text-gray-500">
                             {formatCronDisplay(schedule.scheduleCron)}
                           </p>
-                          <p className="text-xs text-gray-400">
-                            Next: {formatDate(schedule.nextRunAt)}
-                          </p>
+                           <p className="text-xs text-gray-400">
+                            {ta("nextRun")}: {formatDate(schedule.nextRunAt)}
+                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
@@ -1022,9 +1005,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
-                            aria-label={
-                              schedule.isEnabled ? "Disable" : "Enable"
-                            }>
+                            aria-label={schedule.isEnabled ? ta("disableAction") : ta("enableAction")}>
                             <span
                               className={`absolute top-0.5 ${
                                 schedule.isEnabled ? "right-0.5" : "left-0.5"
@@ -1035,7 +1016,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                             onClick={() => handleDeleteSchedule(schedule.id)}
                             disabled={isPending}
                             className="text-red-500 hover:text-red-700 text-xs">
-                            Delete
+                            {tc("delete")}
                           </button>
                         </div>
                       </div>
@@ -1054,11 +1035,11 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col print-container">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Report Details</h2>
+              <h2 className="text-lg font-semibold">{ta("reportDetail")}</h2>
               <button
                 onClick={closeReportDetail}
                 className="text-gray-500 hover:text-gray-700 p-1"
-                aria-label="Close">
+                aria-label={ta("closeDetail")}>
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -1086,7 +1067,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        Status
+                        {ta("detail.status")}
                       </p>
                       <span
                         className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor(
@@ -1097,7 +1078,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        Template
+                        {ta("detail.template")}
                       </p>
                       <p className="text-sm font-medium mt-1">
                         {reportDetail.templateId}
@@ -1105,15 +1086,15 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        Model
+                        {ta("detail.model")}
                       </p>
                       <p className="text-sm font-medium mt-1">
-                        {reportDetail.model ?? "N/A"}
+                        {reportDetail.model ?? ta("notAvailable")}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        Created
+                        {ta("detail.created")}
                       </p>
                       <p className="text-sm font-medium mt-1">
                         {formatDate(reportDetail.createdAt)}
@@ -1126,27 +1107,27 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                     reportDetail.costUsd !== null) && (
                     <div className="bg-gray-50 rounded-lg p-3">
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Usage
+                        {ta("detail.usage")}
                       </p>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-600">Input Tokens:</span>{" "}
+                          <span className="text-gray-600">{ta("detail.inputTokens")}:</span>{" "}
                           <span className="font-medium">
                             {reportDetail.inputTokens?.toLocaleString() ??
-                              "N/A"}
+                              ta("notAvailable")}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Output Tokens:</span>{" "}
+                          <span className="text-gray-600">{ta("detail.outputTokens")}:</span>{" "}
                           <span className="font-medium">
                             {reportDetail.outputTokens?.toLocaleString() ??
-                              "N/A"}
+                              ta("notAvailable")}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Cost:</span>{" "}
+                          <span className="text-gray-600">{ta("detail.cost")}:</span>{" "}
                           <span className="font-medium text-green-600">
-                            ${reportDetail.costUsd?.toFixed(4) ?? "N/A"}
+                            ${reportDetail.costUsd?.toFixed(4) ?? ta("notAvailable")}
                           </span>
                         </div>
                       </div>
@@ -1156,14 +1137,14 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   {/* Data Types */}
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                      Data Types
+                      {ta("dataTypes.title")}
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {reportDetail.dataTypes.map((dt) => (
                         <span
                           key={dt}
                           className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
-                          {dt}
+                          {ta(`dataTypes.${dt}`)}
                         </span>
                       ))}
                     </div>
@@ -1173,7 +1154,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   {reportDetail.errorMessage && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                       <p className="text-xs text-red-600 uppercase tracking-wide mb-1">
-                        Error
+                        {ta("detail.error")}
                       </p>
                       <p className="text-sm text-red-800">
                         {reportDetail.errorMessage}
@@ -1188,12 +1169,11 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600 mx-auto mb-2" />
                       <p className="text-yellow-800 text-sm">
                         {reportDetail.status === "pending"
-                          ? "Waiting for analysis to start..."
-                          : "Analysis in progress..."}
+                          ? ta("detail.pending")
+                          : ta("detail.running")}
                       </p>
                       <p className="text-yellow-600 text-xs mt-1">
-                        This may take a few minutes. The page will update
-                        automatically.
+                        {ta("detail.autoRefreshHint")}
                       </p>
                     </div>
                   )}
@@ -1202,7 +1182,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   {reportDetail.resultHtml && (
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Analysis Result
+                        {ta("detail.analysisResult")}
                       </p>
                       <div className="border rounded-lg p-4 bg-white">
                         <MarkdownContent html={reportDetail.resultHtml} />
@@ -1214,9 +1194,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   {reportDetail.status === "incomplete" && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                       <p className="text-sm text-orange-800">
-                        This analysis completed but produced less content than
-                        expected. Consider adjusting filters or including more
-                        data types.
+                        {ta("detail.incompleteWarning")}
                       </p>
                     </div>
                   )}
@@ -1227,7 +1205,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                       reportDetail.status === "incomplete") && (
                       <div className="bg-gray-50 rounded-lg p-4 no-print">
                         <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                          Share Report
+                          {ta("share.title")}
                         </p>
                         {shareUrl ? (
                           <div className="space-y-2">
@@ -1245,7 +1223,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                                   setTimeout(() => setShareCopied(false), 2000);
                                 }}
                                 className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-                                {shareCopied ? "Copied!" : "Copy"}
+                                {shareCopied ? ta("share.copied") : ta("share.copy")}
                               </button>
                             </div>
                             <button
@@ -1257,17 +1235,17 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                                 );
                                 if (result.success) {
                                   setShareUrl(null);
-                                  setSuccessMessage("Share link revoked.");
+                                  setSuccessMessage(ta("share.revoked"));
                                 } else {
-                                  setError("Failed to revoke share link.");
+                                  setError(ta("errors.revokeShareFailed"));
                                 }
                                 setShareLoading(false);
                               }}
                               disabled={shareLoading}
                               className="text-xs text-red-600 hover:text-red-800 disabled:opacity-50">
                               {shareLoading
-                                ? "Revoking..."
-                                : "Revoke Share Link"}
+                                ? ta("share.revoking")
+                                : ta("share.revoke")}
                             </button>
                           </div>
                         ) : (
@@ -1280,27 +1258,26 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                               );
                               if (result.success && result.data) {
                                 setShareUrl(result.data.url);
-                                setSuccessMessage("Share link created.");
+                                setSuccessMessage(ta("share.created"));
                               } else {
-                                setError("Failed to create share link.");
+                                setError(ta("errors.createShareFailed"));
                               }
                               setShareLoading(false);
                             }}
                             disabled={shareLoading}
                             className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-50">
-                            {shareLoading ? "Creating..." : "Create Share Link"}
+                            {shareLoading ? ta("share.creating") : ta("share.create")}
                           </button>
                         )}
                         <p className="text-xs text-gray-500 mt-2">
-                          Anyone with this link can view the report without
-                          logging in.
+                          {ta("share.hint")}
                         </p>
                       </div>
                     )}
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-12">
-                  Failed to load report details.
+                  {ta("errors.loadReportDetailsFailed")}
                 </p>
               )}
             </div>
@@ -1326,13 +1303,13 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                         d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
                       />
                     </svg>
-                    Print / Save as PDF
+                    {ta("printReport")}
                   </button>
                 )}
               <button
                 onClick={closeReportDetail}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                Close
+                {ta("closeDetail")}
               </button>
             </div>
           </div>
@@ -1346,7 +1323,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">
-                {editingScheduleId ? "Edit Schedule" : "Create Schedule"}
+                {editingScheduleId ? ta("editSchedule") : ta("createSchedule")}
               </h2>
               <button
                 onClick={() => {
@@ -1354,7 +1331,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   resetScheduleForm();
                 }}
                 className="text-gray-500 hover:text-gray-700 p-1"
-                aria-label="Close">
+                aria-label={tc("close")}>
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -1375,13 +1352,13 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Schedule Name
+                  {ta("scheduleName")}
                 </label>
                 <input
                   type="text"
                   value={scheduleFormName}
                   onChange={(e) => setScheduleFormName(e.target.value)}
-                  placeholder="e.g., Weekly Comment Insights"
+                  placeholder={ta("scheduleNamePlaceholder")}
                   className="w-full border rounded-lg px-3 py-2"
                 />
               </div>
@@ -1389,7 +1366,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
               {/* Template */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Analysis Template
+                  {ta("run.analysisTemplate")}
                 </label>
                 <select
                   value={scheduleFormTemplate}
@@ -1401,7 +1378,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   className="w-full border rounded-lg px-3 py-2 bg-white">
                   {ANALYSIS_TEMPLATES.map((template) => (
                     <option key={template.id} value={template.id}>
-                      {template.name.en}
+                      {template.name.zh}
                     </option>
                   ))}
                 </select>
@@ -1410,7 +1387,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
               {/* Frequency */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Frequency
+                  {ta("frequency")}
                 </label>
                 <div className="flex gap-2">
                   {(["daily", "weekly", "monthly", "custom"] as const).map(
@@ -1423,7 +1400,13 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                             ? "border-blue-500 bg-blue-50 text-blue-700"
                             : "border-gray-200 hover:border-gray-300"
                         }`}>
-                        {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                        {freq === "daily"
+                          ? ta("daily")
+                          : freq === "weekly"
+                          ? ta("weekly")
+                          : freq === "monthly"
+                          ? ta("monthly")
+                          : ta("customCron")}
                       </button>
                     )
                   )}
@@ -1433,7 +1416,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                     type="text"
                     value={scheduleFormCron}
                     onChange={(e) => setScheduleFormCron(e.target.value)}
-                    placeholder="e.g., 0 6 * * 1 (cron syntax)"
+                    placeholder={ta("cronExpressionPlaceholder")}
                     className="w-full border rounded-lg px-3 py-2 mt-2 text-sm"
                   />
                 )}
@@ -1442,7 +1425,7 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
               {/* Model */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  AI Model
+                  {ta("aiModel")}
                 </label>
                 <select
                   value={scheduleFormModel}
@@ -1460,26 +1443,26 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
               {initialData.ragEnabled && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Analysis Mode
+                    {ta("analysisMode")}
                   </label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setScheduleFormMode("standard")}
                       className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${
-                        scheduleFormMode === "standard"
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-gray-200 hover:border-gray-300"
+                          scheduleFormMode === "standard"
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-gray-200 hover:border-gray-300"
                       }`}>
-                      Standard
+                      {ta("standard")}
                     </button>
                     <button
                       onClick={() => setScheduleFormMode("rag")}
                       className={`flex-1 py-2 px-3 rounded-lg border text-sm transition-colors ${
-                        scheduleFormMode === "rag"
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-gray-200 hover:border-gray-300"
+                          scheduleFormMode === "rag"
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-gray-200 hover:border-gray-300"
                       }`}>
-                      RAG (Smart)
+                      {ta("ragSmart")}
                     </button>
                   </div>
                 </div>
@@ -1494,13 +1477,13 @@ export function AIAnalysisClient({ initialData }: AIAnalysisClientProps) {
                   resetScheduleForm();
                 }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                Cancel
+                {tc("cancel")}
               </button>
               <button
                 onClick={handleCreateSchedule}
                 disabled={isPending || !scheduleFormName.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                {isPending ? "Creating..." : "Create Schedule"}
+                {isPending ? tc("processing") : ta("createSchedule")}
               </button>
             </div>
           </div>

@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { CompanySetting } from '@/lib/types/content';
+import { getErrorLabel } from '@/lib/types/action-result';
 import { saveSettingAction, purgeAllCache } from './actions';
 
 interface SettingsClientProps {
@@ -12,6 +14,8 @@ interface SettingsClientProps {
 
 export default function SettingsClient({ initialSettings, locale }: SettingsClientProps) {
   const router = useRouter();
+  const t = useTranslations('admin.settings');
+  const tCategories = useTranslations('admin.settings.categories');
   const [saving, setSaving] = useState<string | null>(null);
   const [purging, setPurging] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -27,10 +31,10 @@ export default function SettingsClient({ initialSettings, locale }: SettingsClie
     setSaving(null);
     
     if (result.success) {
-      setMessage({ type: 'success', text: '已儲存' });
+      setMessage({ type: 'success', text: t('saved') });
       router.refresh();
     } else {
-      setMessage({ type: 'error', text: '儲存失敗' });
+      setMessage({ type: 'error', text: getErrorLabel(result.errorCode, locale) });
     }
   };
 
@@ -42,34 +46,24 @@ export default function SettingsClient({ initialSettings, locale }: SettingsClie
     
     setPurging(false);
     
-    if (result.success) {
+    if (result.success && result.data) {
       setMessage({
         type: 'success',
-        text: `快取已清除 (版本: ${result.newVersion})`
+        text: t('purged', { version: result.data.newVersion })
       });
       router.refresh();
     } else {
       setMessage({
         type: 'error',
-        text: '清除快取失敗'
+        text: result.success ? t('purgeFailed') : getErrorLabel(result.errorCode, locale),
       });
     }
   };
 
-  const t = {
-    title: '公司設定',
-    description: '管理公司基本資訊和聯絡方式',
-    noSettings: '尚無設定',
-    save: '儲存',
-    system: '系統',
-    purgeCache: '清除所有快取',
-    purgeCacheDesc: '清除所有已快取的內容，強制重新載入所有資料。',
-  };
-
   const categoryLabels: Record<string, string> = {
-    general: '一般設定',
-    contact: '聯絡資訊',
-    social: '社群連結',
+    general: tCategories('general'),
+    contact: tCategories('contact'),
+    social: tCategories('social'),
   };
 
   // Group settings by category
@@ -86,8 +80,8 @@ export default function SettingsClient({ initialSettings, locale }: SettingsClie
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t.title}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">{t.description}</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">{t('description')}</p>
       </div>
 
       {/* Message */}
@@ -104,7 +98,7 @@ export default function SettingsClient({ initialSettings, locale }: SettingsClie
       {/* Settings Groups */}
       {Object.keys(groupedSettings).length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-400">{t.noSettings}</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('noSettings')}</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -125,7 +119,6 @@ export default function SettingsClient({ initialSettings, locale }: SettingsClie
                       setting={setting}
                       saving={saving === setting.key}
                       onSave={(value) => handleSave(setting, value)}
-                      t={t}
                     />
                   ))}
                 </div>
@@ -139,17 +132,17 @@ export default function SettingsClient({ initialSettings, locale }: SettingsClie
       <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t.system}
+            {t('system')}
           </h2>
         </div>
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                {t.purgeCache}
+                {t('purgeCache')}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {t.purgeCacheDesc}
+                {t('purgeCacheDesc')}
               </p>
             </div>
             <button
@@ -158,8 +151,8 @@ export default function SettingsClient({ initialSettings, locale }: SettingsClie
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {purging 
-                ? '清除中...'
-                : t.purgeCache}
+                ? t('purging')
+                : t('purgeCache')}
             </button>
           </div>
         </div>
@@ -172,13 +165,12 @@ function SettingRow({
   setting,
   saving,
   onSave,
-  t,
 }: {
   setting: CompanySetting;
   saving: boolean;
   onSave: (value: string) => void;
-  t: Record<string, string>;
 }) {
+  const t = useTranslations('admin.settings');
   const [value, setValue] = useState(setting.value);
   const [editing, setEditing] = useState(false);
 
@@ -247,7 +239,7 @@ function SettingRow({
                 disabled={saving}
                 className="px-3 py-1.5 text-sm text-white bg-primary rounded-lg hover:bg-primary-hover disabled:opacity-50"
               >
-                {saving ? '...' : t.save}
+                {saving ? '...' : t('save')}
               </button>
               <button
                 onClick={handleCancel}
@@ -273,7 +265,7 @@ function SettingRow({
                 onClick={() => setEditing(true)}
                 className="px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-lg"
               >
-                編輯
+                {t('edit')}
               </button>
             </>
           )}

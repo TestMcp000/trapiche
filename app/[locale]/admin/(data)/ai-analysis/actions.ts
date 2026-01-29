@@ -356,7 +356,6 @@ export async function triggerManualProcessing(): Promise<
     processed: boolean;
     reportId?: string;
     status?: 'completed' | 'incomplete' | 'failed';
-    error?: string;
   }>
 > {
   const supabase = await createClient();
@@ -383,7 +382,7 @@ export async function triggerManualProcessing(): Promise<
   // Get one pending report
   const pending = await getPendingReports(1);
   if (pending.length === 0) {
-    return actionSuccess({ processed: false, error: 'No pending reports' });
+    return actionSuccess({ processed: false });
   }
 
   const report = pending[0];
@@ -398,14 +397,13 @@ export async function triggerManualProcessing(): Promise<
 
     if (data.length === 0) {
       await updateReportStatus(report.id, 'failed', {
-        errorMessage: 'No data available for the specified filters',
+        errorMessage: '指定的篩選條件下沒有可用資料',
       });
       revalidateTag('ai-analysis', { expire: 0 });
       return actionSuccess({
         processed: true,
         reportId: report.id,
         status: 'failed',
-        error: 'No data available',
       });
     }
 
@@ -422,8 +420,9 @@ export async function triggerManualProcessing(): Promise<
     );
 
     if (!analysisResult.success || !analysisResult.result) {
+      console.error('[triggerManualProcessing] Analysis execution failed:', analysisResult.error);
       await updateReportStatus(report.id, 'failed', {
-        errorMessage: analysisResult.error ?? 'Analysis execution failed',
+        errorMessage: '分析執行失敗（詳細原因請查看伺服器日誌）',
         model: analysisResult.model,
       });
       revalidateTag('ai-analysis', { expire: 0 });
@@ -431,7 +430,6 @@ export async function triggerManualProcessing(): Promise<
         processed: true,
         reportId: report.id,
         status: 'failed',
-        error: analysisResult.error,
       });
     }
 
@@ -468,14 +466,15 @@ export async function triggerManualProcessing(): Promise<
       status: finalStatus,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    await updateReportStatus(report.id, 'failed', { errorMessage });
+    console.error('[triggerManualProcessing] Unexpected error:', error);
+    await updateReportStatus(report.id, 'failed', {
+      errorMessage: '處理失敗（詳細原因請查看伺服器日誌）',
+    });
     revalidateTag('ai-analysis', { expire: 0 });
     return actionSuccess({
       processed: true,
       reportId: report.id,
       status: 'failed',
-      error: errorMessage,
     });
   }
 }

@@ -8,6 +8,8 @@
  */
 
 import { revalidateTag, revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
   getGalleryCategoriesWithCounts,
   createGalleryCategoryAdmin,
@@ -17,6 +19,12 @@ import {
   type CategoryWithCount,
   type GalleryCategoryDbPayload,
 } from '@/lib/modules/gallery/admin-io';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 
 // Re-export type for client component
 export type { CategoryWithCount };
@@ -66,15 +74,21 @@ function toDbPayload(payload: CategoryPayload): GalleryCategoryDbPayload {
 export async function createGalleryCategory(
   payload: CategoryPayload,
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   const result = await createGalleryCategoryAdmin(toDbPayload(payload));
 
   if ('error' in result) {
-    return { success: false, error: result.error };
+    return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
   }
 
   revalidateGalleryCache(locale);
-  return { success: true };
+  return actionSuccess();
 }
 
 /**
@@ -84,15 +98,25 @@ export async function updateGalleryCategory(
   id: string,
   payload: CategoryPayload,
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  if (!id) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
   const result = await updateGalleryCategoryAdmin(id, toDbPayload(payload));
 
   if ('error' in result) {
-    return { success: false, error: result.error };
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
   }
 
   revalidateGalleryCache(locale);
-  return { success: true };
+  return actionSuccess();
 }
 
 /**
@@ -102,22 +126,29 @@ export async function updateGalleryCategory(
 export async function deleteGalleryCategory(
   id: string,
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  if (!id) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
   // Check for items in this category
   const hasItems = await hasItemsInCategoryAdmin(id);
   if (hasItems) {
-    return {
-      success: false,
-      error: '此分類仍包含作品，請先移動或刪除作品後再刪除分類。',
-    };
+    return actionError(ADMIN_ERROR_CODES.CATEGORY_HAS_ITEMS);
   }
 
   const result = await deleteGalleryCategoryAdmin(id);
 
   if ('error' in result) {
-    return { success: false, error: result.error };
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
   }
 
   revalidateGalleryCache(locale);
-  return { success: true };
+  return actionSuccess();
 }

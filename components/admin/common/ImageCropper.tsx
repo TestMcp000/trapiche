@@ -3,6 +3,7 @@
 import { useRef, useCallback, useState } from 'react';
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { useTranslations } from 'next-intl';
 import RawImg from './RawImg';
 
 // =============================================================================
@@ -11,7 +12,6 @@ import RawImg from './RawImg';
 
 export interface ImageCropperProps {
   imageToCrop: string;
-  locale: string;
   label?: string;
   className?: string;
   onApply: (blob: Blob) => Promise<void>;
@@ -78,36 +78,18 @@ async function getCroppedImg(
 
 export default function ImageCropper({
   imageToCrop,
-  locale,
   label,
   className = '',
   onApply,
   onCancel,
 }: ImageCropperProps) {
+  const t = useTranslations('admin.media.cropper');
+
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const labels = {
-    en: {
-      uploading: 'Uploading...',
-      apply: 'Apply & Upload',
-      cancel: 'Cancel',
-      hint: 'Drag edges or corners to crop freely',
-      errorUpload: 'Upload failed. Please try again.',
-    },
-    zh: {
-      uploading: '上傳中...',
-      apply: '套用並上傳',
-      cancel: '取消',
-      hint: '拖動邊緣或角落自由裁切',
-      errorUpload: '上傳失敗，請重試。',
-    },
-  };
-
-  const t = labels[locale as keyof typeof labels] || labels.en;
 
   // Initialize crop when image loads
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -142,7 +124,7 @@ export default function ImageCropper({
       await onApply(croppedBlob);
     } catch (err) {
       console.error('Crop error:', err);
-      setError(t.errorUpload);
+      setError(t('errorUpload'));
     } finally {
       setUploading(false);
     }
@@ -176,7 +158,7 @@ export default function ImageCropper({
       
       {/* Hint */}
       <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-        💡 {t.hint}
+        💡 {t('hint')}
       </p>
 
       {/* Actions */}
@@ -186,7 +168,7 @@ export default function ImageCropper({
           onClick={onCancel}
           className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          {t.cancel}
+          {t('cancel')}
         </button>
         <button
           type="button"
@@ -194,7 +176,7 @@ export default function ImageCropper({
           disabled={uploading || !completedCrop}
           className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          {uploading ? t.uploading : t.apply}
+          {uploading ? t('uploading') : t('apply')}
         </button>
       </div>
 

@@ -120,19 +120,19 @@ test('validatePageViewRequest: invalid body type', () => {
 test('validatePageViewRequest: invalid path', () => {
   const result = validatePageViewRequest({ path: '', locale: 'zh' });
   assert.ok(!result.valid);
-  assert.ok(result.error?.includes('path'));
+  assert.ok(result.error?.includes('路徑無效'));
 });
 
 test('validatePageViewRequest: invalid locale', () => {
   const result = validatePageViewRequest({ path: '/blog', locale: 'fr' });
   assert.ok(!result.valid);
-  assert.ok(result.error?.includes('locale'));
+  assert.ok(result.error?.includes('語系無效'));
 });
 
 test('validatePageViewRequest: excluded path', () => {
   const result = validatePageViewRequest({ path: '/admin/dashboard', locale: 'zh' });
   assert.ok(!result.valid);
-  assert.ok(result.error?.includes('excluded'));
+  assert.ok(result.error?.includes('不納入追蹤'));
 });
 
 // =============================================================================

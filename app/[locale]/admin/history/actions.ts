@@ -3,11 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { restoreFromHistory } from '@/lib/modules/content/io';
 import { createClient } from '@/lib/infrastructure/supabase/server';
-
-export type RestoreResult = {
-  success: boolean;
-  error?: string;
-};
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 
 /**
  * Server action to restore content from a history record.
@@ -15,19 +17,22 @@ export type RestoreResult = {
 export async function restoreHistoryAction(
   historyId: string,
   locale: string
-): Promise<RestoreResult> {
+): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return { success: false, error: 'Not authenticated' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
-    
-    const result = await restoreFromHistory(historyId, user.id);
-    
+
+    if (!historyId) {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
+    const result = await restoreFromHistory(historyId, guard.userId);
+
     if (!result) {
-      return { success: false, error: 'Restore failed' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
     
     // Revalidate relevant paths
@@ -36,9 +41,9 @@ export async function restoreHistoryAction(
     revalidatePath(`/${locale}/admin/portfolio`);
     revalidatePath(`/${locale}/admin/settings`);
     
-    return { success: true };
+    return actionSuccess();
   } catch (err) {
     console.error('Restore action error:', err);
-    return { success: false, error: 'An unexpected error occurred' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }

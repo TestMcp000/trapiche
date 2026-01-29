@@ -80,7 +80,7 @@ export function validateTemplateId(
 ): ValidationResult<AnalysisTemplateId> {
   if (!isValidTemplateId(input)) {
     return invalidResult(
-      `Invalid template ID. Must be one of: ${VALID_TEMPLATE_IDS.join(', ')}`
+      `templateId 無效：必須是以下其中之一：${VALID_TEMPLATE_IDS.join(', ')}`
     );
   }
   return validResult(input);
@@ -101,14 +101,14 @@ export function validateCustomTemplateId(
       !UUID_V4_REGEX.test(customTemplateId)
     ) {
       return invalidResult(
-        'customTemplateId is required and must be a valid UUID when templateId is "custom"'
+        '當 templateId 為 "custom" 時，customTemplateId 為必填且必須是有效的 UUID'
       );
     }
     return validResult(customTemplateId);
   } else {
     if (customTemplateId !== undefined && customTemplateId !== null) {
       return invalidResult(
-        'customTemplateId must be undefined when templateId is not "custom"'
+        '當 templateId 不是 "custom" 時，customTemplateId 必須為 undefined'
       );
     }
     return validResult(undefined);
@@ -136,17 +136,17 @@ export function validateDataTypes(
   input: unknown
 ): ValidationResult<AnalysisDataType[]> {
   if (!Array.isArray(input)) {
-    return invalidResult('Data types must be an array');
+    return invalidResult('dataTypes 必須是陣列');
   }
 
   if (input.length === 0) {
-    return invalidResult('At least one data type is required');
+    return invalidResult('至少需要選擇一種 dataType');
   }
 
   const invalidTypes = input.filter((t) => !isValidDataType(t));
   if (invalidTypes.length > 0) {
     return invalidResult(
-      `Invalid data types: ${invalidTypes.join(', ')}. Valid types: ${VALID_DATA_TYPES.join(', ')}`
+      `dataTypes 無效：${invalidTypes.join(', ')}。允許值：${VALID_DATA_TYPES.join(', ')}`
     );
   }
 
@@ -175,7 +175,7 @@ export function validateRequiredDataTypes(
 
   if (missing.length > 0) {
     return invalidResult(
-      `Missing required data types for ${templateId}: ${missing.join(', ')}`
+      `缺少 ${templateId} 需要的 dataTypes：${missing.join(', ')}`
     );
   }
 
@@ -211,7 +211,7 @@ export function isValidMode(value: unknown): value is AnalysisMode {
  */
 export function validateMode(input: unknown): ValidationResult<AnalysisMode> {
   if (!isValidMode(input)) {
-    return invalidResult(`Invalid mode. Must be one of: ${VALID_MODES.join(', ')}`);
+    return invalidResult(`mode 無效：必須是以下其中之一：${VALID_MODES.join(', ')}`);
   }
   return validResult(input);
 }
@@ -237,7 +237,7 @@ export function isValidModelId(value: unknown): value is string {
 export function validateModelId(input: unknown): ValidationResult<string> {
   if (!isValidModelId(input)) {
     return invalidResult(
-      `Invalid model ID. Must be one of: ${ALLOWED_MODEL_IDS.join(', ')}`
+      `modelId 無效：必須是以下其中之一：${ALLOWED_MODEL_IDS.join(', ')}`
     );
   }
   return validResult(input);
@@ -272,7 +272,7 @@ export function validateRagConfig(
   }
 
   if (typeof input !== 'object') {
-    return invalidResult('RAG config must be an object');
+    return invalidResult('ragConfig 必須是物件');
   }
 
   const config = input as Record<string, unknown>;
@@ -280,22 +280,22 @@ export function validateRagConfig(
   // Validate topK
   const topK = config.topK;
   if (typeof topK !== 'number' || !Number.isInteger(topK)) {
-    return invalidResult('RAG topK must be an integer');
+    return invalidResult('ragConfig.topK 必須是整數');
   }
   if (topK < RAG_DEFAULTS.MIN_TOP_K || topK > RAG_DEFAULTS.MAX_TOP_K) {
     return invalidResult(
-      `RAG topK must be between ${RAG_DEFAULTS.MIN_TOP_K} and ${RAG_DEFAULTS.MAX_TOP_K}`
+      `ragConfig.topK 必須介於 ${RAG_DEFAULTS.MIN_TOP_K} 到 ${RAG_DEFAULTS.MAX_TOP_K}`
     );
   }
 
   // Validate threshold
   const threshold = config.threshold;
   if (typeof threshold !== 'number') {
-    return invalidResult('RAG threshold must be a number');
+    return invalidResult('ragConfig.threshold 必須是數字');
   }
   if (threshold < RAG_DEFAULTS.MIN_THRESHOLD || threshold > RAG_DEFAULTS.MAX_THRESHOLD) {
     return invalidResult(
-      `RAG threshold must be between ${RAG_DEFAULTS.MIN_THRESHOLD} and ${RAG_DEFAULTS.MAX_THRESHOLD}`
+      `ragConfig.threshold 必須介於 ${RAG_DEFAULTS.MIN_THRESHOLD} 到 ${RAG_DEFAULTS.MAX_THRESHOLD}`
     );
   }
 
@@ -338,24 +338,24 @@ export function validateDateRange(
   }
 
   if (typeof input !== 'object') {
-    return invalidResult('Date range must be an object with from and to');
+    return invalidResult('dateRange 必須是包含 from 與 to 的物件');
   }
 
   const range = input as Record<string, unknown>;
 
   if (!isValidIsoDate(range.from)) {
-    return invalidResult('Invalid "from" date. Must be ISO format (YYYY-MM-DD)');
+    return invalidResult('"from" 日期無效：必須是 ISO 格式 (YYYY-MM-DD)');
   }
 
   if (!isValidIsoDate(range.to)) {
-    return invalidResult('Invalid "to" date. Must be ISO format (YYYY-MM-DD)');
+    return invalidResult('"to" 日期無效：必須是 ISO 格式 (YYYY-MM-DD)');
   }
 
   const fromDate = new Date(range.from);
   const toDate = new Date(range.to);
 
   if (fromDate > toDate) {
-    return invalidResult('"from" date must be before or equal to "to" date');
+    return invalidResult('"from" 必須早於或等於 "to"');
   }
 
   return validResult({ from: range.from, to: range.to });
@@ -385,7 +385,7 @@ export function validateAnalysisRequest(
   input: unknown
 ): ValidationResult<AnalysisRequest> {
   if (typeof input !== 'object' || input === null) {
-    return invalidResult('Request must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const req = input as Record<string, unknown>;
@@ -515,7 +515,7 @@ export function isValidScheduleCron(value: unknown): value is string {
 export function validateScheduleCron(input: unknown): ValidationResult<string> {
   if (!isValidScheduleCron(input)) {
     return invalidResult(
-      'Invalid cron expression. Use @daily, @weekly, @monthly, or "minute hour * * *" format (e.g., "0 6 * * *" for 6:00 AM daily)'
+      'cron 表達式無效。請使用 @daily、@weekly、@monthly 或 "minute hour * * *" 格式（例如每日 06:00： "0 6 * * *"）'
     );
   }
   return validResult(input);
@@ -546,7 +546,7 @@ export function isValidScheduleName(value: unknown): value is string {
 export function validateScheduleName(input: unknown): ValidationResult<string> {
   if (!isValidScheduleName(input)) {
     return invalidResult(
-      'Schedule name must be 1-100 characters'
+      '排程名稱長度需為 1-100 個字元'
     );
   }
   return validResult(input.trim());
@@ -576,7 +576,7 @@ export function validateCreateScheduleRequest(
   input: unknown
 ): ValidationResult<CreateScheduleRequest> {
   if (typeof input !== 'object' || input === null) {
-    return invalidResult('Request must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const req = input as Record<string, unknown>;
@@ -620,7 +620,7 @@ export function validateCreateScheduleRequest(
 
   // Validate timezone if present
   if (req.timezone !== undefined && !isValidTimezone(req.timezone)) {
-    errors.timezone = 'Timezone must be a non-empty string';
+    errors.timezone = 'timezone 必須是非空字串';
   }
 
   // Check for any errors so far

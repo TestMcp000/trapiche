@@ -55,7 +55,7 @@ export function validateSettingValue(
 ): ValidationResult {
   // Check key whitelist first
   if (!isValidSettingKey(key)) {
-    return { valid: false, error: `Unknown setting key: ${key}` };
+    return { valid: false, error: `未知的設定項目：${key}` };
   }
 
   switch (key) {
@@ -87,7 +87,7 @@ export function validateModerationMode(value: unknown): ValidationResult {
   if (!MODERATION_MODES.includes(strValue as ModerationMode)) {
     return {
       valid: false,
-      error: 'moderation_mode must be "auto", "all", or "first_time"',
+      error: 'moderation_mode 必須是 "auto"、"all" 或 "first_time"',
     };
   }
   return { valid: true, normalizedValue: strValue };
@@ -102,7 +102,7 @@ export function validateBooleanSetting(
 ): ValidationResult {
   const strValue = String(value).toLowerCase();
   if (strValue !== 'true' && strValue !== 'false') {
-    return { valid: false, error: `${key} must be "true" or "false"` };
+    return { valid: false, error: `${key} 必須是 "true" 或 "false"` };
   }
   return { valid: true, normalizedValue: strValue };
 }
@@ -115,7 +115,7 @@ export function validateRecaptchaThreshold(value: unknown): ValidationResult {
   if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
     return {
       valid: false,
-      error: 'recaptcha_threshold must be a number between 0 and 1',
+      error: 'recaptcha_threshold 必須是 0 到 1 之間的數字',
     };
   }
   return { valid: true, normalizedValue: String(threshold) };
@@ -129,7 +129,7 @@ export function validateRateLimit(value: unknown): ValidationResult {
   if (!Number.isFinite(rateLimit) || rateLimit < 1 || rateLimit > 20) {
     return {
       valid: false,
-      error: 'rate_limit_per_minute must be an integer between 1 and 20',
+      error: 'rate_limit_per_minute 必須是 1 到 20 之間的整數',
     };
   }
   return { valid: true, normalizedValue: String(rateLimit) };
@@ -143,7 +143,7 @@ export function validateMaxContentLength(value: unknown): ValidationResult {
   if (!Number.isFinite(maxLength) || maxLength < 100 || maxLength > 10000) {
     return {
       valid: false,
-      error: 'max_content_length must be an integer between 100 and 10000',
+      error: 'max_content_length 必須是 100 到 10000 之間的整數',
     };
   }
   return { valid: true, normalizedValue: String(maxLength) };
@@ -157,7 +157,7 @@ export function validateMaxLinks(value: unknown): ValidationResult {
   if (!Number.isFinite(maxLinks) || maxLinks < 0 || maxLinks > 20) {
     return {
       valid: false,
-      error: 'max_links_before_moderation must be an integer between 0 and 20',
+      error: 'max_links_before_moderation 必須是 0 到 20 之間的整數',
     };
   }
   return { valid: true, normalizedValue: String(maxLinks) };
@@ -174,7 +174,7 @@ export function validateCommentSettingsPatch(
   if (!settings || typeof settings !== 'object') {
     return {
       valid: false,
-      errors: { _: 'settings object is required' },
+      errors: { _: '必須提供 settings 物件' },
     };
   }
 

@@ -82,7 +82,7 @@ export function parseGalleryCategoriesJson(
 
     // Validate envelope structure
     if (typeof parsed !== 'object' || parsed === null) {
-      return { success: false, error: 'Invalid JSON: expected object' };
+      return { success: false, error: 'JSON 格式無效：預期為物件' };
     }
 
     const envelope = parsed as Record<string, unknown>;
@@ -90,12 +90,12 @@ export function parseGalleryCategoriesJson(
     if (envelope.type !== 'gallery_categories') {
       return {
         success: false,
-        error: `Invalid type: expected 'gallery_categories', got '${envelope.type}'`,
+        error: `type 無效：預期為 'gallery_categories'，實際為 '${envelope.type}'`,
       };
     }
 
     if (!Array.isArray(envelope.data)) {
-      return { success: false, error: 'Invalid data: expected array' };
+      return { success: false, error: 'data 欄位無效：預期為陣列' };
     }
 
     // Validate and transform each item
@@ -108,7 +108,7 @@ export function parseGalleryCategoriesJson(
       if (missing.length > 0) {
         return {
           success: false,
-          error: `Category ${i + 1}: missing required fields: ${missing.join(', ')}`,
+          error: `第 ${i + 1} 個分類：缺少必填欄位：${missing.join(', ')}`,
         };
       }
 
@@ -119,7 +119,7 @@ export function parseGalleryCategoriesJson(
   } catch (error) {
     return {
       success: false,
-      error: `JSON parse error: ${error instanceof Error ? error.message : String(error)}`,
+      error: `JSON 解析失敗：${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -134,7 +134,7 @@ export function parseGalleryCategoriesObject(
   data: unknown
 ): ParseResult<GalleryCategoryImportData[]> {
   if (typeof data !== 'object' || data === null) {
-    return { success: false, error: 'Invalid input: expected object' };
+    return { success: false, error: '輸入格式無效：預期為物件' };
   }
 
   const envelope = data as GalleryCategoriesExport;
@@ -142,12 +142,12 @@ export function parseGalleryCategoriesObject(
   if (envelope.type !== 'gallery_categories') {
     return {
       success: false,
-      error: `Invalid type: expected 'gallery_categories', got '${envelope.type}'`,
+      error: `type 無效：預期為 'gallery_categories'，實際為 '${envelope.type}'`,
     };
   }
 
   if (!Array.isArray(envelope.data)) {
-    return { success: false, error: 'Invalid data: expected array' };
+    return { success: false, error: 'data 欄位無效：預期為陣列' };
   }
 
   const categories: GalleryCategoryImportData[] = [];
@@ -159,7 +159,7 @@ export function parseGalleryCategoriesObject(
     if (missing.length > 0) {
       return {
         success: false,
-        error: `Category ${i + 1}: missing required fields: ${missing.join(', ')}`,
+        error: `第 ${i + 1} 個分類：缺少必填欄位：${missing.join(', ')}`,
       };
     }
 

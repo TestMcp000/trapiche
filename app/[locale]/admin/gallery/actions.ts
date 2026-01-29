@@ -9,11 +9,19 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { buildGalleryListUrl } from '@/lib/seo/url-builders';
+import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
   saveGalleryItemAdmin,
   deleteGalleryItemAdmin,
   type GalleryItemDbPayload,
 } from '@/lib/modules/gallery/admin-io';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import {
   getAdminHotspotsByItemId,
   getHotspotsMaxLimit,
@@ -48,12 +56,18 @@ export async function saveGalleryItemAction(
   itemId: string | null,
   payload: GalleryItemDbPayload,
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
+    const supabase = await createClient();
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
+    }
+
     const result = await saveGalleryItemAdmin(itemId, payload);
 
     if ('error' in result) {
-      return { success: false, error: result.error };
+      return actionError(itemId ? ADMIN_ERROR_CODES.UPDATE_FAILED : ADMIN_ERROR_CODES.CREATE_FAILED);
     }
 
     // Revalidate cache
@@ -61,10 +75,10 @@ export async function saveGalleryItemAction(
     revalidatePath(`/${locale}/admin/gallery`);
     revalidatePath(buildGalleryListUrl(locale));
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error saving gallery item:', error);
-    return { success: false, error: '儲存作品失敗' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -74,12 +88,18 @@ export async function saveGalleryItemAction(
 export async function deleteGalleryItemAction(
   itemId: string,
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
   try {
+    const supabase = await createClient();
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
+    }
+
     const result = await deleteGalleryItemAdmin(itemId);
 
     if ('error' in result) {
-      return { success: false, error: result.error };
+      return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
     }
 
     // Revalidate cache
@@ -87,10 +107,10 @@ export async function deleteGalleryItemAction(
     revalidatePath(`/${locale}/admin/gallery`);
     revalidatePath(buildGalleryListUrl(locale));
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error deleting gallery item:', error);
-    return { success: false, error: '刪除作品失敗' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 

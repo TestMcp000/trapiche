@@ -35,7 +35,6 @@ import {
     eventTagSlugExists,
     updateEventTags,
     getEventTagIdsAdmin,
-    type AdminEventsQueryOptions,
 } from '@/lib/modules/events/admin-io';
 import {
     ADMIN_ERROR_CODES,
@@ -46,13 +45,9 @@ import {
 import { isValidSlug } from '@/lib/validators/slug';
 import type {
     Event,
-    EventWithType,
     EventType,
-    EventTypeWithCount,
     EventTag,
-    EventTagWithCount,
     EventTagInput,
-    EventInput,
     EventTypeInput,
 } from '@/lib/types/events';
 

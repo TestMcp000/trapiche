@@ -104,7 +104,8 @@ async function uploadJsonToStorage(
     });
 
   if (uploadError) {
-    return { error: `Upload failed: ${uploadError.message}` };
+    console.error('[export-gallery-io] uploadJsonToStorage upload failed:', uploadError);
+    return { error: '上傳失敗' };
   }
 
   // Create signed URL
@@ -113,7 +114,8 @@ async function uploadJsonToStorage(
     .createSignedUrl(filename, SIGNED_URL_EXPIRY);
 
   if (signedError || !signedData?.signedUrl) {
-    return { error: `Failed to create download URL: ${signedError?.message ?? 'Unknown error'}` };
+    console.error('[export-gallery-io] uploadJsonToStorage createSignedUrl failed:', signedError);
+    return { error: '建立下載連結失敗' };
   }
 
   return { url: signedData.signedUrl, sizeBytes: buffer.length };
@@ -159,9 +161,10 @@ export async function exportGalleryItemsBundle(): Promise<GalleryExportResult> {
       },
     };
   } catch (error) {
+    console.error('[export-gallery-io] exportGalleryItemsBundle failed:', error);
     return {
       success: false,
-      error: `Export failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: '匯出失敗',
     };
   }
 }
@@ -200,9 +203,10 @@ export async function exportGalleryCategoriesBundle(): Promise<GalleryExportResu
       },
     };
   } catch (error) {
+    console.error('[export-gallery-io] exportGalleryCategoriesBundle failed:', error);
     return {
       success: false,
-      error: `Export failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: '匯出失敗',
     };
   }
 }

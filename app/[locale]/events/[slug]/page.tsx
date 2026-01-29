@@ -9,6 +9,7 @@
 
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { getPublicEventBySlugCached } from "@/lib/modules/events/cached";
 import { getMetadataAlternates, SITE_URL } from "@/lib/seo";
 import {
@@ -265,11 +266,14 @@ export default async function EventDetailPage({ params }: PageProps) {
 
           {/* Cover Image */}
           {event.cover_image_url && (
-            <div className="mb-8 rounded-2xl overflow-hidden shadow-lg">
-              <img
+            <div className="mb-8 rounded-2xl overflow-hidden shadow-lg relative aspect-video">
+              <Image
                 src={event.cover_image_url}
                 alt={event.cover_image_alt_zh || event.title_zh}
-                className="w-full h-auto object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 800px"
+                className="object-cover"
+                priority
               />
             </div>
           )}

@@ -187,7 +187,7 @@ function CategoriesClientContent({
                 value={formData.name_zh}
                 onChange={(e) => handleNameZhChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="科技"
+                placeholder={t('namePlaceholder')}
                 disabled={isPending}
               />
             </div>
@@ -203,7 +203,7 @@ function CategoriesClientContent({
                   setFormData({ ...formData, slug: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="technology"
+                placeholder={t('slugPlaceholder')}
                 disabled={isPending}
               />
             </div>
@@ -235,10 +235,10 @@ function CategoriesClientContent({
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  分類名稱
+                  {t('nameColumn')}
                 </th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Slug
+                  {t('slugColumn')}
                 </th>
                 <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                   {t('posts')}

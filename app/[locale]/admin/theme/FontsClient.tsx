@@ -12,7 +12,8 @@
 
 import { useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import { THEME_PRESETS } from '@/lib/modules/theme/presets';
 import { buildThemeCssVars } from '@/lib/modules/theme/resolve';
 import { findThemeFontKeyByStack } from '@/lib/modules/theme/fonts';
@@ -37,6 +38,7 @@ interface FontsClientProps {
 
 export default function FontsClient({ config, canEdit }: FontsClientProps) {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('admin');
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -89,7 +91,7 @@ export default function FontsClient({ config, canEdit }: FontsClientProps) {
         router.refresh();
         iframeRef.current?.reload();
       } else {
-        setMessage({ type: 'error', text: result.error || t('theme.failed') });
+        setMessage({ type: 'error', text: getErrorLabel(result.errorCode, locale) });
       }
     });
   };

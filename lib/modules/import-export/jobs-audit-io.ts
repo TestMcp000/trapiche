@@ -30,6 +30,6 @@ export async function writeAuditLog(
   });
 
   if (error) {
-    console.error('[jobs-audit-io] Failed to write audit log:', error.message);
+    console.error('[jobs-audit-io] 寫入稽核紀錄失敗:', error.message);
   }
 }

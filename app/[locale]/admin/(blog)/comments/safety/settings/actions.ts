@@ -7,22 +7,30 @@ import {
     updateSafetySettings,
 } from '@/lib/modules/safety-risk-engine/admin-io';
 import type { SafetyEngineSettings } from '@/lib/types/safety-risk-engine';
-
-async function checkAdmin() {
-    const supabase = await createClient();
-    const guard = await requireSiteAdmin(supabase);
-    if (!guard.ok) {
-        throw new Error(guard.errorCode);
-    }
-    return { id: guard.userId };
-}
+import {
+    ADMIN_ERROR_CODES,
+    actionError,
+    actionSuccess,
+    type ActionResult,
+} from '@/lib/types/action-result';
 
 /**
  * Fetch safety settings.
  */
-export async function fetchSafetySettingsAction(): Promise<SafetyEngineSettings | null> {
-    await checkAdmin();
-    return getSafetySettingsForAdmin();
+export async function fetchSafetySettingsAction(): Promise<ActionResult<SafetyEngineSettings | null>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const settings = await getSafetySettingsForAdmin();
+        return actionSuccess(settings);
+    } catch (error) {
+        console.error('[fetchSafetySettingsAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -38,8 +46,22 @@ export async function updateSafetySettingsAction(
         heldMessage: string;
         rejectedMessage: string;
     }>
-): Promise<{ success: boolean }> {
-    await checkAdmin();
-    const success = await updateSafetySettings(settings);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await updateSafetySettings(settings);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[updateSafetySettingsAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }

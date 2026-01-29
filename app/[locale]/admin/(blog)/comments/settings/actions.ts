@@ -8,7 +8,7 @@
  */
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
-import { isSiteAdmin } from '@/lib/modules/auth';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
   getCommentSettingsAndBlacklist,
   updateCommentSettings,
@@ -16,42 +16,22 @@ import {
   removeCommentBlacklistItem,
 } from '@/lib/modules/comment/admin-io';
 import { validateCommentSettingsPatch } from '@/lib/validators/comment-settings';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import type { 
   CommentSettingsResponse, 
   CommentBlacklistItem,
   CommentBlacklistType 
 } from '@/lib/types/comments';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-export interface SettingsActionResult {
-  success: boolean;
-  error?: string;
-}
-
-export interface FetchSettingsResult {
-  success: boolean;
-  settings?: Record<string, string>;
-  blacklist?: CommentBlacklistItem[];
-  config?: CommentSettingsResponse['config'];
-  error?: string;
-}
-
-export interface AddBlacklistResult {
-  success: boolean;
-  item?: CommentBlacklistItem;
-  error?: string;
-}
-
-// =============================================================================
-// Helper
-// =============================================================================
-
-async function checkAdmin(): Promise<boolean> {
-  const supabase = await createClient();
-  return isSiteAdmin(supabase);
+export interface FetchCommentSettingsData {
+  settings: Record<string, string>;
+  blacklist: CommentBlacklistItem[];
+  config: CommentSettingsResponse['config'];
 }
 
 // =============================================================================
@@ -61,19 +41,19 @@ async function checkAdmin(): Promise<boolean> {
 /**
  * Fetch comment settings and blacklist
  */
-export async function fetchCommentSettingsAction(): Promise<FetchSettingsResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+export async function fetchCommentSettingsAction(): Promise<ActionResult<FetchCommentSettingsData>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   const result = await getCommentSettingsAndBlacklist();
-  return {
-    success: true,
+  return actionSuccess({
     settings: result.settings,
     blacklist: result.blacklist,
     config: result.config,
-  };
+  });
 }
 
 // =============================================================================
@@ -85,21 +65,25 @@ export async function fetchCommentSettingsAction(): Promise<FetchSettingsResult>
  */
 export async function updateCommentSettingsAction(
   settings: Record<string, string>
-): Promise<SettingsActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   // Validate settings using shared validator
   const validation = validateCommentSettingsPatch(settings);
   if (!validation.valid || !validation.validatedSettings) {
-    const errorMessages = Object.values(validation.errors).join(', ');
-    return { success: false, error: errorMessages || 'Validation failed' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await updateCommentSettings(validation.validatedSettings);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  return actionSuccess();
 }
 
 // =============================================================================
@@ -113,14 +97,15 @@ export async function addBlacklistItemAction(input: {
   type: CommentBlacklistType;
   value: string;
   reason?: string | null;
-}): Promise<AddBlacklistResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+}): Promise<ActionResult<{ item: CommentBlacklistItem }>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   if (!input.value?.trim()) {
-    return { success: false, error: 'Value is required' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await addCommentBlacklistItem({
@@ -129,7 +114,14 @@ export async function addBlacklistItemAction(input: {
     reason: input.reason || null,
   });
 
-  return result;
+  if (!result.success || !result.item) {
+    if (result.error?.includes('exists')) {
+      return actionError(ADMIN_ERROR_CODES.RESOURCE_IN_USE);
+    }
+    return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
+  }
+
+  return actionSuccess({ item: result.item });
 }
 
 /**
@@ -137,16 +129,21 @@ export async function addBlacklistItemAction(input: {
  */
 export async function removeBlacklistItemAction(
   id: string
-): Promise<SettingsActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   if (!id) {
-    return { success: false, error: 'ID is required' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await removeCommentBlacklistItem(id);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
+  }
+
+  return actionSuccess();
 }

@@ -13,8 +13,10 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import type { LandingSection } from '@/lib/types/landing';
-import { PRESET_SECTION_KEYS } from '@/lib/modules/landing/constants';
+import { PRESET_SECTION_KEYS, ALWAYS_VISIBLE_SECTIONS, MAX_CUSTOM_SECTIONS } from '@/lib/modules/landing/constants';
 import {
   toggleSectionVisibility,
   createCustomSection,
@@ -26,41 +28,40 @@ interface Props {
   locale: string;
 }
 
-// Section keys that cannot be hidden
-const ALWAYS_VISIBLE = ['hero', 'contact'];
-
-// Section labels for display
-const SECTION_LABELS: Record<string, string> = {
-  hero: '首頁橫幅',
-  about: '關於我們',
-  services: '服務',
-  platforms: '平台',
-  product_design: '產品設計',
-  portfolio: '作品集',
-  contact: '聯繫',
-};
-
 // Type-safe preset key lookup
 const PRESET_KEYS_SET = new Set(PRESET_SECTION_KEYS);
 
 export default function LandingSectionsClient({ initialSections, locale }: Props) {
   const router = useRouter();
+  const t = useTranslations('admin.landing');
+  const tSectionLabels = useTranslations('admin.landing.sectionLabels');
   const [sections, setSections] = useState(initialSections);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const _isPreset = (key: string) => PRESET_KEYS_SET.has(key as typeof PRESET_SECTION_KEYS[number]);
   const isCustom = (key: string) => key.startsWith('custom_');
-  const canToggleVisibility = (key: string) => !ALWAYS_VISIBLE.includes(key);
+  const canToggleVisibility = (key: string) =>
+    !ALWAYS_VISIBLE_SECTIONS.includes(key as (typeof ALWAYS_VISIBLE_SECTIONS)[number]);
   
   const customSectionCount = sections.filter(s => isCustom(s.section_key)).length;
-  const canAddCustom = customSectionCount < 10;
+  const canAddCustom = customSectionCount < MAX_CUSTOM_SECTIONS;
+
+  const presetLabels: Record<string, string> = {
+    hero: tSectionLabels('hero'),
+    about: tSectionLabels('about'),
+    services: tSectionLabels('services'),
+    platforms: tSectionLabels('platforms'),
+    product_design: tSectionLabels('product_design'),
+    portfolio: tSectionLabels('portfolio'),
+    contact: tSectionLabels('contact'),
+  };
 
   const getSectionLabel = (section: LandingSection): string => {
     if (isCustom(section.section_key)) {
       return section.title_zh || section.section_key;
     }
-    return SECTION_LABELS[section.section_key] || section.section_key;
+    return presetLabels[section.section_key] || section.section_key;
   };
 
   const handleToggleVisibility = async (sectionKey: string, currentVisible: boolean) => {
@@ -75,7 +76,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
         );
         router.refresh();
       } else {
-        setError(result.error || '切換顯示狀態失敗');
+        setError(getErrorLabel(result.errorCode, locale));
       }
     });
   };
@@ -86,18 +87,24 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
     setError(null);
     startTransition(async () => {
       const result = await createCustomSection({ section_type: 'text' });
-      if (result.success && result.sectionKey) {
-        router.refresh();
-        router.push(`/${locale}/admin/landing/${result.sectionKey}`);
-      } else {
-        setError(result.error || '新增區塊失敗');
+      if (!result.success) {
+        setError(getErrorLabel(result.errorCode, locale));
+        return;
       }
+
+      if (!result.data?.sectionKey) {
+        setError(getErrorLabel('internal_error', locale));
+        return;
+      }
+
+      router.refresh();
+      router.push(`/${locale}/admin/landing/${result.data.sectionKey}`);
     });
   };
 
   const handleDeleteSection = async (sectionKey: string) => {
     if (!isCustom(sectionKey)) return;
-    if (!confirm('確定要刪除此區塊？')) return;
+    if (!confirm(t('deleteConfirm'))) return;
     
     setError(null);
     startTransition(async () => {
@@ -106,7 +113,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
         setSections(prev => prev.filter(s => s.section_key !== sectionKey));
         router.refresh();
       } else {
-        setError(result.error || '刪除區塊失敗');
+        setError(getErrorLabel(result.errorCode, locale));
       }
     });
   };
@@ -115,7 +122,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">
-          首頁區塊管理
+          {t('title')}
         </h1>
         
         {canAddCustom && (
@@ -124,7 +131,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
             disabled={isPending}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 transition-colors"
           >
-            + 新增自訂區塊
+            + {t('addSection')}
           </button>
         )}
       </div>
@@ -140,19 +147,19 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
           <thead className="bg-surface-secondary">
             <tr>
               <th className="px-4 py-3 text-left text-sm font-medium text-secondary">
-                順序
+                {t('order')}
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-secondary">
-                區塊
+                {t('section')}
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-secondary">
-                類型
+                {t('type')}
               </th>
               <th className="px-4 py-3 text-center text-sm font-medium text-secondary">
-                顯示
+                {t('visible')}
               </th>
               <th className="px-4 py-3 text-right text-sm font-medium text-secondary">
-                操作
+                {t('actions')}
               </th>
             </tr>
           </thead>
@@ -183,7 +190,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
                       section.is_visible ? 'bg-green-500' : 'bg-gray-300'
                     } ${!canToggleVisibility(section.section_key) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title={!canToggleVisibility(section.section_key) 
-                      ? '此區塊無法隱藏'
+                      ? t('cannotHide')
                       : undefined}
                   >
                     <span 
@@ -199,7 +206,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
                       href={`/${locale}/admin/landing/${section.section_key}`}
                       className="px-3 py-1 text-sm text-primary hover:underline"
                     >
-                      編輯
+                      {t('edit')}
                     </Link>
                     {isCustom(section.section_key) && (
                       <button
@@ -207,7 +214,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
                         disabled={isPending}
                         className="px-3 py-1 text-sm text-red-600 hover:underline disabled:opacity-50"
                       >
-                        刪除
+                        {t('delete')}
                       </button>
                     )}
                   </div>
@@ -219,7 +226,7 @@ export default function LandingSectionsClient({ initialSections, locale }: Props
       </div>
 
       <p className="mt-4 text-sm text-secondary">
-        {`自訂區塊: ${customSectionCount}/10`}
+        {t('customCount', { count: customSectionCount, max: MAX_CUSTOM_SECTIONS })}
       </p>
     </div>
   );

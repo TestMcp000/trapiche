@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from 'react';
+import { getErrorLabel } from '@/lib/types/action-result';
 import { toggleSectionVisibility } from '../actions';
 
 interface SectionToggleProps {
@@ -40,7 +41,7 @@ export default function SectionToggle({
       if (!result.success) {
         // Revert on error
         setIsPublished(!newValue);
-        console.error('Failed to toggle section:', result.error);
+        console.error('Toggle section failed:', getErrorLabel(result.errorCode, routeLocale));
       }
     });
   };

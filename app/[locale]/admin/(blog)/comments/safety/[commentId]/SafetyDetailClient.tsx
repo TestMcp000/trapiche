@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
     fetchAssessmentByCommentAction,
@@ -17,6 +17,7 @@ import type {
     SafetyCorpusKind,
     SafetyRiskLevel,
 } from '@/lib/types/safety-risk-engine';
+import { getErrorLabel } from '@/lib/types/action-result';
 
 interface SafetyDetailClientProps {
     commentId: string;
@@ -24,12 +25,14 @@ interface SafetyDetailClientProps {
 
 export default function SafetyDetailClient({ commentId }: SafetyDetailClientProps) {
     const t = useTranslations('admin.safety');
+    const locale = useLocale();
     const router = useRouter();
 
     const [assessment, setAssessment] = useState<SafetyAssessmentDetail | null>(null);
     const [commentContent, setCommentContent] = useState<string>('');
     const [trainingActiveBatch, setTrainingActiveBatch] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [showPromoteModal, setShowPromoteModal] = useState(false);
     const [promoteText, setPromoteText] = useState('');
     const [promoteLabel, setPromoteLabel] = useState('');
@@ -46,39 +49,55 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
         async function fetchData() {
             try {
                 const result = await fetchAssessmentByCommentAction(commentId);
-                setAssessment(result.assessment);
-                setCommentContent(result.comment?.content || '');
-                setTrainingActiveBatch(result.trainingActiveBatch);
+                if (!result.success) {
+                    setError(getErrorLabel(result.errorCode, locale));
+                    return;
+                }
+
+                setError(null);
+                setAssessment(result.data?.assessment ?? null);
+                setCommentContent(result.data?.comment?.content || '');
+                setTrainingActiveBatch(result.data?.trainingActiveBatch ?? null);
             } catch (error) {
                 console.error('Failed to fetch assessment:', error);
+                setError(getErrorLabel('internal_error', locale));
             } finally {
                 setLoading(false);
             }
         }
         fetchData();
-    }, [commentId]);
+    }, [commentId, locale]);
 
     const handleLabel = async (label: SafetyHumanLabel) => {
         if (!assessment) return;
         const result = await labelDetailAssessmentAction(assessment.id, label);
-        if (result.success) {
-            setAssessment(prev => prev ? { ...prev, humanLabel: label } : null);
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, locale));
+            return;
         }
+
+        setAssessment(prev => prev ? { ...prev, humanLabel: label } : null);
     };
 
     const handleApprove = async () => {
         const result = await approveDetailCommentAction(commentId);
-        if (result.success) {
-            router.push('/admin/comments/safety');
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, locale));
+            return;
         }
+
+        router.push(`/${locale}/admin/comments/safety`);
     };
 
     const handleReject = async () => {
-        if (!confirm('確定要拒絕此留言嗎？')) return;
+        if (!confirm(t('confirmReject'))) return;
         const result = await rejectDetailCommentAction(commentId);
-        if (result.success) {
-            router.push('/admin/comments/safety');
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, locale));
+            return;
         }
+
+        router.push(`/${locale}/admin/comments/safety`);
     };
 
     const handlePromoteToCorpus = async () => {
@@ -89,12 +108,15 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
             kind: promoteKind,
             activate: false,
         });
-        if (result.success) {
-            setShowPromoteModal(false);
-            setPromoteText('');
-            setPromoteLabel('');
-            alert('已加入語料庫（草稿）');
+        if (!result.success) {
+            setError(getErrorLabel(result.errorCode, locale));
+            return;
         }
+
+        setShowPromoteModal(false);
+        setPromoteText('');
+        setPromoteLabel('');
+        alert(t('toast.promoteToCorpusDraft'));
     };
 
     const openTrainingModal = () => {
@@ -112,13 +134,13 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
 
         const trimmedReason = trainingReason.trim();
         if (!trimmedReason) {
-            setTrainingError('Reason 不能為空（需要諮商師修正/確認）');
+            setTrainingError(t('training.errors.reasonRequired'));
             return;
         }
 
         const confidence = Number.isFinite(trainingConfidence) ? trainingConfidence : 0;
         if (confidence < 0 || confidence > 1) {
-            setTrainingError('Confidence 必須在 0.0 - 1.0 之間');
+            setTrainingError(t('training.errors.confidenceRange'));
             return;
         }
 
@@ -134,12 +156,16 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
         setTrainingSaving(false);
 
         if (!result.success) {
-            setTrainingError(result.error ?? '加入訓練集失敗');
+            setTrainingError(getErrorLabel(result.errorCode, locale));
             return;
         }
 
         setShowTrainingModal(false);
-        alert(`已加入訓練集（batch: ${result.dataset?.datasetBatch ?? trainingActiveBatch ?? 'unknown'}）`);
+        alert(
+            t('training.toast.added', {
+                batch: trainingActiveBatch ?? t('training.batchNotSet'),
+            })
+        );
     };
 
     const getRiskBadgeColor = (level: string | null) => {
@@ -151,6 +177,11 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
         }
     };
 
+    const getRiskLabel = (level: SafetyRiskLevel | null) => {
+        if (!level) return t('riskLevels.unknown');
+        return t(`riskLevels.${level}` as const);
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center py-12">
@@ -159,17 +190,27 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
         );
     }
 
+    if (error) {
+        return (
+            <div className="p-6">
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+                    {error}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 space-y-6 max-w-4xl mx-auto">
             {/* Back button */}
             <button
-                onClick={() => router.push('/admin/comments/safety')}
+                onClick={() => router.push(`/${locale}/admin/comments/safety`)}
                 className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                返回佇列
+                {t('detail.backToQueue')}
             </button>
 
             {/* Header */}
@@ -197,7 +238,7 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                                     {assessment.layer1Hit}
                                 </span>
                             ) : (
-                                <span className="text-gray-400">無</span>
+                                <span className="text-gray-400">{t('detail.none')}</span>
                             )}
                         </div>
 
@@ -214,7 +255,7 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                                     ))}
                                 </div>
                             ) : (
-                                <span className="text-gray-400">無</span>
+                                <span className="text-gray-400">{t('detail.none')}</span>
                             )}
                         </div>
 
@@ -224,7 +265,7 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                             <div className="space-y-2">
                                 <div>
                                     <span className={`inline-flex px-2 py-1 text-sm font-medium rounded ${getRiskBadgeColor(assessment.aiRiskLevel)}`}>
-                                        {assessment.aiRiskLevel || 'N/A'}
+                                        {getRiskLabel(assessment.aiRiskLevel)}
                                     </span>
                                 </div>
                                 {assessment.confidence !== null && (
@@ -251,7 +292,7 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
 
                     {/* Actions */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">操作</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('table.actions')}</h3>
 
                         {/* Main Actions */}
                         <div className="flex flex-wrap gap-3 mb-6">
@@ -352,13 +393,13 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                                 onClick={() => setShowPromoteModal(false)}
                                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             >
-                                取消
+                                {t('training.cancel')}
                             </button>
                             <button
                                 onClick={handlePromoteToCorpus}
                                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                             >
-                                加入語料庫
+                                {t('actions.promoteToCorpus')}
                             </button>
                         </div>
                     </div>
@@ -371,7 +412,7 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-lg w-full mx-4">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('training.title')}</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            {t('training.subtitle', { batch: trainingActiveBatch ?? '未設定' })}
+                            {t('training.subtitle', { batch: trainingActiveBatch ?? t('training.batchNotSet') })}
                         </p>
 
                         <div className="space-y-4">
@@ -384,9 +425,9 @@ export default function SafetyDetailClient({ commentId }: SafetyDetailClientProp
                                     onChange={(e) => setTrainingRiskLevel(e.target.value as SafetyRiskLevel)}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                                 >
-                                    <option value="Safe">Safe</option>
-                                    <option value="High_Risk">High_Risk</option>
-                                    <option value="Uncertain">Uncertain</option>
+                                    <option value="Safe">{t('riskLevels.Safe')}</option>
+                                    <option value="High_Risk">{t('riskLevels.High_Risk')}</option>
+                                    <option value="Uncertain">{t('riskLevels.Uncertain')}</option>
                                 </select>
                             </div>
 

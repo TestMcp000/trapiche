@@ -33,21 +33,21 @@ export function validateEnvelopeStructure(
   envelope: unknown
 ): string | undefined {
   if (!envelope || typeof envelope !== 'object') {
-    return 'Invalid JSON structure: expected an object';
+    return 'JSON 結構無效：預期為物件';
   }
 
   const obj = envelope as Record<string, unknown>;
 
   if (typeof obj.exportedAt !== 'string') {
-    return 'Missing or invalid "exportedAt" field';
+    return '缺少或無效的 "exportedAt" 欄位';
   }
 
   if (obj.type !== 'blog_categories') {
-    return `Invalid type: expected "blog_categories", got "${obj.type}"`;
+    return `type 無效：預期為 "blog_categories"，實際為 "${obj.type}"`;
   }
 
   if (!Array.isArray(obj.data)) {
-    return 'Missing or invalid "data" field: expected an array';
+    return '缺少或無效的 "data" 欄位：預期為陣列';
   }
 
   return undefined;
@@ -64,21 +64,22 @@ export function validateCategoryObject(
   category: unknown,
   index: number
 ): string | undefined {
+  const displayIndex = index + 1;
   if (!category || typeof category !== 'object') {
-    return `Item ${index}: expected an object`;
+    return `第 ${displayIndex} 筆：預期為物件`;
   }
 
   const obj = category as Record<string, unknown>;
 
   for (const field of REQUIRED_CATEGORY_FIELDS) {
     if (typeof obj[field] !== 'string' || !obj[field]) {
-      return `Item ${index}: missing or empty required field "${field}"`;
+      return `第 ${displayIndex} 筆：缺少必填欄位 "${field}" 或為空`;
     }
   }
 
   const nameCandidate = obj.name_zh ?? obj.name_en;
   if (typeof nameCandidate !== 'string' || nameCandidate.trim().length === 0) {
-    return `Item ${index}: missing or empty required field "name"`;
+    return `第 ${displayIndex} 筆：缺少必填欄位 "name" 或為空`;
   }
 
   return undefined;
@@ -122,7 +123,7 @@ export function parseBlogCategoriesJsonString(
   } catch (error) {
     return {
       success: false,
-      error: `Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`,
+      error: `JSON 解析失敗：${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -168,13 +169,13 @@ export function parseBlogCategoriesJson(
   if (errors.length > 0) {
     return {
       success: false,
-      error: `Category validation failed:\n${errors.join('\n')}`,
+      error: `分類資料驗證失敗：\n${errors.join('\n')}`,
     };
   }
 
   // Warn if empty
   if (categories.length === 0) {
-    warnings.push('No categories found in data array');
+    warnings.push('data 陣列中找不到任何分類');
   }
 
   const result: BlogCategoriesExport = {

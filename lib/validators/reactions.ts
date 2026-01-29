@@ -21,19 +21,19 @@ import {
  */
 export function validateReactionToggleRequest(body: unknown): ValidationResult<ReactionToggleRequest> {
   if (!body || typeof body !== 'object') {
-    return invalidResult('Request body must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const { targetType, targetId } = body as Record<string, unknown>;
 
   // Validate targetType
   if (!isValidReactionTargetType(targetType)) {
-    return invalidResult('targetType must be "gallery_item" or "comment"');
+    return invalidResult('targetType 必須是 "gallery_item" 或 "comment"');
   }
 
   // Validate targetId
   if (!isValidUUID(targetId)) {
-    return invalidResult('targetId must be a valid UUID');
+    return invalidResult('targetId 必須是有效的 UUID');
   }
 
   return validResult({

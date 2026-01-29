@@ -9,18 +9,19 @@
 
 import { updateSiteContent, togglePublishSiteContent, getSiteContent } from '@/lib/modules/content/io';
 import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { buildGalleryListUrl } from '@/lib/seo/url-builders';
 import { parseHamburgerNav } from '@/lib/validators/hamburger-nav';
 import { deepValidateHamburgerNav } from '@/lib/modules/content/hamburger-nav-publish-io';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 
-
-interface SaveResult {
-  success: boolean;
-  error?: string;
-  /** Validation errors with JSON paths for precise error location */
-  validationErrors?: Array<{ path: string; message: string }>;
-}
+type ValidationErrors = Array<{ path: string; message: string }>;
 
 /**
  * Save site content (single-language zh; mirror to content_en for legacy)
@@ -29,13 +30,12 @@ export async function saveSiteContent(
   sectionKey: string,
   content: Record<string, unknown>,
   locale: string
-): Promise<SaveResult> {
+): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
     // Validate hamburger_nav structure before saving
@@ -44,20 +44,22 @@ export async function saveSiteContent(
       if (parseResult.errors.length > 0) {
         return {
           success: false,
-          error: '導航結構驗證失敗',
-          validationErrors: parseResult.errors.map(e => ({
-            path: e.path,
-            message: e.message,
-          })),
+          errorCode: ADMIN_ERROR_CODES.VALIDATION_ERROR,
+          details: {
+            validationErrors: parseResult.errors.map((e) => ({
+              path: e.path,
+              message: e.message,
+            })) satisfies ValidationErrors,
+          },
         };
       }
     }
 
     // DB schema still has content_en/content_zh; keep them identical for single-language site.
-    const result = await updateSiteContent(sectionKey, content, content, user.id);
+    const result = await updateSiteContent(sectionKey, content, content, guard.userId);
 
     if (!result) {
-      return { success: false, error: '儲存內容失敗' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Invalidate cached site content (Header/Footer/Home rely on unstable_cache tags)
@@ -74,10 +76,10 @@ export async function saveSiteContent(
       revalidatePath('/sitemap.xml');
     }
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error saving site content:', error);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -87,13 +89,12 @@ export async function saveSiteContent(
 export async function publishSiteContent(
   sectionKey: string,
   locale: string
-): Promise<SaveResult> {
+): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
     // Deep validate hamburger_nav before publishing
@@ -101,7 +102,7 @@ export async function publishSiteContent(
       // Fetch current draft content
       const currentContent = await getSiteContent(sectionKey);
       if (!currentContent) {
-        return { success: false, error: '找不到導航內容' };
+        return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
       }
 
       // Parse and validate structure
@@ -109,11 +110,13 @@ export async function publishSiteContent(
       if (parseResult.errors.length > 0 || !parseResult.nav) {
         return {
           success: false,
-          error: '導航結構驗證失敗，無法發布',
-          validationErrors: parseResult.errors.map(e => ({
-            path: e.path,
-            message: e.message,
-          })),
+          errorCode: ADMIN_ERROR_CODES.VALIDATION_ERROR,
+          details: {
+            validationErrors: parseResult.errors.map((e) => ({
+              path: e.path,
+              message: e.message,
+            })) satisfies ValidationErrors,
+          },
         };
       }
 
@@ -122,19 +125,21 @@ export async function publishSiteContent(
       if (!deepResult.valid) {
         return {
           success: false,
-          error: '導航目標驗證失敗，部分目標不存在或未公開',
-          validationErrors: deepResult.errors.map(e => ({
-            path: e.path,
-            message: e.message,
-          })),
+          errorCode: ADMIN_ERROR_CODES.VALIDATION_ERROR,
+          details: {
+            validationErrors: deepResult.errors.map((e) => ({
+              path: e.path,
+              message: e.message,
+            })) satisfies ValidationErrors,
+          },
         };
       }
     }
 
-    const result = await togglePublishSiteContent(sectionKey, true, user.id);
+    const result = await togglePublishSiteContent(sectionKey, true, guard.userId);
 
     if (!result) {
-      return { success: false, error: '發布失敗' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Invalidate cached site content (Header/Footer/Home rely on unstable_cache tags)
@@ -151,10 +156,10 @@ export async function publishSiteContent(
       revalidatePath('/sitemap.xml');
     }
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error publishing site content:', error);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -164,19 +169,18 @@ export async function publishSiteContent(
 export async function unpublishSiteContent(
   sectionKey: string,
   locale: string
-): Promise<SaveResult> {
+): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
-    const result = await togglePublishSiteContent(sectionKey, false, user.id);
+    const result = await togglePublishSiteContent(sectionKey, false, guard.userId);
 
     if (!result) {
-      return { success: false, error: '取消發布失敗' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Invalidate cached site content (Header/Footer/Home rely on unstable_cache tags)
@@ -193,9 +197,9 @@ export async function unpublishSiteContent(
       revalidatePath('/sitemap.xml');
     }
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error unpublishing site content:', error);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }

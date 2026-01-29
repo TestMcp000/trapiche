@@ -2,7 +2,8 @@
 
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import { THEME_PRESETS } from '@/lib/modules/theme/presets';
 import { buildThemeCssVars } from '@/lib/modules/theme/resolve';
 import { updateThemeOverridesAction } from './actions';
@@ -71,6 +72,7 @@ interface LayoutsClientProps {
 
 export default function LayoutsClient({ config, canEdit }: LayoutsClientProps) {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations('admin');
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -143,11 +145,11 @@ export default function LayoutsClient({ config, canEdit }: LayoutsClientProps) {
       } else {
         setMessage({
           type: 'error',
-          text: result.error || t('theme.failed'),
+          text: getErrorLabel(result.errorCode, locale),
         });
       }
     });
-  }, [canEdit, selectedLayout, localOverrides, t, router]);
+  }, [canEdit, selectedLayout, localOverrides, t, router, locale]);
 
   // Check if there are unsaved changes
   const savedOverrides = config?.theme_overrides?.[selectedLayout] ?? {};

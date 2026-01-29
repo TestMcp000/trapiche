@@ -11,7 +11,7 @@
  */
 
 import { useState, useTransition, useRef, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { AdminRoleType } from "@/lib/modules/auth";
 import type { ExportFormat } from "./actions";
 import {
@@ -46,6 +46,7 @@ import {
   type GenericImportPreviewResult,
   type GenericImportApplyResult,
 } from "./actions";
+import { getErrorLabel } from "@/lib/types/action-result";
 import type {
   BlogImportPreview,
   BlogImportResult,
@@ -179,7 +180,7 @@ export function ImportExportClient({ role }: ImportExportClientProps) {
       formData.append("file", importFile);
       const result = await applyBlogImportAction(formData);
       setImportResult(result);
-      if (result.success && result.result?.success) {
+      if (result.success && result.data?.success) {
         setImportFile(null);
         setPreviewResult(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -300,25 +301,26 @@ export function ImportExportClient({ role }: ImportExportClientProps) {
           isPending={isPending}
           result={
             blogExportResult
-              ? {
-                  success: blogExportResult.success,
-                  downloadUrl: blogExportResult.downloadUrl,
-                  stats: blogExportResult.stats
-                    ? {
+              ? blogExportResult.success
+                ? {
+                    success: true,
+                    data: {
+                      downloadUrl: blogExportResult.data.downloadUrl,
+                      stats: {
                         count:
-                          blogExportResult.stats.postsCount +
-                          blogExportResult.stats.categoriesCount,
-                        bundleSizeBytes: blogExportResult.stats.bundleSizeBytes,
-                      }
-                    : undefined,
-                  error: blogExportResult.error,
-                }
+                          blogExportResult.data.stats.postsCount +
+                          blogExportResult.data.stats.categoriesCount,
+                        bundleSizeBytes: blogExportResult.data.stats.bundleSizeBytes,
+                      },
+                    },
+                  }
+                : { success: false, errorCode: blogExportResult.errorCode }
               : null
           }
           statsLabel={
-            blogExportResult?.stats
-              ? `${blogExportResult.stats.postsCount} ${ti("posts")}, ${
-                  blogExportResult.stats.categoriesCount
+            blogExportResult?.success
+              ? `${blogExportResult.data.stats.postsCount} ${ti("posts")}, ${
+                  blogExportResult.data.stats.categoriesCount
                 } ${ti("categories")}`
               : undefined
           }
@@ -442,8 +444,17 @@ export function ImportExportClient({ role }: ImportExportClientProps) {
             const format = exportFormats.comments;
             startTransition(async () => {
               setExportResults((prev) => ({ ...prev, comments: null }));
-              const result = await exportCommentsWithJob({ format });
-              setExportResults((prev) => ({ ...prev, comments: result }));
+              const jobResult = await exportCommentsWithJob({ format });
+              const mapped: GenericExportResult = jobResult.success
+                ? {
+                    success: true,
+                    data: {
+                      downloadUrl: jobResult.data.downloadUrl,
+                      stats: jobResult.data.stats,
+                    },
+                  }
+                : { success: false, errorCode: jobResult.errorCode };
+              setExportResults((prev) => ({ ...prev, comments: mapped }));
             });
           }}
           isPending={isPending}
@@ -540,6 +551,9 @@ function ExportCard({
   statsLabel,
   compact = false,
 }: ExportCardProps) {
+  const locale = useLocale();
+  const tc = useTranslations("admin.data.common");
+
   return (
     <div
       className={`border rounded-lg bg-white shadow-sm ${
@@ -561,36 +575,43 @@ function ExportCard({
         className={`w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
           compact ? "text-sm" : ""
         }`}>
-        {isPending ? "Exporting..." : "Export"}
+        {isPending ? tc("exporting") : tc("export")}
       </button>
 
       {result && (
         <div className="mt-3">
           {result.success ? (
             <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
-              <p className="text-green-800 font-medium">Success!</p>
-              {(statsLabel || result.stats) && (
+              <p className="text-green-800 font-medium">{tc("success")}</p>
+              {(statsLabel || result.data?.stats) && (
                 <p className="text-green-700 text-xs mt-1">
-                  {statsLabel || `${result.stats?.count ?? 0} items`}
-                  {result.stats?.bundleSizeBytes && (
+                  {statsLabel ||
+                    `${result.data?.stats?.count ?? 0} ${tc("items")}`}
+                  {result.data?.stats?.bundleSizeBytes && (
                     <span className="text-green-600 ml-1">
-                      ({(result.stats.bundleSizeBytes / 1024).toFixed(1)} KB)
+                      (
+                      {(
+                        ((result.data?.stats?.bundleSizeBytes ?? 0) / 1024) as number
+                      ).toFixed(1)}{" "}
+                      KB)
                     </span>
                   )}
                 </p>
               )}
-              {result.downloadUrl && (
+              {result.data?.downloadUrl && (
                 <a
-                  href={result.downloadUrl}
+                  href={result.data.downloadUrl}
                   download
                   className="inline-block mt-1 text-blue-600 hover:text-blue-800 underline text-xs">
-                  Download
+                  {tc("download")}
                 </a>
               )}
             </div>
           ) : (
             <div className="p-2 bg-red-50 border border-red-200 rounded">
-              <p className="text-red-800 text-xs">{result.error}</p>
+              <p className="text-red-800 text-xs">
+                {getErrorLabel(result.errorCode, locale)}
+              </p>
             </div>
           )}
         </div>
@@ -624,6 +645,9 @@ function ExportCardWithFormat({
   statsLabel,
   compact = false,
 }: ExportCardWithFormatProps) {
+  const locale = useLocale();
+  const tc = useTranslations("admin.data.common");
+
   return (
     <div
       className={`border rounded-lg bg-white shadow-sm ${
@@ -669,36 +693,43 @@ function ExportCardWithFormat({
         className={`w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
           compact ? "text-sm" : ""
         }`}>
-        {isPending ? "Exporting..." : `Export ${format.toUpperCase()}`}
+        {isPending ? tc("exporting") : `${tc("export")} ${format.toUpperCase()}`}
       </button>
 
       {result && (
         <div className="mt-3">
           {result.success ? (
             <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
-              <p className="text-green-800 font-medium">Success!</p>
-              {(statsLabel || result.stats) && (
+              <p className="text-green-800 font-medium">{tc("success")}</p>
+              {(statsLabel || result.data?.stats) && (
                 <p className="text-green-700 text-xs mt-1">
-                  {statsLabel || `${result.stats?.count ?? 0} items`}
-                  {result.stats?.bundleSizeBytes && (
+                  {statsLabel ||
+                    `${result.data?.stats?.count ?? 0} ${tc("items")}`}
+                  {result.data?.stats?.bundleSizeBytes && (
                     <span className="text-green-600 ml-1">
-                      ({(result.stats.bundleSizeBytes / 1024).toFixed(1)} KB)
+                      (
+                      {(
+                        ((result.data?.stats?.bundleSizeBytes ?? 0) / 1024) as number
+                      ).toFixed(1)}{" "}
+                      KB)
                     </span>
                   )}
                 </p>
               )}
-              {result.downloadUrl && (
+              {result.data?.downloadUrl && (
                 <a
-                  href={result.downloadUrl}
+                  href={result.data.downloadUrl}
                   download
                   className="inline-block mt-1 text-blue-600 hover:text-blue-800 underline text-xs">
-                  Download
+                  {tc("download")}
                 </a>
               )}
             </div>
           ) : (
             <div className="p-2 bg-red-50 border border-red-200 rounded">
-              <p className="text-red-800 text-xs">{result.error}</p>
+              <p className="text-red-800 text-xs">
+                {getErrorLabel(result.errorCode, locale)}
+              </p>
             </div>
           )}
         </div>
@@ -739,15 +770,19 @@ function ImportCard({
   previewResult,
   importResult,
 }: ImportCardProps) {
+  const tc = useTranslations("admin.data.common");
+
   return (
     <div className="border rounded-lg p-4 bg-white shadow-sm">
-      <h3 className="font-medium">Import {title}</h3>
+      <h3 className="font-medium">
+        {tc("import")} {title}
+      </h3>
       <p className="text-gray-500 text-sm mt-2 mb-3">{description}</p>
 
       {!isOwner ? (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-amber-800 italic text-sm">
-            Import is restricted to owners only.
+            {tc("ownerOnly")}
           </p>
         </div>
       ) : (
@@ -767,13 +802,13 @@ function ImportCard({
               onClick={onPreview}
               disabled={!file || isPending}
               className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-              {isPending ? "Validating..." : "Preview"}
+              {isPending ? tc("validating") : tc("preview")}
             </button>
             <button
               onClick={onClear}
               disabled={isPending}
               className="px-3 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors text-sm">
-              Clear
+              {tc("clear")}
             </button>
           </div>
 
@@ -822,19 +857,23 @@ function JsonImportCard({
   onClear,
   setInputRef,
 }: JsonImportCardProps) {
+  const tc = useTranslations("admin.data.common");
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFileChange(e.target.files?.[0] ?? null);
   };
 
   return (
     <div className="border rounded-lg p-4 bg-white shadow-sm">
-      <h3 className="font-medium">Import {title}</h3>
+      <h3 className="font-medium">
+        {tc("import")} {title}
+      </h3>
       <p className="text-gray-500 text-sm mt-2 mb-3">{description}</p>
 
       {!isOwner ? (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-amber-800 italic text-sm">
-            Import is restricted to owners only.
+            {tc("ownerOnly")}
           </p>
         </div>
       ) : (
@@ -854,13 +893,13 @@ function JsonImportCard({
               onClick={onPreview}
               disabled={!state.file || isPending}
               className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-              {isPending ? "Validating..." : "Preview"}
+              {isPending ? tc("validating") : tc("preview")}
             </button>
             <button
               onClick={onClear}
               disabled={isPending}
               className="px-3 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors text-sm">
-              Clear
+              {tc("clear")}
             </button>
           </div>
 
@@ -896,15 +935,21 @@ function PreviewResultCard({
   onApply,
   isPending,
 }: PreviewResultCardProps) {
+  const locale = useLocale();
+  const tc = useTranslations("admin.data.common");
+  const ti = useTranslations("admin.data.importExport");
+
   if (!previewResult.success) {
     return (
       <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-        <p className="text-red-800 text-sm">{previewResult.error}</p>
+        <p className="text-red-800 text-sm">
+          {getErrorLabel(previewResult.errorCode, locale)}
+        </p>
       </div>
     );
   }
 
-  const preview: BlogImportPreview | undefined = previewResult.preview;
+  const preview: BlogImportPreview | undefined = previewResult.data;
   if (!preview) return null;
 
   const hasErrors = !preview.success;
@@ -918,7 +963,7 @@ function PreviewResultCard({
         hasErrors ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200"
       }`}>
       <h4 className="font-medium text-sm mb-2">
-        {hasErrors ? "Validation Failed" : "Preview"}
+        {hasErrors ? ti("validationFailed") : tc("preview")}
       </h4>
 
       {preview.error && (
@@ -927,16 +972,16 @@ function PreviewResultCard({
 
       <div className="text-xs space-y-1">
         <p>
-          <span className="font-medium">Categories:</span>{" "}
-          {preview.categories.valid}/{preview.categories.total} valid
+          <span className="font-medium">{ti("categoriesLabel")}:</span>{" "}
+          {preview.categories.valid}/{preview.categories.total} {ti("validCount")}
         </p>
         <p>
-          <span className="font-medium">Posts:</span> {preview.posts.valid}/
-          {preview.posts.total} valid
+          <span className="font-medium">{ti("postsLabel")}:</span>{" "}
+          {preview.posts.valid}/{preview.posts.total} {ti("validCount")}
         </p>
         {preview.missingCategories.length > 0 && (
           <p className="text-amber-700">
-            <span className="font-medium">Missing:</span>{" "}
+            <span className="font-medium">{ti("missingCategoriesLabel")}:</span>{" "}
             {preview.missingCategories.join(", ")}
           </p>
         )}
@@ -946,7 +991,7 @@ function PreviewResultCard({
       {preview.categories.items.filter((i) => !i.valid).length > 0 && (
         <details className="mt-2">
           <summary className="text-xs text-red-700 cursor-pointer">
-            Category errors (
+            {ti("categoryErrors")} (
             {preview.categories.items.filter((i) => !i.valid).length})
           </summary>
           <ul className="mt-1 text-xs text-red-600 max-h-24 overflow-y-auto">
@@ -965,7 +1010,7 @@ function PreviewResultCard({
       {preview.posts.items.filter((i) => !i.valid).length > 0 && (
         <details className="mt-2">
           <summary className="text-xs text-red-700 cursor-pointer">
-            Post errors ({preview.posts.items.filter((i) => !i.valid).length})
+            {ti("postErrors")} ({preview.posts.items.filter((i) => !i.valid).length})
           </summary>
           <ul className="mt-1 text-xs text-red-600 max-h-24 overflow-y-auto">
             {preview.posts.items
@@ -985,7 +1030,7 @@ function PreviewResultCard({
           onClick={onApply}
           disabled={isPending}
           className="mt-3 w-full px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-          {isPending ? "Importing..." : "Apply Import"}
+          {isPending ? tc("importing") : tc("applyImport")}
         </button>
       )}
     </div>
@@ -997,15 +1042,20 @@ interface ImportResultCardProps {
 }
 
 function ImportResultCard({ importResult }: ImportResultCardProps) {
+  const locale = useLocale();
+  const ti = useTranslations("admin.data.importExport");
+
   if (!importResult.success) {
     return (
       <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-        <p className="text-red-800 text-sm">{importResult.error}</p>
+        <p className="text-red-800 text-sm">
+          {getErrorLabel(importResult.errorCode, locale)}
+        </p>
       </div>
     );
   }
 
-  const result: BlogImportResult | undefined = importResult.result;
+  const result: BlogImportResult | undefined = importResult.data;
   if (!result) return null;
 
   // Atomic import: success = true means all succeeded, success = false means all rolled back
@@ -1017,7 +1067,7 @@ function ImportResultCard({ importResult }: ImportResultCardProps) {
           : "bg-red-50 border-red-200"
       }`}>
       <h4 className="font-medium text-sm mb-2">
-        {result.success ? "Import Complete!" : "Import Failed"}
+        {result.success ? ti("importComplete") : ti("importFailed")}
       </h4>
 
       {result.error && (
@@ -1026,11 +1076,12 @@ function ImportResultCard({ importResult }: ImportResultCardProps) {
 
       <div className="text-xs space-y-1">
         <p>
-          <span className="font-medium">Categories:</span>{" "}
+          <span className="font-medium">{ti("categoriesLabel")}:</span>{" "}
           {result.categoriesImported}
         </p>
         <p>
-          <span className="font-medium">Posts:</span> {result.postsImported}
+          <span className="font-medium">{ti("postsLabel")}:</span>{" "}
+          {result.postsImported}
         </p>
       </div>
     </div>
@@ -1052,15 +1103,21 @@ function GenericPreviewResultCard({
   onApply,
   isPending,
 }: GenericPreviewResultCardProps) {
+  const locale = useLocale();
+  const tc = useTranslations("admin.data.common");
+  const ti = useTranslations("admin.data.importExport");
+
   if (!previewResult.success) {
     return (
       <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-        <p className="text-red-800 text-sm">{previewResult.error}</p>
+        <p className="text-red-800 text-sm">
+          {getErrorLabel(previewResult.errorCode, locale)}
+        </p>
       </div>
     );
   }
 
-  const preview = previewResult.preview;
+  const preview = previewResult.data;
   if (!preview) return null;
 
   const hasErrors = preview.valid < preview.total;
@@ -1073,12 +1130,12 @@ function GenericPreviewResultCard({
           ? "bg-amber-50 border-amber-200"
           : "bg-blue-50 border-blue-200"
       }`}>
-      <h4 className="font-medium text-sm mb-2">Preview</h4>
+      <h4 className="font-medium text-sm mb-2">{tc("preview")}</h4>
 
       <div className="text-xs space-y-1">
         <p>
-          <span className="font-medium">Valid:</span> {preview.valid}/
-          {preview.total} items
+          <span className="font-medium">{ti("validCount")}:</span> {preview.valid}/
+          {preview.total} {tc("items")}
         </p>
       </div>
 
@@ -1086,7 +1143,7 @@ function GenericPreviewResultCard({
       {preview.items.filter((i) => !i.valid).length > 0 && (
         <details className="mt-2">
           <summary className="text-xs text-red-700 cursor-pointer">
-            Validation errors ({preview.items.filter((i) => !i.valid).length})
+            {ti("validationErrors")} ({preview.items.filter((i) => !i.valid).length})
           </summary>
           <ul className="mt-1 text-xs text-red-600 max-h-24 overflow-y-auto">
             {preview.items
@@ -1106,7 +1163,7 @@ function GenericPreviewResultCard({
           onClick={onApply}
           disabled={isPending}
           className="mt-3 w-full px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
-          {isPending ? "Importing..." : "Apply Import"}
+          {isPending ? tc("importing") : tc("applyImport")}
         </button>
       )}
     </div>
@@ -1120,15 +1177,24 @@ interface GenericImportResultCardProps {
 function GenericImportResultCard({
   importResult,
 }: GenericImportResultCardProps) {
-  if (!importResult.success && !importResult.imported) {
+  const locale = useLocale();
+  const tc = useTranslations("admin.data.common");
+  const ti = useTranslations("admin.data.importExport");
+
+  if (!importResult.success) {
     return (
       <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-        <p className="text-red-800 text-sm">{importResult.error}</p>
+        <p className="text-red-800 text-sm">
+          {getErrorLabel(importResult.errorCode, locale)}
+        </p>
       </div>
     );
   }
 
-  const hasErrors = (importResult.errors?.length ?? 0) > 0;
+  const data = importResult.data;
+  if (!data) return null;
+
+  const hasErrors = (data.errors?.length ?? 0) > 0;
 
   return (
     <div
@@ -1138,23 +1204,23 @@ function GenericImportResultCard({
           : "bg-green-50 border-green-200"
       }`}>
       <h4 className="font-medium text-sm mb-2">
-        {hasErrors ? "Import Completed with Errors" : "Import Complete!"}
+        {hasErrors ? ti("importCompletedWithErrors") : ti("importComplete")}
       </h4>
 
       <div className="text-xs space-y-1">
         <p>
-          <span className="font-medium">Imported:</span>{" "}
-          {importResult.imported ?? 0} items
+          <span className="font-medium">{ti("importedLabel")}:</span>{" "}
+          {data.imported} {tc("items")}
         </p>
       </div>
 
       {hasErrors && (
         <details className="mt-2">
           <summary className="text-xs text-red-700 cursor-pointer">
-            Errors ({importResult.errors?.length})
+            {ti("errorsLabel")} ({data.errors?.length})
           </summary>
           <ul className="mt-1 text-xs text-red-600 max-h-24 overflow-y-auto">
-            {importResult.errors?.map((err, idx) => (
+            {data.errors?.map((err, idx) => (
               <li key={idx}>
                 <code>{err.slug}</code>: {err.error}
               </li>
@@ -1181,6 +1247,10 @@ function JobHistorySection({
   isPending,
   startTransition,
 }: JobHistorySectionProps) {
+  const locale = useLocale();
+  const tc = useTranslations("admin.data.common");
+  const ti = useTranslations("admin.data.importExport");
+
   const [jobs, setJobs] = useState<ImportExportJobListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1191,9 +1261,9 @@ function JobHistorySection({
     setError(null);
     const result = await listJobsAction({ limit: 20 });
     if (result.success) {
-      setJobs(result.jobs ?? []);
+      setJobs(result.data ?? []);
     } else {
-      setError(result.error ?? "Failed to load jobs");
+      setError(getErrorLabel(result.errorCode, locale));
     }
     setLoading(false);
   };
@@ -1201,10 +1271,10 @@ function JobHistorySection({
   const handleRedownload = async (jobId: string) => {
     startTransition(async () => {
       const result = await redownloadJobAction(jobId);
-      if (result.success && result.downloadUrl) {
-        window.open(result.downloadUrl, "_blank");
+      if (result.success) {
+        window.open(result.data.downloadUrl, "_blank");
       } else {
-        alert(result.error ?? "Failed to generate download URL");
+        alert(getErrorLabel(result.errorCode, locale));
       }
     });
   };
@@ -1212,7 +1282,7 @@ function JobHistorySection({
   const handleDelete = async (jobId: string) => {
     if (
       !confirm(
-        "Are you sure you want to delete this job? The associated file will also be deleted."
+        ti("confirmDeleteJob")
       )
     ) {
       return;
@@ -1222,7 +1292,7 @@ function JobHistorySection({
       if (result.success) {
         setJobs((prev) => prev.filter((j) => j.id !== jobId));
       } else {
-        alert(result.error ?? "Failed to delete job");
+        alert(getErrorLabel(result.errorCode, locale));
       }
     });
   };
@@ -1230,7 +1300,7 @@ function JobHistorySection({
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-3 border-b border-gray-200 pb-2">
-        <h2 className="text-lg font-semibold text-gray-800">Job History</h2>
+        <h2 className="text-lg font-semibold text-gray-800">{ti("jobHistory")}</h2>
         <button
           onClick={() => {
             setShowHistory(!showHistory);
@@ -1239,19 +1309,19 @@ function JobHistorySection({
             }
           }}
           className="text-sm text-blue-600 hover:text-blue-800">
-          {showHistory ? "Hide" : "Show History"}
+          {showHistory ? ti("hideJobHistory") : ti("showJobHistory")}
         </button>
       </div>
 
       {showHistory && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
           {loading ? (
-            <div className="p-4 text-center text-gray-500">Loading...</div>
+            <div className="p-4 text-center text-gray-500">{tc("loading")}</div>
           ) : error ? (
             <div className="p-4 text-center text-red-600">{error}</div>
           ) : jobs.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
-              No jobs in history
+              {ti("noJobs")}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1259,28 +1329,28 @@ function JobHistorySection({
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Status
+                      {tc("status")}
                     </th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Type
+                      {tc("type")}
                     </th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Entity
+                      {ti("entity")}
                     </th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Format
+                      {tc("format")}
                     </th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Rows
+                      {ti("rows")}
                     </th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Size
+                      {ti("size")}
                     </th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Date
+                      {tc("date")}
                     </th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">
-                      Actions
+                      {tc("actions")}
                     </th>
                   </tr>
                 </thead>
@@ -1290,8 +1360,12 @@ function JobHistorySection({
                       <td className="px-4 py-2">
                         <JobStatusBadge status={job.status} />
                       </td>
-                      <td className="px-4 py-2 capitalize">{job.kind}</td>
-                      <td className="px-4 py-2 capitalize">{job.entity}</td>
+                      <td className="px-4 py-2">
+                        {job.kind === "export" ? tc("export") : tc("import")}
+                      </td>
+                      <td className="px-4 py-2">
+                        {job.entity === "comments" ? tc("comments") : job.entity}
+                      </td>
                       <td className="px-4 py-2 uppercase text-xs">
                         {job.format}
                       </td>
@@ -1310,7 +1384,7 @@ function JobHistorySection({
                                 onClick={() => handleRedownload(job.id)}
                                 disabled={isPending}
                                 className="text-blue-600 hover:text-blue-800 text-xs disabled:opacity-50">
-                                Re-download
+                                {tc("redownload")}
                               </button>
                             )}
                           {isOwner && (
@@ -1318,12 +1392,12 @@ function JobHistorySection({
                               onClick={() => handleDelete(job.id)}
                               disabled={isPending}
                               className="text-red-600 hover:text-red-800 text-xs disabled:opacity-50">
-                              Delete
+                              {tc("delete")}
                             </button>
                           )}
                           {job.status === "failed" && job.error_message && (
                             <span
-                              title={job.error_message}
+                              title={ti("jobFailedHint")}
                               className="text-red-500 cursor-help">
                               ⚠️
                             </span>
@@ -1343,7 +1417,7 @@ function JobHistorySection({
                 onClick={loadJobs}
                 disabled={isPending}
                 className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50">
-                Refresh
+                {tc("refresh")}
               </button>
             </div>
           )}
@@ -1355,6 +1429,8 @@ function JobHistorySection({
 
 /** Job status badge component */
 function JobStatusBadge({ status }: { status: string }) {
+  const tc = useTranslations("admin.data.common");
+
   const statusConfig: Record<string, { color: string; icon: string }> = {
     pending: { color: "bg-gray-100 text-gray-600", icon: "⏳" },
     processing: { color: "bg-blue-100 text-blue-600", icon: "🔄" },
@@ -1363,11 +1439,19 @@ function JobStatusBadge({ status }: { status: string }) {
   };
 
   const config = statusConfig[status] ?? statusConfig.pending;
+  const label =
+    status === "processing"
+      ? tc("processing")
+      : status === "completed"
+        ? tc("completed")
+        : status === "failed"
+          ? tc("failed")
+          : tc("pending");
 
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${config.color}`}>
-      {config.icon} {status}
+      {config.icon} {label}
     </span>
   );
 }

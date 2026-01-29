@@ -13,6 +13,9 @@
  */
 
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import type {
   EmbeddingTargetType,
   SemanticSearchResult,
@@ -33,6 +36,7 @@ import {
 } from './actions';
 
 interface ControlCenterClientProps {
+  routeLocale: string;
   initialData: {
     role: 'owner' | 'editor';
     enabled: boolean;
@@ -46,40 +50,21 @@ const MIN_QUERY_LENGTH = 2;
 /** Debounce delay in milliseconds */
 const DEBOUNCE_DELAY = 300;
 
-/** Target type display names */
-const TARGET_TYPE_LABELS: Record<EmbeddingTargetType, string> = {
-  post: 'Blog Posts',
-  gallery_item: 'Gallery Items',
-  comment: 'Comments',
-  safety_slang: 'Safety Slang',
-  safety_case: 'Safety Cases',
-};
-
-/** Search mode display names */
-const SEARCH_MODE_LABELS: Record<SearchMode, string> = {
-  semantic: 'Semantic',
-  keyword: 'Keyword',
-  hybrid: 'Hybrid',
-};
-
-/** Search mode descriptions */
-const SEARCH_MODE_DESCRIPTIONS: Record<SearchMode, string> = {
-  semantic: 'Find content by meaning similarity (AI-powered)',
-  keyword: 'Find content with matching text (exact terms)',
-  hybrid: 'Combine semantic and keyword search with weights',
-};
-
 /** Get admin route for target type */
-function getAdminRoute(targetType: EmbeddingTargetType, targetId: string): string {
+function getAdminRoute(
+  locale: string,
+  targetType: EmbeddingTargetType,
+  targetId: string
+): string | null {
   switch (targetType) {
     case 'post':
-      return `/admin/blog?id=${targetId}`;
+      return `/${locale}/admin/posts/${targetId}/edit`;
     case 'gallery_item':
-      return `/admin/gallery?id=${targetId}`;
+      return `/${locale}/admin/gallery/${targetId}`;
     case 'comment':
-      return `/admin/comments?id=${targetId}`;
+      return `/${locale}/admin/comments?search=${encodeURIComponent(targetId)}`;
     default:
-      return '#';
+      return null;
   }
 }
 
@@ -101,21 +86,10 @@ function isKeywordResult(result: SearchResult): result is KeywordSearchResult {
   return 'tsRank' in result;
 }
 
-/** Get display score based on result type */
-function getDisplayScore(result: SearchResult): { label: string; value: string } {
-  if (isHybridResult(result)) {
-    return { label: 'Combined', value: formatScore(result.combinedScore) };
-  }
-  if (isKeywordResult(result)) {
-    return { label: 'Relevance', value: result.tsRank.toFixed(3) };
-  }
-  return { label: 'Similarity', value: formatScore(result.similarity) };
-}
-
 /** Format date/time */
 function formatDateTime(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString('zh-TW', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -123,7 +97,10 @@ function formatDateTime(dateStr: string): string {
   });
 }
 
-export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
+export function ControlCenterClient({ initialData, routeLocale }: ControlCenterClientProps) {
+  const t = useTranslations('admin.data.controlCenter');
+  const tc = useTranslations('admin.data.common');
+
   const [isPending, startTransition] = useTransition();
   
   // Search mode state
@@ -214,7 +191,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
         }
         
         if (!result.success) {
-          setError(result.error);
+          setError(getErrorLabel(result.errorCode, routeLocale));
           setResults([]);
         } else {
           setResults(result.data);
@@ -222,7 +199,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
         setHasSearched(true);
       });
     },
-    []
+    [routeLocale]
   );
 
   // Debounced search on query/mode/weight change
@@ -270,29 +247,41 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
   if (!initialData.enabled) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Control Center</h1>
+        <h1 className="text-2xl font-bold mb-4">{t('title')}</h1>
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <p className="text-yellow-800 font-medium">
-            Semantic Search Not Available
+            {t('notAvailable')}
           </p>
           <p className="text-yellow-700 text-sm mt-2">
-            No embeddings have been generated yet. Embeddings are created when content is added 
-            and the embedding queue is processed.
+            {t('notAvailableDesc')}
           </p>
           <p className="text-yellow-600 text-xs mt-2">
-            Ensure the <code className="bg-yellow-100 px-1 rounded">OPENAI_API_KEY</code> environment 
-            variable is set and the embedding Edge Function is deployed.
+            {t('notAvailableHint')}
           </p>
         </div>
       </div>
     );
   }
 
+  const getModeLabel = (mode: SearchMode): string => t(`modes.${mode}`);
+  const getModeDescription = (mode: SearchMode): string => t(`modeDescriptions.${mode}`);
+  const getTargetTypeLabel = (type: EmbeddingTargetType): string => t(`targetTypes.${type}`);
+
+  const getDisplayScore = (result: SearchResult): { label: string; value: string } => {
+    if (isHybridResult(result)) {
+      return { label: t('scores.combined'), value: formatScore(result.combinedScore) };
+    }
+    if (isKeywordResult(result)) {
+      return { label: t('scores.relevance'), value: result.tsRank.toFixed(3) };
+    }
+    return { label: t('scores.similarity'), value: formatScore(result.similarity) };
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Control Center</h1>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
         <button
           onClick={() => setShowAnalytics(!showAnalytics)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -301,24 +290,24 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+          {showAnalytics ? t('hideAnalytics') : t('showAnalytics')}
         </button>
       </div>
       <p className="text-gray-600 mb-6">
-        Search across your content using semantic similarity, keyword matching, or a hybrid approach.
+        {t('description')}
       </p>
 
       {/* Analytics Panel */}
       {showAnalytics && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Search Analytics</h2>
+            <h2 className="text-lg font-semibold">{t('analytics.title')}</h2>
             <button
               onClick={loadAnalytics}
               disabled={analyticsLoading}
               className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
             >
-              {analyticsLoading ? 'Loading...' : 'Refresh'}
+              {analyticsLoading ? tc('loading') : t('analytics.refresh')}
             </button>
           </div>
 
@@ -329,29 +318,29 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                 <div className="text-2xl font-bold text-gray-900">
                   {analyticsStats.totalQueries}
                 </div>
-                <div className="text-xs text-gray-500">Total Queries</div>
+                <div className="text-xs text-gray-500">{t('analytics.totalQueries')}</div>
               </div>
               <div className="bg-white rounded-lg p-3 border">
                 <div className="text-2xl font-bold text-red-600">
                   {analyticsStats.lowQualityCount}
                 </div>
                 <div className="text-xs text-gray-500">
-                  Low Quality ({analyticsStats.lowQualityPercentage}%)
+                  {t('analytics.lowQuality')} ({analyticsStats.lowQualityPercentage}%)
                 </div>
               </div>
               <div className="bg-white rounded-lg p-3 border">
                 <div className="text-2xl font-bold text-gray-900">
                   {analyticsStats.avgResultsCount}
                 </div>
-                <div className="text-xs text-gray-500">Avg Results</div>
+                <div className="text-xs text-gray-500">{t('analytics.avgResults')}</div>
               </div>
               <div className="bg-white rounded-lg p-3 border">
                 <div className="text-2xl font-bold text-gray-900">
                   {analyticsStats.avgTopScore !== null
                     ? formatScore(analyticsStats.avgTopScore)
-                    : 'N/A'}
+                    : '-'}
                 </div>
-                <div className="text-xs text-gray-500">Avg Top Score</div>
+                <div className="text-xs text-gray-500">{t('analytics.avgTopScore')}</div>
               </div>
             </div>
           )}
@@ -359,17 +348,15 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
           {/* Mode Distribution */}
           {analyticsStats && analyticsStats.totalQueries > 0 && (
             <div className="flex gap-4 mb-4 text-sm">
-              <span className="text-gray-600">
-                By Mode:
-              </span>
+              <span className="text-gray-600">{t('analytics.byMode')}:</span>
               <span className="text-blue-600">
-                Semantic: {analyticsStats.byMode.semantic}
+                {t('modes.semantic')}: {analyticsStats.byMode.semantic}
               </span>
               <span className="text-green-600">
-                Keyword: {analyticsStats.byMode.keyword}
+                {t('modes.keyword')}: {analyticsStats.byMode.keyword}
               </span>
               <span className="text-purple-600">
-                Hybrid: {analyticsStats.byMode.hybrid}
+                {t('modes.hybrid')}: {analyticsStats.byMode.hybrid}
               </span>
             </div>
           )}
@@ -384,7 +371,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Recent Queries ({recentQueries.length})
+              {t('analytics.recentQueries')} ({recentQueries.length})
             </button>
             <button
               onClick={() => setAnalyticsFilter('low-quality')}
@@ -394,7 +381,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Low Quality ({lowQualityQueries.length})
+              {t('analytics.lowQualityQueries')} ({lowQualityQueries.length})
             </button>
           </div>
 
@@ -402,7 +389,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
           <div className="bg-white rounded-lg border max-h-60 overflow-y-auto">
             {(analyticsFilter === 'recent' ? recentQueries : lowQualityQueries).length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">
-                No queries recorded yet.
+                {t('analytics.noQueries')}
               </div>
             ) : (
               <div className="divide-y">
@@ -422,22 +409,24 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                             : 'bg-purple-100 text-purple-700'
                         }`}
                       >
-                        {item.mode[0].toUpperCase()}
+                        {getModeLabel(item.mode)}
                       </span>
                       <span className="text-sm text-gray-900 truncate">
                         {item.query}
                       </span>
                       {item.isLowQuality && (
                         <span className="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-700">
-                          Low
+                          {t('analytics.lowQuality')}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500 shrink-0">
-                      <span>{item.resultsCount} results</span>
+                      <span>
+                        {item.resultsCount} {t('analytics.results')}
+                      </span>
                       <span>{formatDateTime(item.createdAt)}</span>
                       <span className="text-blue-600 opacity-0 group-hover:opacity-100">
-                        Use →
+                        {t('analytics.use')}
                       </span>
                     </div>
                   </button>
@@ -448,7 +437,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
 
           {analyticsFilter === 'low-quality' && lowQualityQueries.length > 0 && (
             <p className="text-xs text-gray-500 mt-2">
-              Click a query to search again. Consider adding more content or adjusting embeddings for these topics.
+              {t('analytics.lowQualityHint')}
             </p>
           )}
         </div>
@@ -464,7 +453,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
       {/* Search Mode Tabs */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Search Mode
+          {t('searchMode')}
         </label>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
           {(['semantic', 'keyword', 'hybrid'] as const).map((mode) => (
@@ -477,12 +466,12 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {SEARCH_MODE_LABELS[mode]}
+              {getModeLabel(mode)}
             </button>
           ))}
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          {SEARCH_MODE_DESCRIPTIONS[searchMode]}
+          {getModeDescription(searchMode)}
         </p>
       </div>
 
@@ -490,11 +479,11 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
       {searchMode === 'hybrid' && (
         <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <label className="block text-sm font-medium text-blue-900 mb-2">
-            Search Weight Balance
+            {t('hybrid.weightBalance')}
           </label>
           <div className="flex items-center gap-4">
             <span className="text-sm text-blue-700 w-28">
-              Semantic: {formatScore(semanticWeight)}
+              {t('hybrid.semantic')}: {formatScore(semanticWeight)}
             </span>
             <input
               type="range"
@@ -506,11 +495,11 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
               className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
             />
             <span className="text-sm text-blue-700 w-28 text-right">
-              Keyword: {formatScore(keywordWeight)}
+              {t('hybrid.keyword')}: {formatScore(keywordWeight)}
             </span>
           </div>
           <p className="text-xs text-blue-600 mt-2">
-            Adjust the balance between semantic (meaning) and keyword (exact match) search.
+            {t('hybrid.adjustHint')}
           </p>
         </div>
       )}
@@ -520,19 +509,19 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
         {/* Search Input */}
         <div>
           <label htmlFor="search-query" className="block text-sm font-medium text-gray-700 mb-1">
-            Search Query
+            {t('searchQuery')}
           </label>
           <input
             id="search-query"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter your search query..."
+            placeholder={t('searchPlaceholder')}
             className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
           {query.length > 0 && query.length < MIN_QUERY_LENGTH && (
             <p className="text-xs text-gray-500 mt-1">
-              Enter at least {MIN_QUERY_LENGTH} characters to search
+              {t('minChars', { min: MIN_QUERY_LENGTH })}
             </p>
           )}
         </div>
@@ -540,7 +529,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
         {/* Target Type Filters */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Content Types
+            {t('contentTypes')}
           </label>
           <div className="flex flex-wrap gap-2">
             {(initialData.targetTypes as EmbeddingTargetType[]).map((type) => {
@@ -555,7 +544,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {TARGET_TYPE_LABELS[type]}
+                  {getTargetTypeLabel(type)}
                 </button>
               );
             })}
@@ -567,15 +556,15 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
       <div className="border rounded-lg">
         <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
           <h2 className="font-semibold">
-            Search Results
+            {t('searchResults')}
             {hasSearched && (
               <span className="text-gray-500 font-normal ml-2">
-                ({results.length} found)
+                ({results.length} {t('found')})
               </span>
             )}
             {hasSearched && (
               <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full ml-2">
-                {SEARCH_MODE_LABELS[searchMode]}
+                {getModeLabel(searchMode)}
               </span>
             )}
           </h2>
@@ -587,13 +576,13 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
         <div className="p-4">
           {!hasSearched && !isPending && (
             <p className="text-gray-500 text-center py-8">
-              Enter a search query to find similar content
+              {t('enterQuery')}
             </p>
           )}
 
           {hasSearched && results.length === 0 && !isPending && (
             <p className="text-gray-500 text-center py-8">
-              No results found. Try a different query or adjust filters.
+              {t('noResults')}
             </p>
           )}
 
@@ -601,12 +590,71 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
             <div className="space-y-2">
               {results.map((result, index) => {
                 const scoreInfo = getDisplayScore(result);
+                const href = getAdminRoute(routeLocale, result.targetType, result.targetId);
+                const containerClass = `block p-3 rounded-lg border transition-colors ${
+                  href ? 'hover:bg-gray-50' : 'opacity-70 cursor-not-allowed'
+                }`;
                 return (
-                  <a
-                    key={`${result.targetType}-${result.targetId}-${index}`}
-                    href={getAdminRoute(result.targetType, result.targetId)}
-                    className="block p-3 rounded-lg border hover:bg-gray-50 transition-colors"
-                  >
+                  href ? (
+                    <Link
+                      key={`${result.targetType}-${result.targetId}-${index}`}
+                      href={href}
+                      className={containerClass}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              result.targetType === 'post'
+                                ? 'bg-blue-100 text-blue-800'
+                                : result.targetType === 'gallery_item'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {getTargetTypeLabel(result.targetType)}
+                          </span>
+                          <span className="text-sm text-gray-600 font-mono truncate max-w-[200px]">
+                            {result.targetId.slice(0, 8)}...
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Show detailed scores for hybrid mode */}
+                          {isHybridResult(result) && (
+                            <div className="flex gap-2 text-xs text-gray-500 mr-2">
+                              <span>
+                                {t('hybrid.semantic')}: {formatScore(result.semanticScore)}
+                              </span>
+                              <span>
+                                {t('hybrid.keyword')}: {formatScore(result.keywordScore)}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-sm font-medium text-green-600" title={scoreInfo.label}>
+                            {scoreInfo.value}
+                          </span>
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </Link>
+                  ) : (
+                    <div
+                      key={`${result.targetType}-${result.targetId}-${index}`}
+                      className={containerClass}
+                      aria-disabled="true"
+                    >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span
@@ -618,7 +666,7 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                               : 'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {TARGET_TYPE_LABELS[result.targetType]}
+                          {getTargetTypeLabel(result.targetType)}
                         </span>
                         <span className="text-sm text-gray-600 font-mono truncate max-w-[200px]">
                           {result.targetId.slice(0, 8)}...
@@ -628,8 +676,12 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                         {/* Show detailed scores for hybrid mode */}
                         {isHybridResult(result) && (
                           <div className="flex gap-2 text-xs text-gray-500 mr-2">
-                            <span>S: {formatScore(result.semanticScore)}</span>
-                            <span>K: {formatScore(result.keywordScore)}</span>
+                            <span>
+                              {t('hybrid.semantic')}: {formatScore(result.semanticScore)}
+                            </span>
+                            <span>
+                              {t('hybrid.keyword')}: {formatScore(result.keywordScore)}
+                            </span>
                           </div>
                         )}
                         <span className="text-sm font-medium text-green-600" title={scoreInfo.label}>
@@ -650,7 +702,8 @@ export function ControlCenterClient({ initialData }: ControlCenterClientProps) {
                         </svg>
                       </div>
                     </div>
-                  </a>
+                    </div>
+                  )
                 );
               })}
             </div>

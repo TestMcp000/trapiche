@@ -10,6 +10,7 @@
  */
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { parseHamburgerNav } from '@/lib/validators/hamburger-nav';
 import { deepValidateHamburgerNav } from '@/lib/modules/content/hamburger-nav-publish-io';
@@ -18,15 +19,15 @@ import {
   updateSiteContent,
   togglePublishSiteContent,
 } from '@/lib/modules/content/site-content-io';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import type { HamburgerNavV2 } from '@/lib/types/hamburger-nav';
 
 const SECTION_KEY = 'hamburger_nav';
-
-interface ActionResult {
-  success: boolean;
-  error?: string;
-  validationErrors?: Array<{ path: string; message: string }>;
-}
 
 /**
  * Save hamburger nav as draft (schema validation only, no DB existence check)
@@ -34,15 +35,12 @@ interface ActionResult {
 export async function saveNavDraft(
   nav: HamburgerNavV2,
   locale: string
-): Promise<ActionResult> {
+): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
     // Validate structure (cast to Record for parseHamburgerNav)
@@ -50,11 +48,13 @@ export async function saveNavDraft(
     if (parseResult.errors.length > 0) {
       return {
         success: false,
-        error: '導航結構驗證失敗',
-        validationErrors: parseResult.errors.map((e) => ({
-          path: e.path,
-          message: e.message,
-        })),
+        errorCode: ADMIN_ERROR_CODES.VALIDATION_ERROR,
+        details: {
+          validationErrors: parseResult.errors.map((e) => ({
+            path: e.path,
+            message: e.message,
+          })),
+        },
       };
     }
 
@@ -63,11 +63,11 @@ export async function saveNavDraft(
       SECTION_KEY,
       nav as unknown as Record<string, unknown>,
       nav as unknown as Record<string, unknown>,
-      user.id
+      guard.userId
     );
 
     if (!result) {
-      return { success: false, error: '儲存草稿失敗' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Invalidate cache
@@ -75,31 +75,28 @@ export async function saveNavDraft(
     revalidatePath(`/${locale}`);
     revalidatePath(`/${locale}/admin/settings/navigation`);
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error saving nav draft:', error);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
 /**
  * Publish hamburger nav (deep validation: check all targets exist and are public)
  */
-export async function publishNav(locale: string): Promise<ActionResult> {
+export async function publishNav(locale: string): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
     // Fetch current draft content
     const currentContent = await getSiteContent(SECTION_KEY);
     if (!currentContent) {
-      return { success: false, error: '找不到導航內容' };
+      return actionError(ADMIN_ERROR_CODES.NOT_FOUND);
     }
 
     // Parse and validate structure
@@ -107,11 +104,13 @@ export async function publishNav(locale: string): Promise<ActionResult> {
     if (parseResult.errors.length > 0 || !parseResult.nav) {
       return {
         success: false,
-        error: '導航結構驗證失敗，無法發布',
-        validationErrors: parseResult.errors.map((e) => ({
-          path: e.path,
-          message: e.message,
-        })),
+        errorCode: ADMIN_ERROR_CODES.VALIDATION_ERROR,
+        details: {
+          validationErrors: parseResult.errors.map((e) => ({
+            path: e.path,
+            message: e.message,
+          })),
+        },
       };
     }
 
@@ -120,19 +119,21 @@ export async function publishNav(locale: string): Promise<ActionResult> {
     if (!deepResult.valid) {
       return {
         success: false,
-        error: '導航目標驗證失敗，部分目標不存在或未公開',
-        validationErrors: deepResult.errors.map((e) => ({
-          path: e.path,
-          message: e.message,
-        })),
+        errorCode: ADMIN_ERROR_CODES.VALIDATION_ERROR,
+        details: {
+          validationErrors: deepResult.errors.map((e) => ({
+            path: e.path,
+            message: e.message,
+          })),
+        },
       };
     }
 
     // Toggle publish
-    const result = await togglePublishSiteContent(SECTION_KEY, true, user.id);
+    const result = await togglePublishSiteContent(SECTION_KEY, true, guard.userId);
 
     if (!result) {
-      return { success: false, error: '發布失敗' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Invalidate cache
@@ -140,31 +141,28 @@ export async function publishNav(locale: string): Promise<ActionResult> {
     revalidatePath(`/${locale}`);
     revalidatePath(`/${locale}/admin/settings/navigation`);
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error publishing nav:', error);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
 /**
  * Unpublish hamburger nav
  */
-export async function unpublishNav(locale: string): Promise<ActionResult> {
+export async function unpublishNav(locale: string): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, error: '尚未登入' };
+    const guard = await requireSiteAdmin(supabase);
+    if (!guard.ok) {
+      return actionError(guard.errorCode);
     }
 
-    const result = await togglePublishSiteContent(SECTION_KEY, false, user.id);
+    const result = await togglePublishSiteContent(SECTION_KEY, false, guard.userId);
 
     if (!result) {
-      return { success: false, error: '取消發布失敗' };
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Invalidate cache
@@ -172,9 +170,9 @@ export async function unpublishNav(locale: string): Promise<ActionResult> {
     revalidatePath(`/${locale}`);
     revalidatePath(`/${locale}/admin/settings/navigation`);
 
-    return { success: true };
+    return actionSuccess();
   } catch (error) {
     console.error('Error unpublishing nav:', error);
-    return { success: false, error: '發生未預期的錯誤' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }

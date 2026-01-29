@@ -12,23 +12,20 @@ import {
     promoteSafetyAssessmentToTrainingDataset,
 } from '@/lib/modules/safety-risk-engine/admin-io';
 import { getSafetyDetailPageData } from '@/lib/modules/safety-risk-engine/safety-detail-admin-io';
+import { isValidSafetyLlmResponse } from '@/lib/modules/safety-risk-engine/prompt';
 import type {
     SafetyAssessmentDetail,
     SafetyHumanLabel,
     SafetyCorpusKind,
     SafetyHumanReviewedStatus,
     SafetyLlmResponse,
-    SafetyTrainingDatasetRow,
 } from '@/lib/types/safety-risk-engine';
-
-async function checkAdmin() {
-    const supabase = await createClient();
-    const guard = await requireSiteAdmin(supabase);
-    if (!guard.ok) {
-        throw new Error(guard.errorCode);
-    }
-    return { id: guard.userId };
-}
+import {
+    ADMIN_ERROR_CODES,
+    actionError,
+    actionSuccess,
+    type ActionResult,
+} from '@/lib/types/action-result';
 
 /**
  * Fetch safety assessment detail by comment ID.
@@ -36,26 +33,35 @@ async function checkAdmin() {
  */
 export async function fetchAssessmentByCommentAction(
     commentId: string
-): Promise<{ assessment: SafetyAssessmentDetail | null; comment: { content: string } | null; trainingActiveBatch: string | null }> {
-    await checkAdmin();
+): Promise<ActionResult<{ assessment: SafetyAssessmentDetail | null; comment: { content: string } | null; trainingActiveBatch: string | null }>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
 
-    const pageData = await getSafetyDetailPageData(commentId);
+        const pageData = await getSafetyDetailPageData(commentId);
 
-    if (!pageData.latestAssessmentId) {
-        return {
-            assessment: null,
+        if (!pageData.latestAssessmentId) {
+            return actionSuccess({
+                assessment: null,
+                comment: pageData.comment,
+                trainingActiveBatch: pageData.trainingActiveBatch,
+            });
+        }
+
+        const assessment = await getSafetyAssessmentDetail(pageData.latestAssessmentId);
+
+        return actionSuccess({
+            assessment,
             comment: pageData.comment,
             trainingActiveBatch: pageData.trainingActiveBatch,
-        };
+        });
+    } catch (error) {
+        console.error('[fetchAssessmentByCommentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
-
-    const assessment = await getSafetyAssessmentDetail(pageData.latestAssessmentId);
-
-    return {
-        assessment,
-        comment: pageData.comment,
-        trainingActiveBatch: pageData.trainingActiveBatch,
-    };
 }
 
 /**
@@ -64,10 +70,24 @@ export async function fetchAssessmentByCommentAction(
 export async function labelDetailAssessmentAction(
     assessmentId: string,
     label: SafetyHumanLabel
-): Promise<{ success: boolean }> {
-    const user = await checkAdmin();
-    const success = await labelSafetyAssessment(assessmentId, label, user.id);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await labelSafetyAssessment(assessmentId, label, guard.userId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[labelDetailAssessmentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -75,10 +95,24 @@ export async function labelDetailAssessmentAction(
  */
 export async function approveDetailCommentAction(
     commentId: string
-): Promise<{ success: boolean }> {
-    await checkAdmin();
-    const success = await approveSafetyComment(commentId);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await approveSafetyComment(commentId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[approveDetailCommentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -86,10 +120,24 @@ export async function approveDetailCommentAction(
  */
 export async function rejectDetailCommentAction(
     commentId: string
-): Promise<{ success: boolean }> {
-    await checkAdmin();
-    const success = await rejectSafetyComment(commentId);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await rejectSafetyComment(commentId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[rejectDetailCommentAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -100,10 +148,24 @@ export async function promoteDetailToCorpusAction(data: {
     label: string;
     kind: SafetyCorpusKind;
     activate?: boolean;
-}): Promise<{ success: boolean; itemId?: string }> {
-    const user = await checkAdmin();
-    const itemId = await promoteToCorpus(data, user.id);
-    return { success: !!itemId, itemId: itemId ?? undefined };
+}): Promise<ActionResult<{ itemId: string }>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const itemId = await promoteToCorpus(data, guard.userId);
+        if (!itemId) {
+            return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
+        }
+
+        return actionSuccess({ itemId });
+    } catch (error) {
+        console.error('[promoteDetailToCorpusAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -114,15 +176,23 @@ export async function promoteDetailToCorpusAction(data: {
 export async function promoteDetailToTrainingAction(
     assessmentId: string,
     correctedOutputJson: SafetyLlmResponse
-): Promise<{ success: boolean; dataset?: SafetyTrainingDatasetRow; error?: string }> {
-    const user = await checkAdmin();
-
+): Promise<ActionResult<void>> {
     try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!isValidSafetyLlmResponse(correctedOutputJson)) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
         const existingAssessment = await getSafetyAssessmentDetail(assessmentId);
 
-        const dataset = await promoteSafetyAssessmentToTrainingDataset({
+        await promoteSafetyAssessmentToTrainingDataset({
             assessmentId,
-            reviewerId: user.id,
+            reviewerId: guard.userId,
             correctedOutputJson,
         });
 
@@ -133,13 +203,11 @@ export async function promoteDetailToTrainingAction(
             else if (correctedOutputJson.risk_level === 'High_Risk') status = 'verified_risk';
         }
 
-        await updateSafetyAssessmentHumanReviewedStatus(assessmentId, status, user.id);
+        await updateSafetyAssessmentHumanReviewedStatus(assessmentId, status, guard.userId);
 
-        return { success: true, dataset };
+        return actionSuccess();
     } catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown promote error',
-        };
+        console.error('[promoteDetailToTrainingAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
     }
 }

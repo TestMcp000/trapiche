@@ -105,9 +105,9 @@ function CommentsClientContent({ routeLocale, searchParams }: CommentsClientProp
         offset: (page - 1) * PAGE_SIZE,
       });
       
-      if (result.success) {
-        setComments(result.comments as AdminCommentListItem[]);
-        setTotal(result.total);
+      if (result.success && result.data) {
+        setComments(result.data.comments as AdminCommentListItem[]);
+        setTotal(result.data.total);
       }
     } catch (error) {
       console.error('Failed to fetch comments:', error);

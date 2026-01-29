@@ -201,7 +201,7 @@ describe('Gallery Items JSON Parser', () => {
 
       const result = parseGalleryItemsJson(json);
       assert.equal(result.success, false);
-      assert.ok(result.error?.includes('Invalid type'));
+      assert.ok(result.error?.includes('type 無效'));
     });
   });
 });

@@ -102,17 +102,17 @@ export function validateCommentsGetQuery(
 
   // Validate required parameters
   if (!targetType || !targetId) {
-    return invalidResult('targetType and targetId are required');
+    return invalidResult('targetType 與 targetId 為必填');
   }
 
   // Validate targetType
   if (!isValidTargetType(targetType)) {
-    return invalidResult('targetType must be "post" or "gallery_item"');
+    return invalidResult('targetType 必須是 "post" 或 "gallery_item"');
   }
 
   // Validate targetId (should be UUID)
   if (!isValidUUID(targetId)) {
-    return invalidResult('targetId must be a valid UUID');
+    return invalidResult('targetId 必須是有效的 UUID');
   }
 
   // countOnly: only 'true' string is treated as true
@@ -136,7 +136,7 @@ export function validateCreateCommentRequest(
   body: unknown
 ): ValidationResult<CreateCommentRequest> {
   if (!body || typeof body !== 'object') {
-    return invalidResult('Request body must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const {
@@ -151,28 +151,28 @@ export function validateCreateCommentRequest(
 
   // Validate required: targetType
   if (!isValidTargetType(targetType)) {
-    return invalidResult('targetType must be "post" or "gallery_item"');
+    return invalidResult('targetType 必須是 "post" 或 "gallery_item"');
   }
 
   // Validate required: targetId
   if (!isValidUUID(targetId)) {
-    return invalidResult('targetId must be a valid UUID');
+    return invalidResult('targetId 必須是有效的 UUID');
   }
 
   // Validate required: content
   if (!isNonEmptyString(content)) {
-    return invalidResult('content is required and must be a non-empty string');
+    return invalidResult('content 為必填且不可為空');
   }
 
   // Validate content length
   if ((content as string).length > MAX_CONTENT_LENGTH) {
-    return invalidResult(`content must not exceed ${MAX_CONTENT_LENGTH} characters`);
+    return invalidResult(`content 不得超過 ${MAX_CONTENT_LENGTH} 字元`);
   }
 
   // Validate optional: parentId (must be UUID if provided)
   if (parentId !== undefined && parentId !== null) {
     if (!isValidUUID(parentId)) {
-      return invalidResult('parentId must be a valid UUID');
+      return invalidResult('parentId 必須是有效的 UUID');
     }
   }
 
@@ -198,24 +198,24 @@ export function validateUpdateCommentRequest(
   body: unknown
 ): ValidationResult<UpdateCommentRequest> {
   if (!body || typeof body !== 'object') {
-    return invalidResult('Request body must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const { commentId, content } = body as Record<string, unknown>;
 
   // Validate required: commentId
   if (!isValidUUID(commentId)) {
-    return invalidResult('commentId must be a valid UUID');
+    return invalidResult('commentId 必須是有效的 UUID');
   }
 
   // Validate required: content
   if (!isNonEmptyString(content)) {
-    return invalidResult('content is required and must be a non-empty string');
+    return invalidResult('content 為必填且不可為空');
   }
 
   // Validate content length
   if ((content as string).length > MAX_CONTENT_LENGTH) {
-    return invalidResult(`content must not exceed ${MAX_CONTENT_LENGTH} characters`);
+    return invalidResult(`content 不得超過 ${MAX_CONTENT_LENGTH} 字元`);
   }
 
   return validResult({
@@ -237,7 +237,7 @@ export function validateDeleteCommentQuery(
   const commentId = searchParams.get('commentId');
 
   if (!isValidUUID(commentId)) {
-    return invalidResult('commentId must be a valid UUID');
+    return invalidResult('commentId 必須是有效的 UUID');
   }
 
   return validResult({
@@ -278,7 +278,7 @@ export function validateAdminCommentsQuery(
   let status: AdminStatusFilter | undefined;
   if (statusParam && statusParam !== 'all') {
     if (!isValidAdminStatusFilter(statusParam)) {
-      return invalidResult('status must be "approved", "pending", "spam", or "all"');
+      return invalidResult('status 必須是 "approved"、"pending"、"spam" 或 "all"');
     }
     status = statusParam;
   }
@@ -287,7 +287,7 @@ export function validateAdminCommentsQuery(
   let targetType: CommentTargetType | undefined;
   if (targetTypeParam) {
     if (!isValidTargetType(targetTypeParam)) {
-      return invalidResult('targetType must be "post" or "gallery_item"');
+      return invalidResult('targetType 必須是 "post" 或 "gallery_item"');
     }
     targetType = targetTypeParam;
   }
@@ -296,7 +296,7 @@ export function validateAdminCommentsQuery(
   let targetId: string | undefined;
   if (targetIdParam) {
     if (!isValidUUID(targetIdParam)) {
-      return invalidResult('targetId must be a valid UUID');
+      return invalidResult('targetId 必須是有效的 UUID');
     }
     targetId = targetIdParam;
   }
@@ -306,7 +306,7 @@ export function validateAdminCommentsQuery(
   if (limitParam) {
     const parsed = parseInt(limitParam, 10);
     if (isNaN(parsed) || parsed < 1 || parsed > 100) {
-      return invalidResult('limit must be between 1 and 100');
+      return invalidResult('limit 必須介於 1 到 100');
     }
     limit = parsed;
   }
@@ -316,7 +316,7 @@ export function validateAdminCommentsQuery(
   if (offsetParam) {
     const parsed = parseInt(offsetParam, 10);
     if (isNaN(parsed) || parsed < 0 || parsed > 10000) {
-      return invalidResult('offset must be between 0 and 10000');
+      return invalidResult('offset 必須介於 0 到 10000');
     }
     offset = parsed;
   }
@@ -351,28 +351,28 @@ export function validateAdminCommentPatchRequest(
   body: unknown
 ): ValidationResult<AdminCommentPatchValidated> {
   if (!body || typeof body !== 'object') {
-    return invalidResult('Request body must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const { action, commentId, commentIds } = body as Record<string, unknown>;
 
   // Validate required: action
   if (!isValidAdminAction(action)) {
-    return invalidResult('action must be "approve", "spam", or "delete"');
+    return invalidResult('action 必須是 "approve"、"spam" 或 "delete"');
   }
 
   // Validate commentIds for bulk actions
   if (commentIds !== undefined) {
     if (!Array.isArray(commentIds)) {
-      return invalidResult('commentIds must be an array');
+      return invalidResult('commentIds 必須是陣列');
     }
     if (commentIds.length === 0) {
-      return invalidResult('commentIds must not be empty');
+      return invalidResult('commentIds 不可為空');
     }
     // Validate each ID is UUID
     for (const id of commentIds) {
       if (!isValidUUID(id)) {
-        return invalidResult('all commentIds must be valid UUIDs');
+        return invalidResult('commentIds 內所有值都必須是有效的 UUID');
       }
     }
     return validResult({
@@ -383,7 +383,7 @@ export function validateAdminCommentPatchRequest(
 
   // Single comment action
   if (!isValidUUID(commentId)) {
-    return invalidResult('commentId must be a valid UUID');
+    return invalidResult('commentId 必須是有效的 UUID');
   }
 
   return validResult({
@@ -405,7 +405,7 @@ export function validateAdminCommentDeleteQuery(
   const commentId = searchParams.get('commentId');
 
   if (!isValidUUID(commentId)) {
-    return invalidResult('commentId must be a valid UUID');
+    return invalidResult('commentId 必須是有效的 UUID');
   }
 
   return validResult({
@@ -424,19 +424,19 @@ export function validateCommentFeedbackRequest(
   body: unknown
 ): ValidationResult<CommentFeedbackRequest> {
   if (!body || typeof body !== 'object') {
-    return invalidResult('Request body must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const { commentId, feedbackType } = body as Record<string, unknown>;
 
   // Validate required: commentId
   if (!isValidUUID(commentId)) {
-    return invalidResult('commentId must be a valid UUID');
+    return invalidResult('commentId 必須是有效的 UUID');
   }
 
   // Validate required: feedbackType
   if (!isValidFeedbackType(feedbackType)) {
-    return invalidResult('feedbackType must be "spam" or "ham"');
+    return invalidResult('feedbackType 必須是 "spam" 或 "ham"');
   }
 
   return validResult({

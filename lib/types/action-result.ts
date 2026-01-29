@@ -32,44 +32,52 @@ export const ADMIN_ERROR_CODES = {
   DELETE_FAILED: 'delete_failed',
 
   // Domain-specific
+  LIMIT_REACHED: 'limit_reached',
   SLUG_DUPLICATE: 'slug_duplicate',
   CATEGORY_HAS_POSTS: 'category_has_posts',
+  CATEGORY_HAS_ITEMS: 'category_has_items',
   RESOURCE_IN_USE: 'resource_in_use',
 } as const;
 
 export type ActionErrorCode = typeof ADMIN_ERROR_CODES[keyof typeof ADMIN_ERROR_CODES];
 
 /**
- * Discriminated union for action results
+ * Discriminated union for server action results
  *
- * Success case: { success: true, data?: T }
- * Error case: { success: false, errorCode: ActionErrorCode }
+ * - For `ActionResult<void>`: success returns `{ success: true }`
+ * - For `ActionResult<T>` (non-void): success returns `{ success: true, data: T }`
+ * - Error returns `{ success: false, errorCode }`
  *
- * @example
- * // Success with data
- * return { success: true, data: createdCategory };
- *
- * // Success without data (void operations)
- * return { success: true };
- *
- * // Error
- * return { success: false, errorCode: ADMIN_ERROR_CODES.UNAUTHORIZED };
+ * This keeps client-side type narrowing strict and prevents `data` from becoming
+ * optional for non-void results (avoids repetitive `result.data?` checks).
  */
-export type ActionResult<T = void> =
-  | { success: true; data?: T }
-  | { success: false; errorCode: ActionErrorCode };
+export type ActionSuccess<T> = [T] extends [void]
+  ? { success: true }
+  : { success: true; data: T };
+
+export type ActionFailure = {
+  success: false;
+  errorCode: ActionErrorCode;
+  details?: unknown;
+};
+
+export type ActionResult<T = void> = ActionSuccess<T> | ActionFailure;
+
+type ActionResultAny = ActionSuccess<void> | ActionSuccess<unknown> | ActionFailure;
 
 /**
  * Helper to create success result
  */
-export function actionSuccess<T>(data?: T): ActionResult<T> {
-  return data !== undefined ? { success: true, data } : { success: true };
+export function actionSuccess(): ActionResult<void>;
+export function actionSuccess<T>(data: T): ActionResult<T>;
+export function actionSuccess(data?: unknown): ActionResultAny {
+  return data === undefined ? { success: true } : { success: true, data };
 }
 
 /**
  * Helper to create error result
  */
-export function actionError(errorCode: ActionErrorCode): ActionResult<never> {
+export function actionError(errorCode: ActionErrorCode): ActionFailure {
   return { success: false, errorCode };
 }
 
@@ -141,6 +149,10 @@ export const ERROR_LABELS: Record<ActionErrorCode, { en: string; zh: string }> =
     en: 'Failed to delete',
     zh: '刪除失敗',
   },
+  limit_reached: {
+    en: 'Limit reached',
+    zh: '已達上限',
+  },
   slug_duplicate: {
     en: 'This slug is already in use',
     zh: '此網址代稱已被使用',
@@ -148,6 +160,10 @@ export const ERROR_LABELS: Record<ActionErrorCode, { en: string; zh: string }> =
   category_has_posts: {
     en: 'Category contains posts, cannot delete',
     zh: '分類下有文章，無法刪除',
+  },
+  category_has_items: {
+    en: 'Category contains items, cannot delete',
+    zh: '分類下仍有作品，無法刪除',
   },
   resource_in_use: {
     en: 'Resource is in use',

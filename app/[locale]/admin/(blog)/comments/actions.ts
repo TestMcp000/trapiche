@@ -8,7 +8,7 @@
  */
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
-import { isSiteAdmin } from '@/lib/modules/auth';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
   getCommentsForAdmin,
   approveComment,
@@ -20,32 +20,20 @@ import {
   type AdminCommentFilters,
   type AdminComment,
 } from '@/lib/modules/comment/admin-io';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export interface FetchCommentsResult {
-  success: boolean;
+export interface FetchAdminCommentsData {
   comments: AdminComment[];
   total: number;
-  error?: string;
-}
-
-export interface CommentActionResult {
-  success: boolean;
-  comment?: AdminComment;
-  message?: string;
-  error?: string;
-}
-
-// =============================================================================
-// Helper
-// =============================================================================
-
-async function checkAdmin(): Promise<boolean> {
-  const supabase = await createClient();
-  return isSiteAdmin(supabase);
 }
 
 // =============================================================================
@@ -57,18 +45,15 @@ async function checkAdmin(): Promise<boolean> {
  */
 export async function fetchAdminCommentsAction(
   filters: AdminCommentFilters
-): Promise<FetchCommentsResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, comments: [], total: 0, error: 'Unauthorized' };
+): Promise<ActionResult<FetchAdminCommentsData>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   const result = await getCommentsForAdmin(filters);
-  return {
-    success: true,
-    comments: result.comments,
-    total: result.total,
-  };
+  return actionSuccess({ comments: result.comments, total: result.total });
 }
 
 // =============================================================================
@@ -80,14 +65,23 @@ export async function fetchAdminCommentsAction(
  */
 export async function approveCommentAction(
   commentId: string
-): Promise<CommentActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  if (!commentId) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await approveComment(commentId);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  return actionSuccess();
 }
 
 /**
@@ -95,14 +89,23 @@ export async function approveCommentAction(
  */
 export async function markSpamAction(
   commentId: string
-): Promise<CommentActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  if (!commentId) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await markAsSpam(commentId);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  return actionSuccess();
 }
 
 /**
@@ -110,14 +113,23 @@ export async function markSpamAction(
  */
 export async function deleteCommentAction(
   commentId: string
-): Promise<CommentActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  if (!commentId) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await adminDeleteComment(commentId);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
+  }
+
+  return actionSuccess();
 }
 
 // =============================================================================
@@ -129,18 +141,23 @@ export async function deleteCommentAction(
  */
 export async function bulkApproveAction(
   commentIds: string[]
-): Promise<CommentActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
-  if (commentIds.length === 0) {
-    return { success: false, error: 'No comments selected' };
+  if (!Array.isArray(commentIds) || commentIds.length === 0) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await bulkApprove(commentIds);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  return actionSuccess();
 }
 
 /**
@@ -148,18 +165,23 @@ export async function bulkApproveAction(
  */
 export async function bulkMarkSpamAction(
   commentIds: string[]
-): Promise<CommentActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
-  if (commentIds.length === 0) {
-    return { success: false, error: 'No comments selected' };
+  if (!Array.isArray(commentIds) || commentIds.length === 0) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await bulkMarkAsSpam(commentIds);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  return actionSuccess();
 }
 
 /**
@@ -167,16 +189,21 @@ export async function bulkMarkSpamAction(
  */
 export async function bulkDeleteAction(
   commentIds: string[]
-): Promise<CommentActionResult> {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
-  if (commentIds.length === 0) {
-    return { success: false, error: 'No comments selected' };
+  if (!Array.isArray(commentIds) || commentIds.length === 0) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   const result = await bulkDelete(commentIds);
-  return result;
+  if (!result.success) {
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
+  }
+
+  return actionSuccess();
 }

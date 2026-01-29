@@ -71,7 +71,7 @@ export function validatePageViewRequest(
 ): ValidationResult<PageViewRequest> {
   // Check body is object
   if (typeof body !== 'object' || body === null) {
-    return invalidResult('Request body must be an object');
+    return invalidResult('請求內容必須是物件');
   }
 
   const { path, locale } = body as Record<string, unknown>;
@@ -79,18 +79,18 @@ export function validatePageViewRequest(
   // Validate path
   if (!isValidPageViewPath(path)) {
     return invalidResult(
-      'Invalid path: must be a string matching /^/[a-zA-Z0-9/_-]*$/ with max 500 chars'
+      '路徑無效：必須符合 /^/[a-zA-Z0-9/_-]*$/ 且長度不超過 500 字元'
     );
   }
 
   // Validate locale
   if (!isValidPageViewLocale(locale)) {
-    return invalidResult('Invalid locale: must be "zh"');
+    return invalidResult('語系無效：必須是 "zh"');
   }
 
   // Check excluded paths
   if (isExcludedPath(path)) {
-    return invalidResult('Path is excluded from tracking');
+    return invalidResult('此路徑不納入追蹤');
   }
 
   return validResult({ path, locale });

@@ -11,7 +11,13 @@
  */
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
-import { isOwner } from '@/lib/modules/auth';
+import { requireOwner } from '@/lib/modules/auth/admin-guard';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import {
   getPreprocessingQueueStats,
   getPreprocessingThroughput,
@@ -28,14 +34,6 @@ import {
 } from '@/lib/modules/preprocessing/io';
 
 // =============================================================================
-// Types
-// =============================================================================
-
-export type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
-
-// =============================================================================
 // Stats Actions
 // =============================================================================
 
@@ -44,17 +42,17 @@ export type ActionResult<T> =
  */
 export async function getQueueStatsAction(): Promise<ActionResult<PreprocessingQueueStats>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const stats = await getPreprocessingQueueStats();
-    return { success: true, data: stats };
+    return actionSuccess(stats);
   } catch (error) {
     console.error('[getQueueStatsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch queue statistics.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -63,17 +61,17 @@ export async function getQueueStatsAction(): Promise<ActionResult<PreprocessingQ
  */
 export async function getThroughputAction(): Promise<ActionResult<PreprocessingThroughput>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const throughput = await getPreprocessingThroughput();
-    return { success: true, data: throughput };
+    return actionSuccess(throughput);
   } catch (error) {
     console.error('[getThroughputAction] Error:', error);
-    return { success: false, error: 'Failed to fetch throughput metrics.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -82,17 +80,17 @@ export async function getThroughputAction(): Promise<ActionResult<PreprocessingT
  */
 export async function getQualityMetricsAction(): Promise<ActionResult<QualityMetrics>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const metrics = await getQualityMetrics();
-    return { success: true, data: metrics };
+    return actionSuccess(metrics);
   } catch (error) {
     console.error('[getQualityMetricsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch quality metrics.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -103,17 +101,17 @@ export async function getErrorLogsAction(
   limit: number = 20
 ): Promise<ActionResult<PreprocessingErrorLog[]>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const logs = await getPreprocessingErrorLogs(limit);
-    return { success: true, data: logs };
+    return actionSuccess(logs);
   } catch (error) {
     console.error('[getErrorLogsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch error logs.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -124,17 +122,17 @@ export async function getFailedSamplesAction(
   limit: number = 10
 ): Promise<ActionResult<FailedSample[]>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const samples = await getFailedSamples(limit);
-    return { success: true, data: samples };
+    return actionSuccess(samples);
   } catch (error) {
     console.error('[getFailedSamplesAction] Error:', error);
-    return { success: false, error: 'Failed to fetch failed samples.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -147,20 +145,21 @@ export async function getFailedSamplesAction(
  */
 export async function retryFailedAction(): Promise<ActionResult<{ retried: number }>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const result = await retryFailedPreprocessingItems();
     if (result.error) {
-      return { success: false, error: result.error };
+      console.error('[retryFailedAction] retryFailedPreprocessingItems error:', result.error);
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
-    return { success: true, data: { retried: result.retried } };
+    return actionSuccess({ retried: result.retried });
   } catch (error) {
     console.error('[retryFailedAction] Error:', error);
-    return { success: false, error: 'Failed to retry failed items.' };
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
   }
 }
 
@@ -169,20 +168,21 @@ export async function retryFailedAction(): Promise<ActionResult<{ retried: numbe
  */
 export async function purgeFailedAction(): Promise<ActionResult<{ purged: number }>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const result = await purgeFailedQueueItems();
     if (result.error) {
-      return { success: false, error: result.error };
+      console.error('[purgeFailedAction] purgeFailedQueueItems error:', result.error);
+      return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
     }
-    return { success: true, data: { purged: result.purged } };
+    return actionSuccess({ purged: result.purged });
   } catch (error) {
     console.error('[purgeFailedAction] Error:', error);
-    return { success: false, error: 'Failed to purge failed items.' };
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
   }
 }
 
@@ -215,17 +215,17 @@ export interface UpdateConfigRequest {
  */
 export async function getPreprocessingConfigsAction(): Promise<ActionResult<AllConfigsResult>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const configs = await getAllConfigs();
-    return { success: true, data: configs };
+    return actionSuccess(configs);
   } catch (error) {
     console.error('[getPreprocessingConfigsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch preprocessing configs.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -236,24 +236,25 @@ export async function updatePreprocessingConfigAction(
   config: UpdateConfigRequest
 ): Promise<ActionResult<void>> {
   const supabase = await createClient();
-  const owner = await isOwner(supabase);
-  if (!owner) {
-    return { success: false, error: 'Unauthorized. Owner access required.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const result = await updatePreprocessingConfig(config as Record<EmbeddingTargetType, { chunking?: Partial<ChunkingConfig>; quality?: Partial<QualityGateConfig> }>);
     if (!result.success) {
-      return { success: false, error: result.error ?? 'Failed to update config.' };
+      console.error('[updatePreprocessingConfigAction] updatePreprocessingConfig error:', result.error);
+      return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
     }
 
     // Revalidate related caches
     revalidateTag('site-config', { expire: 0 });
     revalidateTag('preprocessing-config', { expire: 0 });
 
-    return { success: true, data: undefined };
+    return actionSuccess();
   } catch (error) {
     console.error('[updatePreprocessingConfigAction] Error:', error);
-    return { success: false, error: 'Failed to update preprocessing config.' };
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
   }
 }

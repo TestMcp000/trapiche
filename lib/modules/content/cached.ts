@@ -123,62 +123,14 @@ export const getCompanySettingsCached = cachedQuery(
 import type { HamburgerNavV2 } from '@/lib/types/hamburger-nav';
 import { parseHamburgerNav } from '@/lib/validators/hamburger-nav';
 
-/**
- * Default hamburger nav seed (matches doc/archive/DESIGN_SSOT.md §6)
- * @see doc/SPEC.md (Home UIUX / Navigation)
- * @see doc/archive/2026-01-28-step-plan-v15-cms-vnext-nav-blog-taxonomy-events-pages.md (PR-40)
- */
-const DEFAULT_HAMBURGER_NAV: HamburgerNavV2 = {
+const EMPTY_HAMBURGER_NAV: HamburgerNavV2 = {
   version: 2,
-  groups: [
-    {
-      id: 'health-education',
-      label: '身心健康衛教',
-      items: [
-        { id: 'emotion-care', label: '情緒照顧', target: { type: 'blog_index', q: '情緒照顧' } },
-        { id: 'anxiety-stress', label: '焦慮壓力', target: { type: 'blog_index', q: '焦慮壓力' } },
-        { id: 'sleep', label: '睡眠議題', target: { type: 'blog_index', q: '睡眠議題' } },
-        { id: 'boundaries', label: '關係界線', target: { type: 'blog_index', q: '關係界線' } },
-        { id: 'self-awareness', label: '自我覺察', target: { type: 'blog_index', q: '自我覺察' } },
-      ],
-    },
-    {
-      id: 'book-recommendations',
-      label: '書籍推薦',
-      items: [
-        { id: 'emotion-healing', label: '情緒療癒', target: { type: 'blog_index', q: '情緒療癒' } },
-        { id: 'relationship-repair', label: '關係修復', target: { type: 'blog_index', q: '關係修復' } },
-        { id: 'self-growth', label: '自我成長', target: { type: 'blog_index', q: '自我成長' } },
-        { id: 'healing-writing', label: '療癒書寫', target: { type: 'blog_index', q: '療癒書寫' } },
-        { id: 'parenting', label: '親子教養', target: { type: 'blog_index', q: '親子教養' } },
-      ],
-    },
-    {
-      id: 'events',
-      label: '講座／活動',
-      items: [
-        { id: 'recent-talks', label: '近期講座', target: { type: 'events_index', eventType: 'talks' } },
-        { id: 'workshops', label: '療癒工作坊', target: { type: 'events_index', eventType: 'workshops' } },
-        { id: 'corporate-training', label: '企業內訓', target: { type: 'events_index', eventType: 'corporate-training' } },
-        { id: 'collaboration', label: '合作邀請', target: { type: 'page', path: '/collaboration' } },
-      ],
-    },
-    {
-      id: 'about-contact',
-      label: '關於／聯絡',
-      items: [
-        { id: 'about', label: '心理師介紹', target: { type: 'page', path: '/about' } },
-        { id: 'services', label: '服務方式', target: { type: 'page', path: '/services' } },
-        { id: 'faq', label: '常見問題', target: { type: 'faq_index' } },
-        { id: 'contact', label: '聯絡方式', target: { type: 'page', path: '/contact' } },
-      ],
-    },
-  ],
+  groups: [],
 };
 
 /**
  * Cached hamburger nav v2 fetch
- * Returns parsed HamburgerNavV2 or default if not found/invalid
+ * Returns parsed HamburgerNavV2 or empty nav if not found/invalid
  */
 export const getHamburgerNavCached = cachedQuery(
   async (): Promise<HamburgerNavV2> => {
@@ -192,18 +144,18 @@ export const getHamburgerNavCached = cachedQuery(
 
     if (error) {
       console.error('Error fetching hamburger nav:', error);
-      return DEFAULT_HAMBURGER_NAV;
+      return EMPTY_HAMBURGER_NAV;
     }
 
     if (!data?.content_zh) {
-      return DEFAULT_HAMBURGER_NAV;
+      return EMPTY_HAMBURGER_NAV;
     }
 
     const { nav, errors } = parseHamburgerNav(data.content_zh as Record<string, unknown>);
 
     if (!nav) {
       console.error('Invalid hamburger nav content:', errors);
-      return DEFAULT_HAMBURGER_NAV;
+      return EMPTY_HAMBURGER_NAV;
     }
 
     return nav;

@@ -28,11 +28,14 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
       setCopiedId(reportId);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      console.error('[ReportsClient] Copy failed:', err);
+      setError(t('copyFailed'));
     }
   };
 
   const fetchReports = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await fetch('/api/reports');
       if (!response.ok) {
@@ -40,16 +43,18 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
           router.push(`/${routeLocale}/admin/login`);
           return;
         }
-        throw new Error('Failed to fetch reports');
+        setError(t('loadFailed'));
+        return;
       }
       const data = await response.json();
       setReports(data.reports || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports');
+      console.error('[ReportsClient] Fetch failed:', err);
+      setError(t('loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [routeLocale, router]);
+  }, [routeLocale, router, t]);
 
   useEffect(() => {
     // Poll for updates every 5 seconds if there are running reports
@@ -73,22 +78,27 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
         body: JSON.stringify({ type }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to start report');
+        setError(t('runFailed'));
+        return;
       }
 
       // Refresh list
       await fetchReports();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to run report');
+      console.error('[ReportsClient] Run failed:', err);
+      setError(t('runFailed'));
     } finally {
       setRunning(null);
     }
   };
 
   const getStatusBadge = (status: string) => {
+    const knownStatuses = ['queued', 'running', 'success', 'failed'] as const;
+    const label = knownStatuses.includes(status as (typeof knownStatuses)[number])
+      ? t(`statusLabels.${status}`)
+      : status;
+
     const styles: Record<string, string> = {
       queued: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
       running: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
@@ -97,12 +107,17 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
     };
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status] || ''}`}>
-        {status}
+        {label}
       </span>
     );
   };
 
   const getTypeBadge = (type: string) => {
+    const knownTypes = ['lighthouse', 'schema', 'links'] as const;
+    const label = knownTypes.includes(type as (typeof knownTypes)[number])
+      ? t(`typeLabels.${type}`)
+      : type;
+
     const styles: Record<string, string> = {
       lighthouse: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
       schema: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
@@ -110,7 +125,7 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
     };
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${styles[type] || ''}`}>
-        {type}
+        {label}
       </span>
     );
   };
@@ -120,19 +135,19 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
     
     if (report.type === 'links') {
       const s = report.summary as { brokenCount?: number; totalChecked?: number };
-      return s.brokenCount !== undefined 
-        ? `${s.brokenCount}/${s.totalChecked} broken`
+      return typeof s.brokenCount === 'number' && typeof s.totalChecked === 'number'
+        ? t('summaryLinksBroken', { broken: s.brokenCount, total: s.totalChecked })
         : '-';
     }
     
     if (report.type === 'schema') {
       const s = report.summary as { allValid?: boolean; errors?: string[] };
-      return s.allValid ? '✓ Valid' : `${s.errors?.length || 0} errors`;
+      return s.allValid ? t('summarySchemaValid') : t('summarySchemaErrors', { count: s.errors?.length || 0 });
     }
     
     if (report.type === 'lighthouse') {
       const s = report.summary as { note?: string };
-      return s.note ? 'See details' : '-';
+      return s.note ? t('summarySeeDetails') : '-';
     }
     
     return '-';
@@ -228,7 +243,7 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
                         {getSummaryPreview(report)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(report.created_at).toLocaleString()}
+                        {new Date(report.created_at).toLocaleString('zh-TW')}
                       </td>
                     </tr>
                     {expandedId === report.id && (
@@ -237,7 +252,7 @@ function ReportsClientInner({ initialReports, routeLocale }: { initialReports: R
                           <div className="text-sm">
                             {report.error && (
                               <div className="mb-2 p-2 bg-red-50 dark:bg-red-900/20 rounded">
-                                <strong className="text-red-600 dark:text-red-400">Error:</strong>{' '}
+                                <strong className="text-red-600 dark:text-red-400">{t('errorLabel')}</strong>{' '}
                                 <span className="text-red-700 dark:text-red-300">{report.error}</span>
                               </div>
                             )}

@@ -264,7 +264,7 @@ describe('Blog Post Markdown Parser', () => {
       const result = parseBlogPostMarkdown(md);
 
       assert.equal(result.success, false);
-      assert.ok(result.error?.includes('Missing required frontmatter'));
+      assert.ok(result.error?.includes('缺少必要的 frontmatter'));
     });
 
     it('fails on invalid visibility', () => {
@@ -278,7 +278,7 @@ Content`;
       const result = parseBlogPostMarkdown(md);
 
       assert.equal(result.success, false);
-      assert.ok(result.error?.includes('Invalid visibility'));
+      assert.ok(result.error?.includes('visibility 無效'));
     });
 
     it('round-trips formatted content', () => {

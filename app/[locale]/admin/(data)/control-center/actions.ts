@@ -12,7 +12,13 @@
  */
 
 import { createClient } from '@/lib/infrastructure/supabase/server';
-import { isSiteAdmin, isOwner } from '@/lib/modules/auth';
+import { requireOwner, requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import {
   validateSemanticSearchParams,
   validateKeywordSearchParams,
@@ -43,24 +49,6 @@ import type {
 } from '@/lib/types/embedding';
 
 // =============================================================================
-// Types
-// =============================================================================
-
-export type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
-
-// =============================================================================
-// Helper: Get User ID for logging
-// =============================================================================
-
-async function getCurrentUserId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
-}
-
-// =============================================================================
 // Semantic Search Action
 // =============================================================================
 
@@ -75,21 +63,21 @@ export async function semanticSearchAction(
 ): Promise<ActionResult<SemanticSearchResult[]>> {
   // RBAC Gate
   const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   // Feature Gate
   const enabled = await isSemanticSearchEnabled();
   if (!enabled) {
-    return { success: false, error: 'Semantic search is not available. No embeddings found.' };
+    return actionError(ADMIN_ERROR_CODES.FEATURE_DISABLED);
   }
 
   // Validate input
   const validation = validateSemanticSearchParams({ query, targetTypes, limit });
   if (!validation.success) {
-    return { success: false, error: validation.error.issues[0]?.message ?? 'Invalid input' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   try {
@@ -101,7 +89,6 @@ export async function semanticSearchAction(
 
     // Log search for analytics (fire and forget)
     const topScore = results[0]?.similarity;
-    const userId = await getCurrentUserId();
     void logSearch({
       query: validation.data.query,
       mode: 'semantic',
@@ -111,12 +98,12 @@ export async function semanticSearchAction(
       resultsCount: results.length,
       topScore,
       isLowQuality: isLowQualitySearch(results.length, topScore, validation.data.threshold),
-    }, userId);
+    }, guard.userId);
 
-    return { success: true, data: results };
+    return actionSuccess(results);
   } catch (error) {
     console.error('[semanticSearchAction] Error:', error);
-    return { success: false, error: 'Search failed. Please try again.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -135,21 +122,21 @@ export async function keywordSearchAction(
 ): Promise<ActionResult<KeywordSearchResult[]>> {
   // RBAC Gate
   const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   // Feature Gate
   const enabled = await isSemanticSearchEnabled();
   if (!enabled) {
-    return { success: false, error: 'Search is not available. No embeddings found.' };
+    return actionError(ADMIN_ERROR_CODES.FEATURE_DISABLED);
   }
 
   // Validate input
   const validation = validateKeywordSearchParams({ query, targetTypes, limit });
   if (!validation.success) {
-    return { success: false, error: validation.error.issues[0]?.message ?? 'Invalid input' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   try {
@@ -162,7 +149,6 @@ export async function keywordSearchAction(
     // Log search for analytics (fire and forget)
     // For keyword search, normalize tsRank to 0-1 range (max tsRank ~0.5)
     const topScore = results[0]?.tsRank ? Math.min(results[0].tsRank * 2, 1) : undefined;
-    const userId = await getCurrentUserId();
     void logSearch({
       query: validation.data.query,
       mode: 'keyword',
@@ -171,12 +157,12 @@ export async function keywordSearchAction(
       resultsCount: results.length,
       topScore,
       isLowQuality: isLowQualitySearch(results.length, topScore),
-    }, userId);
+    }, guard.userId);
 
-    return { success: true, data: results };
+    return actionSuccess(results);
   } catch (error) {
     console.error('[keywordSearchAction] Error:', error);
-    return { success: false, error: 'Search failed. Please try again.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -197,15 +183,15 @@ export async function hybridSearchAction(
 ): Promise<ActionResult<HybridSearchResult[]>> {
   // RBAC Gate
   const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   // Feature Gate
   const enabled = await isSemanticSearchEnabled();
   if (!enabled) {
-    return { success: false, error: 'Search is not available. No embeddings found.' };
+    return actionError(ADMIN_ERROR_CODES.FEATURE_DISABLED);
   }
 
   // Validate input
@@ -217,7 +203,7 @@ export async function hybridSearchAction(
     keywordWeight,
   });
   if (!validation.success) {
-    return { success: false, error: validation.error.issues[0]?.message ?? 'Invalid input' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   try {
@@ -232,7 +218,6 @@ export async function hybridSearchAction(
 
     // Log search for analytics (fire and forget)
     const topScore = results[0]?.combinedScore;
-    const userId = await getCurrentUserId();
     void logSearch({
       query: validation.data.query,
       mode: 'hybrid',
@@ -246,12 +231,12 @@ export async function hybridSearchAction(
       resultsCount: results.length,
       topScore,
       isLowQuality: isLowQualitySearch(results.length, topScore, validation.data.threshold),
-    }, userId);
+    }, guard.userId);
 
-    return { success: true, data: results };
+    return actionSuccess(results);
   } catch (error) {
     console.error('[hybridSearchAction] Error:', error);
-    return { success: false, error: 'Search failed. Please try again.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -265,13 +250,13 @@ export async function hybridSearchAction(
 export async function checkSemanticSearchEnabled(): Promise<ActionResult<boolean>> {
   // RBAC Gate
   const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   const enabled = await isSemanticSearchEnabled();
-  return { success: true, data: enabled };
+  return actionSuccess(enabled);
 }
 
 // =============================================================================
@@ -288,15 +273,15 @@ export async function listSearchLogsAction(
 ): Promise<ActionResult<SearchLogListItem[]>> {
   // RBAC Gate (Owner/Editor can view)
   const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   // Validate input
   const validation = validateListSearchLogsParams({ limit, lowQualityOnly });
   if (!validation.success) {
-    return { success: false, error: validation.error.issues[0]?.message ?? 'Invalid input' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   try {
@@ -304,10 +289,10 @@ export async function listSearchLogsAction(
       limit: validation.data.limit,
       lowQualityOnly: validation.data.lowQualityOnly,
     });
-    return { success: true, data: logs };
+    return actionSuccess(logs);
   } catch (error) {
     console.error('[listSearchLogsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch search logs.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -318,17 +303,17 @@ export async function listSearchLogsAction(
 export async function getSearchLogStatsAction(): Promise<ActionResult<SearchLogStats>> {
   // RBAC Gate (Owner/Editor can view)
   const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const stats = await getSearchLogStats();
-    return { success: true, data: stats };
+    return actionSuccess(stats);
   } catch (error) {
     console.error('[getSearchLogStatsAction] Error:', error);
-    return { success: false, error: 'Failed to fetch search statistics.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -341,17 +326,17 @@ export async function getLowQualityQueriesAction(
 ): Promise<ActionResult<SearchLogListItem[]>> {
   // RBAC Gate (Owner/Editor can view)
   const supabase = await createClient();
-  const isAdmin = await isSiteAdmin(supabase);
-  if (!isAdmin) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   try {
     const queries = await getLowQualityQueries(limit ?? 20);
-    return { success: true, data: queries };
+    return actionSuccess(queries);
   } catch (error) {
     console.error('[getLowQualityQueriesAction] Error:', error);
-    return { success: false, error: 'Failed to fetch low-quality queries.' };
+    return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
   }
 }
 
@@ -364,23 +349,24 @@ export async function deleteOldSearchLogsAction(
 ): Promise<ActionResult<{ deletedCount: number }>> {
   // RBAC Gate (Owner-only)
   const supabase = await createClient();
-  const ownerCheck = await isOwner(supabase);
-  if (!ownerCheck) {
-    return { success: false, error: 'Only owner can delete search logs.' };
+  const guard = await requireOwner(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
   }
 
   if (olderThanDays < 1 || olderThanDays > 365) {
-    return { success: false, error: 'olderThanDays must be between 1 and 365.' };
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
   }
 
   try {
     const result = await deleteOldSearchLogs(olderThanDays);
     if (!result.success) {
-      return { success: false, error: result.error ?? 'Delete failed.' };
+      console.error('[deleteOldSearchLogsAction] deleteOldSearchLogs error:', result.error);
+      return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
     }
-    return { success: true, data: { deletedCount: result.deletedCount } };
+    return actionSuccess({ deletedCount: result.deletedCount });
   } catch (error) {
     console.error('[deleteOldSearchLogsAction] Error:', error);
-    return { success: false, error: 'Failed to delete old search logs.' };
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
   }
 }

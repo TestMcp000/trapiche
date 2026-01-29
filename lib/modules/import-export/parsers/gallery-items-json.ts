@@ -111,7 +111,7 @@ export function parseGalleryItemsJson(
 
     // Validate envelope structure
     if (typeof parsed !== 'object' || parsed === null) {
-      return { success: false, error: 'Invalid JSON: expected object' };
+      return { success: false, error: 'JSON 格式無效：預期為物件' };
     }
 
     const envelope = parsed as Record<string, unknown>;
@@ -119,12 +119,12 @@ export function parseGalleryItemsJson(
     if (envelope.type !== 'gallery_items') {
       return {
         success: false,
-        error: `Invalid type: expected 'gallery_items', got '${envelope.type}'`,
+        error: `type 無效：預期為 'gallery_items'，實際為 '${envelope.type}'`,
       };
     }
 
     if (!Array.isArray(envelope.data)) {
-      return { success: false, error: 'Invalid data: expected array' };
+      return { success: false, error: 'data 欄位無效：預期為陣列' };
     }
 
     // Validate and transform each item
@@ -138,7 +138,7 @@ export function parseGalleryItemsJson(
       if (missing.length > 0) {
         return {
           success: false,
-          error: `Item ${i + 1}: missing required fields: ${missing.join(', ')}`,
+          error: `第 ${i + 1} 筆作品：缺少必填欄位：${missing.join(', ')}`,
         };
       }
 
@@ -149,7 +149,7 @@ export function parseGalleryItemsJson(
   } catch (error) {
     return {
       success: false,
-      error: `JSON parse error: ${error instanceof Error ? error.message : String(error)}`,
+      error: `JSON 解析失敗：${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -164,7 +164,7 @@ export function parseGalleryItemsObject(
   data: unknown
 ): ParseResult<GalleryItemImportData[]> {
   if (typeof data !== 'object' || data === null) {
-    return { success: false, error: 'Invalid input: expected object' };
+    return { success: false, error: '輸入格式無效：預期為物件' };
   }
 
   const envelope = data as GalleryItemsExport;
@@ -172,12 +172,12 @@ export function parseGalleryItemsObject(
   if (envelope.type !== 'gallery_items') {
     return {
       success: false,
-      error: `Invalid type: expected 'gallery_items', got '${envelope.type}'`,
+      error: `type 無效：預期為 'gallery_items'，實際為 '${envelope.type}'`,
     };
   }
 
   if (!Array.isArray(envelope.data)) {
-    return { success: false, error: 'Invalid data: expected array' };
+    return { success: false, error: 'data 欄位無效：預期為陣列' };
   }
 
   const items: GalleryItemImportData[] = [];
@@ -189,7 +189,7 @@ export function parseGalleryItemsObject(
     if (missing.length > 0) {
       return {
         success: false,
-        error: `Item ${i + 1}: missing required fields: ${missing.join(', ')}`,
+        error: `第 ${i + 1} 筆作品：缺少必填欄位：${missing.join(', ')}`,
       };
     }
 

@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import { THEME_PRESETS } from '@/lib/modules/theme/presets';
 import { buildThemeCssVars } from '@/lib/modules/theme/resolve';
 import { updatePageThemesAction } from './actions';
@@ -79,7 +80,7 @@ export default function PageThemesClient({ config, canEdit }: PageThemesClientPr
         // Reload iframe to reflect actual DB values
         iframeRef.current?.reload();
       } else {
-        setMessage({ type: 'error', text: result.error || t('theme.failed') });
+        setMessage({ type: 'error', text: getErrorLabel(result.errorCode, locale) });
       }
     });
   };

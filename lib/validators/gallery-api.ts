@@ -44,7 +44,7 @@ export function validateGalleryItemsQuery(
   let sort: GalleryListSort = 'newest';
   if (sortParam) {
     if (!VALID_GALLERY_SORTS.includes(sortParam as GalleryListSort)) {
-      return invalidResult(`sort must be one of: ${VALID_GALLERY_SORTS.join(', ')}`);
+      return invalidResult(`sort 必須是以下其中之一：${VALID_GALLERY_SORTS.join(', ')}`);
     }
     sort = sortParam as GalleryListSort;
   }

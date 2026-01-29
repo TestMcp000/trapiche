@@ -8,6 +8,8 @@
  */
 
 import { revalidateTag, revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/infrastructure/supabase/server';
+import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
 import {
   getFeaturedPinsBySurface,
   getGalleryFeaturedLimits,
@@ -18,6 +20,12 @@ import {
   type PinWithItem,
   type GalleryItemWithCategory,
 } from '@/lib/modules/gallery/admin-io';
+import {
+  ADMIN_ERROR_CODES,
+  actionError,
+  actionSuccess,
+  type ActionResult,
+} from '@/lib/types/action-result';
 import type { GalleryPinSurface } from '@/lib/types/gallery';
 
 // Re-export types for client component
@@ -44,11 +52,17 @@ export async function addFeaturedPin(
   surface: GalleryPinSurface,
   itemId: string,
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   const result = await addFeaturedPinAdmin(surface, itemId);
 
   if ('error' in result) {
-    return { success: false, error: result.error };
+    return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
   }
 
   // Revalidate cache
@@ -56,7 +70,7 @@ export async function addFeaturedPin(
   revalidatePath('/' + locale);
   revalidatePath('/' + locale + '/gallery');
 
-  return { success: true };
+  return actionSuccess();
 }
 
 /**
@@ -65,11 +79,17 @@ export async function addFeaturedPin(
 export async function removeFeaturedPin(
   pinId: string,
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   const result = await removeFeaturedPinAdmin(pinId);
 
   if ('error' in result) {
-    return { success: false, error: result.error };
+    return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
   }
 
   // Revalidate cache
@@ -77,7 +97,7 @@ export async function removeFeaturedPin(
   revalidatePath('/' + locale);
   revalidatePath('/' + locale + '/gallery');
 
-  return { success: true };
+  return actionSuccess();
 }
 
 /**
@@ -87,11 +107,17 @@ export async function saveFeaturedPinOrder(
   surface: GalleryPinSurface,
   orderedPinIds: string[],
   locale: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
   const result = await saveFeaturedPinOrderAdmin(surface, orderedPinIds);
 
   if ('error' in result) {
-    return { success: false, error: result.error };
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
   }
 
   // Revalidate cache
@@ -99,7 +125,7 @@ export async function saveFeaturedPinOrder(
   revalidatePath('/' + locale);
   revalidatePath('/' + locale + '/gallery');
 
-  return { success: true };
+  return actionSuccess();
 }
 
 /**

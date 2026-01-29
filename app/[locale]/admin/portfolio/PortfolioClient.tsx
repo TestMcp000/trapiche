@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { PortfolioItem } from '@/lib/types/content';
+import { getErrorLabel } from '@/lib/types/action-result';
 import { 
   savePortfolioAction, 
   deletePortfolioAction, 
@@ -16,6 +18,7 @@ interface PortfolioClientProps {
 
 export default function PortfolioClient({ initialItems, locale }: PortfolioClientProps) {
   const router = useRouter();
+  const t = useTranslations('admin.portfolio');
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -47,59 +50,38 @@ export default function PortfolioClient({ initialItems, locale }: PortfolioClien
     setSaving(false);
     
     if (result.success) {
-      setMessage({ type: 'success', text: '已儲存' });
+      setMessage({ type: 'success', text: t('saved') });
       setShowForm(false);
       setEditingItem(null);
       router.refresh();
     } else {
-      setMessage({ type: 'error', text: result.error || '儲存失敗' });
+      setMessage({ type: 'error', text: getErrorLabel(result.errorCode, locale) });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('確定要刪除嗎？')) {
+    if (!confirm(t('deleteConfirm'))) {
       return;
     }
     
     const result = await deletePortfolioAction(id, locale);
     
     if (result.success) {
-      setMessage({ type: 'success', text: '已刪除' });
+      setMessage({ type: 'success', text: t('deleted') });
       router.refresh();
     } else {
-      setMessage({ type: 'error', text: result.error || '刪除失敗' });
+      setMessage({ type: 'error', text: getErrorLabel(result.errorCode, locale) });
     }
   };
 
   const handleToggleVisibility = async (id: string, visible: boolean) => {
     const result = await toggleVisibilityAction(id, visible, locale);
     if (result.success) {
-      setMessage({ type: 'success', text: '已更新' });
+      setMessage({ type: 'success', text: t('updated') });
     } else {
-      setMessage({ type: 'error', text: result.error || '更新失敗' });
+      setMessage({ type: 'error', text: getErrorLabel(result.errorCode, locale) });
     }
     router.refresh();
-  };
-
-  const t = {
-    title: '作品集管理',
-    description: '管理網站上顯示的作品項目',
-    add: '新增項目',
-    edit: '編輯',
-    delete: '刪除',
-    visible: '顯示',
-    hidden: '隱藏',
-    history: '歷史',
-    save: '儲存',
-    cancel: '取消',
-    titleLabel: '標題',
-    descLabel: '描述',
-    url: '連結',
-    status: '狀態',
-    badgeColor: '標籤顏色',
-    live: '已上線',
-    development: '開發中',
-    noItems: '尚無項目',
   };
 
   return (
@@ -107,8 +89,8 @@ export default function PortfolioClient({ initialItems, locale }: PortfolioClien
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t.title}</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">{t.description}</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">{t('description')}</p>
         </div>
         <button
           onClick={() => { setEditingItem(null); setShowForm(true); }}
@@ -117,7 +99,7 @@ export default function PortfolioClient({ initialItems, locale }: PortfolioClien
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          {t.add}
+          {t('addItem')}
         </button>
       </div>
 
@@ -135,7 +117,7 @@ export default function PortfolioClient({ initialItems, locale }: PortfolioClien
       {/* Items List */}
       {initialItems.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-400">{t.noItems}</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('noItems')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -159,11 +141,11 @@ export default function PortfolioClient({ initialItems, locale }: PortfolioClien
                         ? 'bg-green-100 text-green-700' 
                         : 'bg-blue-100 text-blue-700'
                     }`}>
-                      {item.status === 'live' ? t.live : t.development}
+                      {item.status === 'live' ? t('form.live') : t('form.development')}
                     </span>
                     {!item.is_visible && (
                       <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                        {t.hidden}
+                        {t('hidden')}
                       </span>
                     )}
                   </div>
@@ -190,25 +172,25 @@ export default function PortfolioClient({ initialItems, locale }: PortfolioClien
                         : 'bg-green-100 text-green-600 hover:bg-green-200'
                     }`}
                   >
-                    {item.is_visible ? t.hidden : t.visible}
+                    {item.is_visible ? t('hidden') : t('visible')}
                   </button>
                   <button
                     onClick={() => { setEditingItem(item); setShowForm(true); }}
                     className="px-3 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
                   >
-                    {t.edit}
+                    {t('edit')}
                   </button>
                   <button
                     onClick={() => router.push(`/${locale}/admin/history?type=portfolio&id=${item.id}`)}
                     className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
                   >
-                    {t.history}
+                    {t('history')}
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
                     className="px-3 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200"
                   >
-                    {t.delete}
+                    {t('delete')}
                   </button>
                 </div>
               </div>
@@ -222,14 +204,13 @@ export default function PortfolioClient({ initialItems, locale }: PortfolioClien
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              {editingItem ? t.edit : t.add}
+              {editingItem ? t('edit') : t('addItem')}
             </h2>
             <PortfolioForm
               item={editingItem}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingItem(null); }}
               saving={saving}
-              t={t}
             />
           </div>
         </div>
@@ -243,14 +224,13 @@ function PortfolioForm({
   onSave,
   onCancel,
   saving,
-  t
 }: {
   item: PortfolioItem | null;
   onSave: (item: Partial<PortfolioItem>) => void;
   onCancel: () => void;
   saving: boolean;
-  t: Record<string, string>;
 }) {
+  const t = useTranslations('admin.portfolio');
   const [formData, setFormData] = useState({
     title_zh: item?.title_zh || item?.title_en || '',
     description_zh: item?.description_zh || item?.description_en || '',
@@ -269,7 +249,9 @@ function PortfolioForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.titleLabel}</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {t('form.titleZh')}
+        </label>
         <input
           type="text"
           value={formData.title_zh}
@@ -280,8 +262,11 @@ function PortfolioForm({
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.descLabel}</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {t('form.descZh')}
+        </label>
         <textarea
+          value={formData.description_zh}
           onChange={(e) => setFormData({ ...formData, description_zh: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700"
           rows={3}
@@ -289,7 +274,9 @@ function PortfolioForm({
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.url}</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {t('form.url')}
+        </label>
         <input
           type="url"
           value={formData.url}
@@ -300,18 +287,22 @@ function PortfolioForm({
       
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.status}</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('form.status')}
+          </label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value as 'live' | 'development' | 'archived' })}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700"
           >
-            <option value="live">{t.live}</option>
-            <option value="development">{t.development}</option>
+            <option value="live">{t('form.live')}</option>
+            <option value="development">{t('form.development')}</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.badgeColor}</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('form.badgeColor')}
+          </label>
           <select
             value={formData.badge_color}
             onChange={(e) => setFormData({ ...formData, badge_color: e.target.value })}
@@ -331,14 +322,14 @@ function PortfolioForm({
           onClick={onCancel}
           className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
         >
-          {t.cancel}
+          {t('cancel')}
         </button>
         <button
           type="submit"
           disabled={saving}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
-          {saving ? '...' : t.save}
+          {saving ? '...' : t('save')}
         </button>
       </div>
     </form>

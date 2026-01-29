@@ -62,10 +62,10 @@ export const ALLOWED_PROTOCOLS = ['https:', 'mailto:'] as const;
  */
 function validateSlug(slug: string, path: string): NavValidationError | null {
     if (!slug || typeof slug !== 'string') {
-        return { path, message: 'Slug is required and must be a string' };
+        return { path, message: 'Slug 為必填，且必須為字串' };
     }
     if (!isValidSlug(slug)) {
-        return { path, message: `Invalid slug format: "${slug}"` };
+        return { path, message: `Slug 格式無效：「${slug}」` };
     }
     return null;
 }
@@ -111,7 +111,7 @@ function validateQueryParams(
         if (!allowedKeys.has(key)) {
             errors.push({
                 path: `${path}.${key}`,
-                message: `Unknown property "${key}"`,
+                message: `未知屬性「${key}」`,
             });
         }
     }
@@ -123,7 +123,7 @@ function validateQueryParams(
             if (typeof value !== 'string') {
                 errors.push({
                     path: `${path}.${key}`,
-                    message: `Query parameter "${key}" must be a string`,
+                    message: `查詢參數「${key}」必須為字串`,
                 });
             }
         }
@@ -138,12 +138,12 @@ function validateQueryParams(
  */
 function validateExternalUrlNav(url: string, path: string): NavValidationError | null {
     if (!url || typeof url !== 'string') {
-        return { path, message: 'URL is required and must be a string' };
+        return { path, message: 'URL 為必填，且必須為字串' };
     }
 
     const result = validateExternalUrlCore(url);
     if (!result.valid) {
-        return { path, message: result.error || 'Invalid URL' };
+        return { path, message: result.error || 'URL 格式無效' };
     }
 
     return null;
@@ -154,16 +154,16 @@ function validateExternalUrlNav(url: string, path: string): NavValidationError |
  */
 function validatePath(pathValue: string, path: string): NavValidationError | null {
     if (!pathValue || typeof pathValue !== 'string') {
-        return { path, message: 'Path is required and must be a string' };
+        return { path, message: 'Path 為必填，且必須為字串' };
     }
 
     if (!pathValue.startsWith('/')) {
-        return { path, message: 'Path must start with /' };
+        return { path, message: 'Path 必須以 / 開頭' };
     }
 
     // Reject absolute URLs in path
     if (pathValue.includes('://')) {
-        return { path, message: 'Path must be relative, not an absolute URL' };
+        return { path, message: 'Path 必須為相對路徑，不能是絕對 URL' };
     }
 
     return null;
@@ -174,19 +174,19 @@ function validatePath(pathValue: string, path: string): NavValidationError | nul
  */
 function validateHash(hash: string, path: string): NavValidationError | null {
     if (!hash || typeof hash !== 'string') {
-        return { path, message: 'Hash is required and must be a string' };
+        return { path, message: 'Hash 為必填，且必須為字串' };
     }
 
     // Normalize: remove leading # if present
     const normalized = hash.startsWith('#') ? hash.slice(1) : hash;
 
     if (!normalized) {
-        return { path, message: 'Hash cannot be empty' };
+        return { path, message: 'Hash 不能為空' };
     }
 
     // Basic validation: no spaces, common anchor format
     if (/\s/.test(normalized)) {
-        return { path, message: 'Hash cannot contain spaces' };
+        return { path, message: 'Hash 不能包含空白字元' };
     }
 
     return null;
@@ -203,7 +203,7 @@ function validateTarget(target: unknown, path: string): NavValidationError[] {
     const errors: NavValidationError[] = [];
 
     if (!target || typeof target !== 'object') {
-        errors.push({ path, message: 'Target must be an object' });
+        errors.push({ path, message: 'Target 必須為物件' });
         return errors;
     }
 
@@ -211,14 +211,14 @@ function validateTarget(target: unknown, path: string): NavValidationError[] {
 
     // Check type field
     if (!t.type || typeof t.type !== 'string') {
-        errors.push({ path: `${path}.type`, message: 'Target type is required' });
+        errors.push({ path: `${path}.type`, message: 'Target.type 為必填' });
         return errors;
     }
 
     if (!ALLOWED_TARGET_TYPES.includes(t.type as NavTargetType)) {
         errors.push({
             path: `${path}.type`,
-            message: `Invalid target type "${t.type}". Allowed: ${ALLOWED_TARGET_TYPES.join(', ')}`,
+            message: `目標類型「${t.type}」無效，可用類型：${ALLOWED_TARGET_TYPES.join(', ')}`,
         });
         return errors;
     }
@@ -332,7 +332,7 @@ function validateNavItem(item: unknown, path: string): NavValidationError[] {
     const errors: NavValidationError[] = [];
 
     if (!item || typeof item !== 'object') {
-        errors.push({ path, message: 'Item must be an object' });
+        errors.push({ path, message: 'Item 必須為物件' });
         return errors;
     }
 
@@ -340,12 +340,12 @@ function validateNavItem(item: unknown, path: string): NavValidationError[] {
 
     // Validate id
     if (!i.id || typeof i.id !== 'string') {
-        errors.push({ path: `${path}.id`, message: 'Item id is required and must be a string' });
+        errors.push({ path: `${path}.id`, message: 'Item.id 為必填，且必須為字串' });
     }
 
     // Validate label
     if (!i.label || typeof i.label !== 'string') {
-        errors.push({ path: `${path}.label`, message: 'Item label is required and must be a string' });
+        errors.push({ path: `${path}.label`, message: 'Item.label 為必填，且必須為字串' });
     }
 
     // Validate target
@@ -361,7 +361,7 @@ function validateNavGroup(group: unknown, path: string): NavValidationError[] {
     const errors: NavValidationError[] = [];
 
     if (!group || typeof group !== 'object') {
-        errors.push({ path, message: 'Group must be an object' });
+        errors.push({ path, message: 'Group 必須為物件' });
         return errors;
     }
 
@@ -369,17 +369,17 @@ function validateNavGroup(group: unknown, path: string): NavValidationError[] {
 
     // Validate id
     if (!g.id || typeof g.id !== 'string') {
-        errors.push({ path: `${path}.id`, message: 'Group id is required and must be a string' });
+        errors.push({ path: `${path}.id`, message: 'Group.id 為必填，且必須為字串' });
     }
 
     // Validate label
     if (!g.label || typeof g.label !== 'string') {
-        errors.push({ path: `${path}.label`, message: 'Group label is required and must be a string' });
+        errors.push({ path: `${path}.label`, message: 'Group.label 為必填，且必須為字串' });
     }
 
     // Validate items
     if (!Array.isArray(g.items)) {
-        errors.push({ path: `${path}.items`, message: 'Group items must be an array' });
+        errors.push({ path: `${path}.items`, message: 'Group.items 必須為陣列' });
     } else {
         g.items.forEach((item, index) => {
             errors.push(...validateNavItem(item, `${path}.items[${index}]`));
@@ -403,19 +403,19 @@ export function validateHamburgerNav(nav: unknown): NavValidationResult {
     const errors: NavValidationError[] = [];
 
     if (!nav || typeof nav !== 'object') {
-        return { valid: false, errors: [{ path: '', message: 'Nav must be an object' }] };
+        return { valid: false, errors: [{ path: '', message: 'Nav 必須為物件' }] };
     }
 
     const n = nav as Record<string, unknown>;
 
     // Validate version
     if (n.version !== 2) {
-        errors.push({ path: 'version', message: 'Version must be 2' });
+        errors.push({ path: 'version', message: 'version 必須為 2' });
     }
 
     // Validate groups
     if (!Array.isArray(n.groups)) {
-        errors.push({ path: 'groups', message: 'Groups must be an array' });
+        errors.push({ path: 'groups', message: 'groups 必須為陣列' });
     } else {
         n.groups.forEach((group, index) => {
             errors.push(...validateNavGroup(group, `groups[${index}]`));
@@ -429,7 +429,7 @@ export function validateHamburgerNav(nav: unknown): NavValidationResult {
                 if (groupIds.has(g.id)) {
                     errors.push({
                         path: `groups[${index}].id`,
-                        message: `Duplicate group id: "${g.id}"`,
+                        message: `重複的群組 id：「${g.id}」`,
                     });
                 }
                 groupIds.add(g.id);
@@ -467,7 +467,7 @@ export function parseHamburgerNav(
         } catch (e) {
             return {
                 nav: null,
-                errors: [{ path: '', message: `Invalid JSON: ${e instanceof Error ? e.message : 'parse error'}` }],
+                errors: [{ path: '', message: `JSON 無效：${e instanceof Error ? e.message : '解析失敗'}` }],
             };
         }
     } else {

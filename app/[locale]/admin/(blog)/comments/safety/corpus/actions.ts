@@ -10,24 +10,32 @@ import {
     deleteSafetyCorpusItem,
 } from '@/lib/modules/safety-risk-engine/admin-io';
 import type { SafetyCorpusItem, SafetyCorpusKind, SafetyCorpusStatus } from '@/lib/types/safety-risk-engine';
-
-async function checkAdmin() {
-    const supabase = await createClient();
-    const guard = await requireSiteAdmin(supabase);
-    if (!guard.ok) {
-        throw new Error(guard.errorCode);
-    }
-    return { id: guard.userId };
-}
+import {
+    ADMIN_ERROR_CODES,
+    actionError,
+    actionSuccess,
+    type ActionResult,
+} from '@/lib/types/action-result';
 
 /**
  * Fetch corpus items with optional filtering.
  */
 export async function fetchCorpusItemsAction(
     filters: { kind?: SafetyCorpusKind; status?: SafetyCorpusStatus; search?: string } = {}
-): Promise<SafetyCorpusItem[]> {
-    await checkAdmin();
-    return getSafetyCorpusItems(filters);
+): Promise<ActionResult<SafetyCorpusItem[]>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const items = await getSafetyCorpusItems(filters);
+        return actionSuccess(items);
+    } catch (error) {
+        console.error('[fetchCorpusItemsAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -37,10 +45,24 @@ export async function createCorpusItemAction(data: {
     kind: SafetyCorpusKind;
     label: string;
     content: string;
-}): Promise<{ success: boolean; itemId?: string }> {
-    const user = await checkAdmin();
-    const itemId = await createSafetyCorpusItem(data, user.id);
-    return { success: !!itemId, itemId: itemId ?? undefined };
+}): Promise<ActionResult<{ itemId: string }>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const itemId = await createSafetyCorpusItem(data, guard.userId);
+        if (!itemId) {
+            return actionError(ADMIN_ERROR_CODES.CREATE_FAILED);
+        }
+
+        return actionSuccess({ itemId });
+    } catch (error) {
+        console.error('[createCorpusItemAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -49,10 +71,24 @@ export async function createCorpusItemAction(data: {
 export async function updateCorpusItemAction(
     id: string,
     data: { label?: string; content?: string }
-): Promise<{ success: boolean }> {
-    const user = await checkAdmin();
-    const success = await updateSafetyCorpusItem(id, data, user.id);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await updateSafetyCorpusItem(id, data, guard.userId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[updateCorpusItemAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -61,10 +97,24 @@ export async function updateCorpusItemAction(
 export async function updateCorpusStatusAction(
     id: string,
     status: SafetyCorpusStatus
-): Promise<{ success: boolean }> {
-    const user = await checkAdmin();
-    const success = await updateSafetyCorpusStatus(id, status, user.id);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await updateSafetyCorpusStatus(id, status, guard.userId);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[updateCorpusStatusAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }
 
 /**
@@ -72,8 +122,22 @@ export async function updateCorpusStatusAction(
  */
 export async function deleteCorpusItemAction(
     id: string
-): Promise<{ success: boolean }> {
-    await checkAdmin();
-    const success = await deleteSafetyCorpusItem(id);
-    return { success };
+): Promise<ActionResult<void>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        const success = await deleteSafetyCorpusItem(id);
+        if (!success) {
+            return actionError(ADMIN_ERROR_CODES.DELETE_FAILED);
+        }
+
+        return actionSuccess();
+    } catch (error) {
+        console.error('[deleteCorpusItemAction] Failed:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
 }

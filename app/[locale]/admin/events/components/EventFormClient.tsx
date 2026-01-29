@@ -18,7 +18,6 @@ import type {
   EventWithType,
   EventTypeWithCount,
   EventTagWithCount,
-  EventVisibility,
 } from "@/lib/types/events";
 import { getErrorLabel } from "@/lib/types/action-result";
 import {

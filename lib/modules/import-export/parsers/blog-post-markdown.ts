@@ -210,7 +210,7 @@ export function parseBlogPostMarkdown(content: string): ParseResult<ParsedBlogPo
     if (missingFields.length > 0) {
       return {
         success: false,
-        error: `Missing required frontmatter fields: ${missingFields.join(', ')}`,
+        error: `缺少必要的 frontmatter 欄位：${missingFields.join(', ')}`,
       };
     }
 
@@ -218,7 +218,7 @@ export function parseBlogPostMarkdown(content: string): ParseResult<ParsedBlogPo
     if (!isValidVisibility(parsed.data.visibility)) {
       return {
         success: false,
-        error: `Invalid visibility value: "${parsed.data.visibility}". Must be one of: draft, private, public`,
+        error: `visibility 無效："${parsed.data.visibility}"。必須是 draft / private / public 其中之一`,
       };
     }
 
@@ -229,7 +229,7 @@ export function parseBlogPostMarkdown(content: string): ParseResult<ParsedBlogPo
     const { content_en, content_zh } = parseBilingualContent(parsed.content);
 
     if (!content_en) {
-      warnings.push('Content is empty');
+      warnings.push('內容為空');
     }
 
     const result: ParsedBlogPost = {
@@ -246,7 +246,7 @@ export function parseBlogPostMarkdown(content: string): ParseResult<ParsedBlogPo
   } catch (error) {
     return {
       success: false,
-      error: `Failed to parse Markdown: ${error instanceof Error ? error.message : String(error)}`,
+      error: `Markdown 解析失敗：${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

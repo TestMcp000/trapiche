@@ -50,7 +50,7 @@ export function validateRerankConfig(
   if (!VALID_PROVIDERS.includes(merged.provider)) {
     return {
       success: false,
-      error: `Invalid provider: ${merged.provider}. Valid: ${VALID_PROVIDERS.join(', ')}`,
+      error: `provider 無效：${merged.provider}。允許值：${VALID_PROVIDERS.join(', ')}`,
     };
   }
 
@@ -58,7 +58,7 @@ export function validateRerankConfig(
   if (merged.provider === 'cohere' && !VALID_COHERE_MODELS.includes(merged.model)) {
     return {
       success: false,
-      error: `Invalid model: ${merged.model}. Valid: ${VALID_COHERE_MODELS.join(', ')}`,
+      error: `model 無效：${merged.model}。允許值：${VALID_COHERE_MODELS.join(', ')}`,
     };
   }
 
@@ -66,7 +66,7 @@ export function validateRerankConfig(
   if (typeof merged.topK !== 'number' || merged.topK < 1 || merged.topK > 1000) {
     return {
       success: false,
-      error: `Invalid topK: ${merged.topK}. Must be 1-1000.`,
+      error: `topK 無效：${merged.topK}。必須介於 1 到 1000。`,
     };
   }
 
@@ -74,7 +74,7 @@ export function validateRerankConfig(
   if (typeof merged.topN !== 'number' || merged.topN < 1 || merged.topN > merged.topK) {
     return {
       success: false,
-      error: `Invalid topN: ${merged.topN}. Must be 1-${merged.topK}.`,
+      error: `topN 無效：${merged.topN}。必須介於 1 到 ${merged.topK}。`,
     };
   }
 

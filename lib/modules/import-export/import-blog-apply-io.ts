@@ -83,8 +83,8 @@ export async function applyBlogImport(
       if (result.valid && result.data) {
         validCategories.push(result.data);
       } else {
-        const errMsg = result.errors ? Object.values(result.errors).join(', ') : 'Unknown error';
-        categoryErrors.push(`Category ${cat.slug || 'unknown'}: ${errMsg}`);
+        const errMsg = result.errors ? Object.values(result.errors).join(', ') : '未知錯誤';
+        categoryErrors.push(`分類 ${cat.slug || '未知'}：${errMsg}`);
       }
     }
 
@@ -97,8 +97,8 @@ export async function applyBlogImport(
       if (result.valid && result.data) {
         validPosts.push(result.data);
       } else {
-        const errMsg = result.errors ? Object.values(result.errors).join(', ') : 'Unknown error';
-        postErrors.push(`Post ${post.frontmatter.slug || 'unknown'}: ${errMsg}`);
+        const errMsg = result.errors ? Object.values(result.errors).join(', ') : '未知錯誤';
+        postErrors.push(`文章 ${post.frontmatter.slug || '未知'}：${errMsg}`);
       }
     }
 
@@ -107,7 +107,7 @@ export async function applyBlogImport(
     if (allErrors.length > 0) {
       return {
         success: false,
-        error: `Validation failed: ${allErrors.slice(0, 3).join('; ')}${allErrors.length > 3 ? ` (+${allErrors.length - 3} more)` : ''}`,
+        error: `驗證失敗：${allErrors.slice(0, 3).join('；')}${allErrors.length > 3 ? `（另外還有 ${allErrors.length - 3} 筆）` : ''}`,
         categoriesImported: 0,
         postsImported: 0,
       };
@@ -147,9 +147,10 @@ export async function applyBlogImport(
     });
 
     if (error) {
+      console.error('[applyBlogImport] RPC error:', error);
       return {
         success: false,
-        error: `Database error: ${error.message}`,
+        error: '資料庫匯入失敗',
         categoriesImported: 0,
         postsImported: 0,
       };
@@ -158,9 +159,10 @@ export async function applyBlogImport(
     // Parse RPC response
     const result = data as ImportBundleRpcResponse;
     if (!result.success) {
+      console.error('[applyBlogImport] RPC returned failure:', result.error);
       return {
         success: false,
-        error: result.error || 'Import failed (unknown error)',
+        error: '匯入失敗',
         categoriesImported: 0,
         postsImported: 0,
       };
@@ -172,9 +174,10 @@ export async function applyBlogImport(
       postsImported: result.posts_count,
     };
   } catch (error) {
+    console.error('[applyBlogImport] Error:', error);
     return {
       success: false,
-      error: `Import failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: '匯入失敗',
       categoriesImported: 0,
       postsImported: 0,
     };

@@ -585,7 +585,7 @@ describe('AI Analysis Validators', () => {
     it('returns error for invalid ID', () => {
       const result = validateTemplateId('invalid');
       assert.equal(result.valid, false);
-      assert.ok(result.error?.includes('Invalid template'));
+      assert.ok(result.error?.includes('templateId 無效'));
     });
   });
 
@@ -725,7 +725,7 @@ describe('AI Analysis Validators', () => {
       };
       const result = validateAnalysisRequest(request);
       assert.equal(result.valid, false);
-      assert.ok(result.error?.includes('data type') || result.error?.includes('Data types'));
+      assert.ok(result.error?.includes('至少需要選擇'));
     });
 
     it('rejects invalid modelId', () => {

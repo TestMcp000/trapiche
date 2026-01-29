@@ -18,6 +18,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import type { AbstractIntlMessages } from 'next-intl';
+import { getErrorLabel } from '@/lib/types/action-result';
 import { validateCommentSettingsPatch } from '@/lib/validators/comment-settings';
 import type { 
   CommentBlacklistItem, 
@@ -100,10 +101,10 @@ function CommentSettingsClientContent({ routeLocale }: CommentSettingsClientProp
     const fetchData = async () => {
       try {
         const result = await fetchCommentSettingsAction();
-        if (result.success) {
-          setSettings(prev => ({ ...prev, ...result.settings }));
-          setBlacklist(result.blacklist || []);
-          setConfig(result.config || null);
+        if (result.success && result.data) {
+          setSettings(prev => ({ ...prev, ...result.data.settings }));
+          setBlacklist(result.data.blacklist || []);
+          setConfig(result.data.config || null);
         }
       } catch (error) {
         console.error('Failed to fetch settings:', error);
@@ -132,7 +133,7 @@ function CommentSettingsClientContent({ routeLocale }: CommentSettingsClientProp
         setSaveMessage(t('saved'));
         setTimeout(() => setSaveMessage(null), 3000);
       } else {
-        setSaveMessage(result.error || t('saveFailed'));
+        setSaveMessage(getErrorLabel(result.errorCode, routeLocale));
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -154,8 +155,8 @@ function CommentSettingsClientContent({ routeLocale }: CommentSettingsClientProp
           reason: newReason.trim() || null,
         });
 
-        if (result.success && result.item) {
-          setBlacklist([result.item, ...blacklist]);
+        if (result.success && result.data?.item) {
+          setBlacklist([result.data.item, ...blacklist]);
           setNewValue('');
           setNewReason('');
         }

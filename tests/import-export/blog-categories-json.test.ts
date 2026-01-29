@@ -131,13 +131,13 @@ describe('Blog Categories JSON Parser', () => {
     });
 
     it('rejects non-object', () => {
-      assert.ok(validateEnvelopeStructure(null)?.includes('object'));
-      assert.ok(validateEnvelopeStructure('string')?.includes('object'));
+      assert.ok(validateEnvelopeStructure(null)?.includes('物件'));
+      assert.ok(validateEnvelopeStructure('string')?.includes('物件'));
     });
 
     it('rejects wrong type', () => {
       const envelope = { exportedAt: '2025-01-01', type: 'wrong', data: [] };
-      assert.ok(validateEnvelopeStructure(envelope)?.includes('Invalid type'));
+      assert.ok(validateEnvelopeStructure(envelope)?.includes('type 無效'));
     });
 
     it('rejects missing data array', () => {
@@ -174,7 +174,7 @@ describe('Blog Categories JSON Parser', () => {
     it('fails on invalid JSON', () => {
       const result = parseBlogCategoriesJsonString('not json');
       assert.equal(result.success, false);
-      assert.ok(result.error?.includes('parse JSON'));
+      assert.ok(result.error?.includes('JSON 解析失敗'));
     });
   });
 
