@@ -81,11 +81,45 @@ describe('resolveNavTarget', () => {
         });
     });
 
+    describe('events targets', () => {
+        it('resolves events_index to /locale/events', () => {
+            const target: NavTarget = { type: 'events_index' };
+            const href = resolveNavTarget(target, locale);
+            assert.equal(href, '/zh/events');
+        });
+
+        it('resolves events_index with type and tag filters', () => {
+            const target: NavTarget = { type: 'events_index', eventType: 'talks', tag: 'workshop' };
+            const href = resolveNavTarget(target, locale);
+            assert.ok(href.startsWith('/zh/events?'));
+            assert.ok(href.includes('type=talks'));
+            assert.ok(href.includes('tag=workshop'));
+        });
+
+        it('resolves event_detail to correct path', () => {
+            const target: NavTarget = { type: 'event_detail', eventSlug: 'my-event' };
+            const href = resolveNavTarget(target, locale);
+            assert.equal(href, '/zh/events/my-event');
+        });
+    });
+
     describe('page targets', () => {
         it('resolves page to locale-prefixed path', () => {
             const target: NavTarget = { type: 'page', path: '/about' };
             const href = resolveNavTarget(target, locale);
             assert.equal(href, '/zh/about');
+        });
+
+        it('resolves page home path without trailing slash', () => {
+            const target: NavTarget = { type: 'page', path: '/' };
+            const href = resolveNavTarget(target, locale);
+            assert.equal(href, '/zh');
+        });
+
+        it('resolves page home path with hash', () => {
+            const target: NavTarget = { type: 'page', path: '/', hash: 'about' };
+            const href = resolveNavTarget(target, locale);
+            assert.equal(href, '/zh#about');
         });
 
         it('resolves page with hash', () => {

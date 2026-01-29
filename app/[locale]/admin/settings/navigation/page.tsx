@@ -109,14 +109,17 @@ export default async function NavigationSettingsPage({ params }: PageProps) {
   // Updated in PR-42 to add /faq and /collaboration
   // Updated in PR-43: removed /platforms (legacy route, redirects to /events)
   const staticPages = [
+    { path: "/", label: "首頁" },
     { path: "/about", label: "關於 / 心理師介紹" },
     { path: "/services", label: "服務方式" },
+    { path: "/portfolio", label: "精選內容（Portfolio）" },
     { path: "/contact", label: "聯絡方式" },
     { path: "/blog", label: "部落格首頁" },
-    { path: "/gallery", label: "作品集首頁" },
+    { path: "/gallery", label: "畫廊首頁" },
     { path: "/events", label: "活動列表" },
     { path: "/faq", label: "常見問題" },
     { path: "/collaboration", label: "合作邀請" },
+    { path: "/privacy", label: "隱私權政策" },
   ];
 
   return (

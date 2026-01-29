@@ -128,6 +128,7 @@ function resolveTarget(target: NavTarget, locale: string): { href: string; isExt
         case 'events_index': {
             const query = buildQueryString({
                 type: target.eventType,
+                tag: target.tag,
                 q: target.q,
                 sort: target.sort,
                 page: target.page,
@@ -144,8 +145,9 @@ function resolveTarget(target: NavTarget, locale: string): { href: string; isExt
         }
 
         case 'page': {
+            const normalizedPath = target.path === '/' ? '' : target.path;
             const hash = target.hash ? (target.hash.startsWith('#') ? target.hash : `#${target.hash}`) : '';
-            return { href: `/${locale}${target.path}${hash}`, isExternal: false };
+            return { href: `/${locale}${normalizedPath}${hash}`, isExternal: false };
         }
 
         case 'anchor': {

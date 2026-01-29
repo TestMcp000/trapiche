@@ -1,7 +1,7 @@
 # Home（UIUX 跟稿）+ Gallery Hero Image + Image Hotspots（圖上 Pin）- Product Requirements Document (PRD)
 
 > **Version**: 0.9  
-> **Last Updated**: 2026-01-21  
+> **Last Updated**: 2026-01-29  
 > **Status**: Draft  
 > **Owner**: Admin / Product  
 > **Parent Document**: (optional) `../../SPEC.md`
@@ -29,9 +29,9 @@
 - Design SSoT（最終權威；純文件）：`../../archive/DESIGN_SSOT.md`
 - Figma Site（提供檢視/分享）：https://pond-bulk-99292481.figma.site/
 - Figma Design（原始檔案）：https://www.figma.com/design/HeXn2lGfcxUUk3zhA81heF/Therapist-Content-Website-UI
-- （Optional / Deprecated）Local UIUX prototype：`uiux/`（僅供追溯；不再作為 SSoT，可移除）
+- （Removed）Local UIUX prototype：`uiux/`（已移除；不再作為 SSoT）
 
-> 本 repo 的 `uiux/` 是獨立 Vite prototype（Tailwind v4 + Radix/MUI 等），不代表可直接搬進 Next.js production bundle；設計最終權威以 `../../archive/DESIGN_SSOT.md` 為準。
+> 過去的 `uiux/` 為獨立 Vite prototype（不代表可直接搬進 Next.js production bundle）；設計最終權威以 `../../archive/DESIGN_SSOT.md` 為準。
 
 **Route 對照（暫定）**
 
@@ -47,7 +47,7 @@
 
 | Topic | Decision | Why |
 | --- | --- | --- |
-| Design SSoT | `../../archive/DESIGN_SSOT.md` 作為排版/互動最終權威 | 避免「設計/實作」各自漂移；且 `uiux/` 可被移除 |
+| Design SSoT | `../../archive/DESIGN_SSOT.md` 作為排版/互動最終權威 | 避免「設計/實作」各自漂移；且 `uiux/` 已移除 |
 | Primary locale | Phase 1：zh only（繁中）；schema 可保留 `*_en` 但不強制 | 降低首版成本，避免 UI/內容被 i18n 拖慢 |
 | Home coverage | 「跟稿」只涵蓋 Home；Gallery list 維持既有 pinterest-like 瀑布流 | 避免大改動，保留既有 gallery UX |
 | Hero image source | 以 `gallery_items.id` 指向 Gallery 作品 | 單一來源，重用現有圖片/metadata |
@@ -66,7 +66,7 @@
 | Markdown | hotspots 的 `description_md` 支援 Markdown（GFM subset），**不允許 raw HTML**；允許外連但僅允許 `https:`（可選 `mailto:`）；sanitize/allowlist | 內容會出現在 Home/Hero，採較保守的 trust boundary |
 | External links | 所有外連強制 `target="_blank"` + `rel="noopener noreferrer"` | 避免 tabnabbing，且是標準安全作法 |
 | Home recommendations | Home 文章推薦以 `ANALYTICS_PERSONALIZATION_UMAMI.md` 作為決策 SSoT（Umami + pgvector） | 避免重複定義個人化規則造成 drift |
-| Header nav labels | 既有 header links labels 持續使用 `site_content(section_key='nav')` | 避免破壞既有 header 對 `nav` 的資料結構假設 |
+| Header nav labels | （Deprecated）已移除 `site_content(section_key='nav')`；導覽一律由 `site_content(section_key='hamburger_nav')` 定義 | 避免導覽雙軌造成 drift |
 | Hamburger nav source | Hamburger menu 的 IA 由 `site_content(section_key='hamburger_nav')` JSON 定義 | 可後台編輯，且不與 `nav` labels 混用 |
 | Hamburger nav external links | 允許外連但僅允許 `https:`（可選 `mailto:`），並強制新分頁 + `rel` | 符合安全原則且滿足導流需求 |
 | Blog/Gallery canonical URLs（v2） | Category/slug 用 path；filters 用 query；搜尋參數統一用 `q`。Blog：`/blog`、`/blog/categories/<categorySlug>`、`/blog/posts/<postSlug>`；Gallery：`/gallery`、`/gallery/categories/<categorySlug>`、`/gallery/items/<categorySlug>/<itemSlug>` | URL 規則一致、好分享/SEO、避免 query/path 雙軌 drift；post URL 不綁 category（更好維護） |

@@ -13,7 +13,9 @@ export default async function ContentManagementPage({
   // Get translations for admin content namespace
   const t = await getTranslations({ locale: routeLocale, namespace: 'admin.content' });
   
-  const contents = await getAllSiteContent();
+  const contents = (await getAllSiteContent()).filter(
+    (c) => !['nav', 'company', 'hamburger_nav'].includes(c.section_key)
+  );
 
   return (
     <div>
@@ -50,9 +52,8 @@ export default async function ContentManagementPage({
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {contents.map((content) => {
                 // Get section label from translations
-                const sectionKey = content.section_key as 'hero' | 'about' | 'platforms' | 'contact' | 'footer' | 'metadata' | 'nav' | 'company' | 'gallery';
-                const sectionLabel = t.has(`sections.${sectionKey}`) 
-                  ? t(`sections.${sectionKey}`)
+                const sectionLabel = t.has(`sections.${content.section_key}`)
+                  ? t(`sections.${content.section_key}`)
                   : content.section_key;
                 
                 return (

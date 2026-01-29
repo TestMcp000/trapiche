@@ -150,18 +150,6 @@ INSERT INTO site_content (section_key, content_en, content_zh, is_published) VAL
   true
 ),
 (
-  'nav',
-  '{"about": "About", "services": "Services", "platforms": "Events", "portfolio": "Highlights", "gallery": "Gallery", "contact": "Contact", "blog": "Blog", "privacy": "Privacy"}'::jsonb,
-  '{"about": "心理師介紹", "services": "服務方式", "platforms": "講座／活動", "portfolio": "精選內容", "gallery": "作品集", "contact": "聯絡表單", "blog": "文章", "privacy": "隱私權政策"}'::jsonb,
-  true
-),
-(
-  'company',
-  '{"name": "Healing Space", "nameShort": "Healing Space"}'::jsonb,
-  '{"name": "心理師療癒空間", "nameShort": "心理師療癒空間"}'::jsonb,
-  true
-),
-(
   'hamburger_nav',
   '{}'::jsonb,
   '{

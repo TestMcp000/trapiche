@@ -182,8 +182,6 @@ export default function ContentEditorClient({
     contact: tSections('contact'),
     footer: tSections('footer'),
     metadata: tSections('metadata'),
-    nav: tSections('nav'),
-    company: tSections('company'),
     gallery: tSections('gallery'),
     collaboration: tSections('collaboration'),
   };

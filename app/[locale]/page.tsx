@@ -21,6 +21,8 @@ import type { SiteContent } from "@/lib/types/content";
 import { getCompanySettingValue } from "@/lib/modules/content/company-settings";
 import { resolveSiteDescription, resolveSiteName } from "@/lib/site/site-metadata";
 import type { PostSummary } from "@/lib/types/blog";
+import { isBlogEnabledCached, isGalleryEnabledCached } from "@/lib/features/cached";
+import { filterHamburgerNavByFeatures } from "@/lib/site/hamburger-nav-filter";
 
 export async function generateMetadata({
   params,
@@ -72,19 +74,36 @@ export default async function HomePage({
   // Single data owner: fetch ALL data needed for Home (SEO + UI) in parallel
   // @see ARCHITECTURE.md §3.0 (single data owner pattern)
   // ==========================================================================
-  const [settings, services, siteContent, hamburgerNav, heroPins, tMeta, suggestedPosts] =
-    await Promise.all([
-      getCompanySettingsCached(),
-      getVisibleServicesCached(),
-      getPublishedSiteContentCached(),
-      getHamburgerNavCached(),
-      getVisibleGalleryPinsCached("hero"),
-      getTranslations({ locale, namespace: "metadata" }),
-      getPublicPostsCached({ limit: 4, locale, sort: "newest" }),
-    ]);
+  const [
+    settings,
+    services,
+    siteContent,
+    hamburgerNav,
+    heroPins,
+    tMeta,
+    blogEnabled,
+    galleryEnabled,
+  ] = await Promise.all([
+    getCompanySettingsCached(),
+    getVisibleServicesCached(),
+    getPublishedSiteContentCached(),
+    getHamburgerNavCached(),
+    getVisibleGalleryPinsCached("hero"),
+    getTranslations({ locale, namespace: "metadata" }),
+    isBlogEnabledCached(),
+    isGalleryEnabledCached(),
+  ]);
+
+  const suggestedPosts = blogEnabled
+    ? await getPublicPostsCached({ limit: 4, locale, sort: "newest" })
+    : [];
 
   // Resolve hamburger nav to render-ready format
-  const resolvedNav = resolveHamburgerNav(hamburgerNav, locale);
+  const filteredNav = filterHamburgerNavByFeatures(hamburgerNav, {
+    blogEnabled,
+    galleryEnabled,
+  });
+  const resolvedNav = resolveHamburgerNav(filteredNav, locale);
 
   // Fetch hero hotspots if hero item exists
   const heroPin = heroPins.length > 0 ? heroPins[0] : null;

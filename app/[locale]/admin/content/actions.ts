@@ -28,6 +28,12 @@ export async function toggleSectionVisibility(
       return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
     }
 
+    // Navigation is managed via the visual editor only.
+    // Prevent bypassing deep validation by toggling publish status here.
+    if (sectionKey === 'hamburger_nav' || sectionKey === 'nav') {
+      return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+    }
+
     // Toggle the publish status
     const result = await togglePublishSiteContent(sectionKey, publish, guard.userId);
 

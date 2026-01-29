@@ -36,12 +36,15 @@ const TARGET_TYPES: NavTargetType[] = [
   "page",
   "blog_index",
   "blog_category",
+  "blog_post",
   "blog_group",
   "blog_topic",
   "blog_tag",
   "gallery_index",
   "gallery_category",
+  "gallery_item",
   "events_index",
+  "event_detail",
   "faq_index",
   "anchor",
   "external",
@@ -78,6 +81,8 @@ export default function NavTargetPicker({
     currentTarget.type === "blog_topic" ? currentTarget.topicSlug : "";
   const getInitialBlogTag = () =>
     currentTarget.type === "blog_tag" ? currentTarget.tagSlug : "";
+  const getInitialBlogPostSlug = () =>
+    currentTarget.type === "blog_post" ? currentTarget.postSlug : "";
   const getInitialBlogQuery = () => {
     if (currentTarget.type === "blog_index") return currentTarget.q || "";
     if (currentTarget.type === "blog_category") return currentTarget.q || "";
@@ -86,7 +91,11 @@ export default function NavTargetPicker({
     return "";
   };
   const getInitialGalleryCategory = () =>
-    currentTarget.type === "gallery_category" ? currentTarget.categorySlug : "";
+    currentTarget.type === "gallery_category" || currentTarget.type === "gallery_item"
+      ? currentTarget.categorySlug
+      : "";
+  const getInitialGalleryItemSlug = () =>
+    currentTarget.type === "gallery_item" ? currentTarget.itemSlug : "";
   const getInitialGalleryQuery = () => {
     if (currentTarget.type === "gallery_index") return currentTarget.q || "";
     if (currentTarget.type === "gallery_category") return currentTarget.q || "";
@@ -96,6 +105,8 @@ export default function NavTargetPicker({
     currentTarget.type === "events_index" ? currentTarget.eventType || "" : "";
   const getInitialEventTag = () =>
     currentTarget.type === "events_index" ? currentTarget.tag || "" : "";
+  const getInitialEventSlug = () =>
+    currentTarget.type === "event_detail" ? currentTarget.eventSlug : "";
   const getInitialAnchorHash = () =>
     currentTarget.type === "anchor" ? currentTarget.hash : "";
   const getInitialExternalUrl = () =>
@@ -107,13 +118,16 @@ export default function NavTargetPicker({
   const [blogGroup, setBlogGroup] = useState(getInitialBlogGroup);
   const [blogTopic, setBlogTopic] = useState(getInitialBlogTopic);
   const [blogTag, setBlogTag] = useState(getInitialBlogTag);
+  const [blogPostSlug, setBlogPostSlug] = useState(getInitialBlogPostSlug);
   const [blogQuery, setBlogQuery] = useState(getInitialBlogQuery);
   const [galleryCategory, setGalleryCategory] = useState(
     getInitialGalleryCategory,
   );
+  const [galleryItemSlug, setGalleryItemSlug] = useState(getInitialGalleryItemSlug);
   const [galleryQuery, setGalleryQuery] = useState(getInitialGalleryQuery);
   const [eventType, setEventType] = useState(getInitialEventType);
   const [eventTag, setEventTag] = useState(getInitialEventTag);
+  const [eventSlug, setEventSlug] = useState(getInitialEventSlug);
   const [anchorHash, setAnchorHash] = useState(getInitialAnchorHash);
   const [externalUrl, setExternalUrl] = useState(getInitialExternalUrl);
 
@@ -140,6 +154,12 @@ export default function NavTargetPicker({
           categorySlug:
             blogCategory || blogCategories[0]?.slug || "uncategorized",
           ...(blogQuery ? { q: blogQuery } : {}),
+        };
+        break;
+      case "blog_post":
+        target = {
+          type: "blog_post",
+          postSlug: blogPostSlug || "",
         };
         break;
       case "blog_group":
@@ -176,11 +196,25 @@ export default function NavTargetPicker({
           ...(galleryQuery ? { q: galleryQuery } : {}),
         };
         break;
+      case "gallery_item":
+        target = {
+          type: "gallery_item",
+          categorySlug:
+            galleryCategory || galleryCategories[0]?.slug || "default",
+          itemSlug: galleryItemSlug || "",
+        };
+        break;
       case "events_index":
         target = {
           type: "events_index",
           ...(eventType ? { eventType } : {}),
           ...(eventTag ? { tag: eventTag } : {}),
+        };
+        break;
+      case "event_detail":
+        target = {
+          type: "event_detail",
+          eventSlug: eventSlug || "",
         };
         break;
       case "faq_index":
@@ -215,6 +249,8 @@ export default function NavTargetPicker({
         return t("targetTypes.blogIndex");
       case "blog_category":
         return t("targetTypes.blogCategory");
+      case "blog_post":
+        return t("targetTypes.blogPost");
       case "blog_group":
         return t("targetTypes.blogGroup");
       case "blog_topic":
@@ -225,8 +261,12 @@ export default function NavTargetPicker({
         return t("targetTypes.galleryIndex");
       case "gallery_category":
         return t("targetTypes.galleryCategory");
+      case "gallery_item":
+        return t("targetTypes.galleryItem");
       case "events_index":
         return t("targetTypes.eventsIndex");
+      case "event_detail":
+        return t("targetTypes.eventDetail");
       case "faq_index":
         return t("targetTypes.faqIndex");
       case "anchor":
@@ -365,6 +405,24 @@ export default function NavTargetPicker({
                 />
               </div>
             </>
+          )}
+
+          {targetType === "blog_post" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("blogPostSlugLabel")}
+              </label>
+              <input
+                type="text"
+                value={blogPostSlug}
+                onChange={(e) => setBlogPostSlug(e.target.value)}
+                placeholder="my-post-slug"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t("blogPostSlugHint")}
+              </p>
+            </div>
           )}
 
           {targetType === "blog_group" && (
@@ -512,6 +570,45 @@ export default function NavTargetPicker({
             </>
           )}
 
+          {targetType === "gallery_item" && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t("galleryCategoryLabel")}
+                </label>
+                <select
+                  value={galleryCategory}
+                  onChange={(e) => setGalleryCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                  {galleryCategories.length === 0 ? (
+                    <option value="">{t("noGalleryCategories")}</option>
+                  ) : (
+                    galleryCategories.map((cat) => (
+                      <option key={cat.slug} value={cat.slug}>
+                        {cat.name_zh || cat.name_en || cat.slug}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t("galleryItemSlugLabel")}
+                </label>
+                <input
+                  type="text"
+                  value={galleryItemSlug}
+                  onChange={(e) => setGalleryItemSlug(e.target.value)}
+                  placeholder="my-item-slug"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {t("galleryItemSlugHint")}
+                </p>
+              </div>
+            </>
+          )}
+
           {targetType === "events_index" && (
             <>
               <div>
@@ -547,6 +644,24 @@ export default function NavTargetPicker({
                 </select>
               </div>
             </>
+          )}
+
+          {targetType === "event_detail" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("eventSlugLabel")}
+              </label>
+              <input
+                type="text"
+                value={eventSlug}
+                onChange={(e) => setEventSlug(e.target.value)}
+                placeholder="my-event-slug"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t("eventSlugHint")}
+              </p>
+            </div>
           )}
 
           {targetType === "faq_index" && (

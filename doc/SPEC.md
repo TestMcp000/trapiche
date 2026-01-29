@@ -508,8 +508,7 @@
 
 ### 內容來源（Public Navigation / Landing）
 
-- Header nav labels（Legacy Header）：`site_content(section_key='nav')`（fallback：`messages/*`）
-- Hamburger nav（Home v2 HeaderBar）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）
+- Navigation IA（Header/Footer/Home v2）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）
   - 後台可視化編輯器：`/admin/settings/navigation`（支援 groups/items 拖曳排序、target picker、draft/publish 兩段式驗證）
   - **Nav Target Allowlist（PR-42）**：
     | Target Type | 必填欄位 | 選填欄位 | 說明 |
@@ -526,9 +525,9 @@
     | `faq_index` | - | - | 常見問題頁 |
     | `anchor` | `hash` | - | 頁內錨點 |
     | `external` | `url` | - | 外部連結（僅 `https:`/`mailto:`） |
-  - Deep Validation（Publish 時）：`blog_group/topic/tag`、`event_detail` 會驗證 DB 是否存在且可見
+- Deep Validation（Publish 時）：`blog_group/topic/tag`、`event_detail` 會驗證 DB 是否存在且可見
 - Footer copy：`site_content(section_key='footer')`（fallback：`messages/*`）
-- Company short name：`site_content(section_key='company')`（fallback：`messages/*`）
+- Company short name：`company_settings.company_name_short`（fallback：`site_content(section_key='metadata').title` → `messages/*`）
 - Home v2 hero copy：`site_content(section_key='hero')`
 - Home v2 marquee / event CTA / hotspots max：`company_settings`（key/value）
 - Landing sections（CMS 仍可管理；legacy layout/anchors 用途）：`landing_sections` table（`lib/modules/landing/*`；目前 Home v2 不直接 render）
@@ -717,7 +716,7 @@
 ### Cross-cutting（跨領域 / 共用）
 
 - SEO: `lib/seo/hreflang.ts`, `lib/seo/jsonld.ts`, `lib/site/site-url.ts`
-- Navigation v2: `lib/site/nav-resolver.ts`, `lib/types/hamburger-nav.ts`, `lib/validators/hamburger-nav.ts`
+- Navigation v2: `lib/site/nav-resolver.ts`, `lib/site/hamburger-nav-filter.ts`, `lib/types/hamburger-nav.ts`, `lib/validators/hamburger-nav.ts`
 - External URL allowlist: `lib/validators/external-url.ts`（`https:`/`mailto:`）
 - Analytics: `lib/analytics/pageviews-io.ts`, `lib/validators/page-views.ts`, `lib/types/page-views.ts`
 - i18n: `lib/i18n/locales.ts`, `messages/*.json`

@@ -382,8 +382,7 @@ interface ApiErrorResponse {
 - Public 頁面（預設）：使用 `components/Header.tsx` + `components/Footer.tsx`。
 - Home v2（`app/[locale]/page.tsx`）：允許使用 `components/home/*`（`MarqueeNotice` / `HeaderBarV2Client` / `HeroStageClient` 等）+ `components/Footer.tsx`。
 - Admin 頁面僅使用 `app/[locale]/admin/layout.tsx` (AdminSidebar)。
-- Legacy Header/Footer 標籤來源：`site_content(section_key='nav')` + `messages/*.json` fallback。
-- Home v2 hamburger nav IA 來源：`site_content(section_key='hamburger_nav')`（typed targets；resolver 單一真相來源：`lib/site/nav-resolver.ts`；invalid/empty → empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）。
+- Navigation IA（Header/Footer/Home v2）：`site_content(section_key='hamburger_nav')`（typed targets；resolver 單一真相來源：`lib/site/nav-resolver.ts`；invalid/empty → empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）。
 
 ## 10. 資料一致性與安全
 
@@ -402,9 +401,9 @@ interface ApiErrorResponse {
   - **Test Script**: `scripts/test.mjs` 使用 `-r test-alias.cjs` 啟用 alias 解析
   - （可選）IO module size guardrail：`node scripts/inspect-io-module-size.mjs --check`（同規則已由 `tests/architecture-boundaries.test.ts` 守門）
 - `npm run lint`
-  - `uiux/` 若為 prototype/獨立專案，必須有清楚邊界：不得讓 root lint 永久紅燈（eslint ignores：`eslint.config.mjs` 內含 `uiux/**`）。
+  - （Removed）`uiux/` prototype 已移除；若未來重新加入，必須有清楚邊界：不得讓 root lint 永久紅燈（eslint ignores：`eslint.config.mjs` 內含 `uiux/**`）。
 - `npm run type-check`
-  - 使用 `tsconfig.typecheck.json`（extends `tsconfig.json`；exclude：`uiux/`, `.next/`, `.test-dist/`）
+  - 使用 `tsconfig.typecheck.json`（extends `tsconfig.json`；exclude：`uiux/`(已移除), `.next/`, `.test-dist/`）
   - 若遇到 `.next/types` 相關型別錯誤：以 `npm run build` 為準（必要時先清掉 `.next/` 再 build）
 - `npm run build`（routes/SEO/`.next/types` 相關變更必跑）
   - 若出現 `is not a module`：優先檢查是否有空檔/缺 export 的 route 檔案（常見：`app/**/page.tsx` 0 bytes）；快速檢查：`Get-ChildItem app -Recurse -File -Include *.ts,*.tsx,*.mts | Where-Object { $_.Length -eq 0 }`
