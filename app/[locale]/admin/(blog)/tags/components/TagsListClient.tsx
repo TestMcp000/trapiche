@@ -39,7 +39,7 @@ export default function TagsListClient(props: TagsListClientProps) {
 }
 
 function TagsListContent({ initialTags, routeLocale }: TagsListClientProps) {
-  const t = useTranslations("admin.taxonomy");
+  const t = useTranslations("admin.blog.taxonomy");
 
   const [tags, setTags] = useState(initialTags);
   const [loading, setLoading] = useState(false);

@@ -24,7 +24,7 @@ export default async function FAQsAdminPage({
 
   const t = await getTranslations({
     locale: routeLocale,
-    namespace: "admin.faqs",
+    namespace: "admin.blog.faqs",
   });
 
   const allMessages = await getMessages({ locale: routeLocale });

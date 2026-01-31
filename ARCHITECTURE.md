@@ -387,7 +387,7 @@ interface ApiErrorResponse {
 ## 10. 資料一致性與安全
 
 - Admin role 以 `site_admins` + JWT `app_metadata.role` 為準；環境變數 fallback 僅供本機或過渡。
-  - **Role Mismatch Warning**: 當 `isAdmin` 為 true 但 `jwtRole` 為空時，admin layout 會顯示警告橫幅 (en/zh)，提示使用者：
+  - **Role Mismatch Warning**: 當 `isAdmin` 為 true 但 `jwtRole` 為空時，admin layout 會顯示警告橫幅（zh；文字來自 next-intl `messages/*.json`，並有程式內 fallback），提示使用者：
     - 已透過環境變數進入後台
     - DB 操作可能被 RLS 拒絕
     - 需聯繫 Owner 同步角色到 `site_admins` 表格

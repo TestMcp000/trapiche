@@ -52,7 +52,7 @@ function EventsListContent({
   eventTypes: initialEventTypes,
   routeLocale,
 }: EventsListClientProps) {
-  const t = useTranslations("admin.events");
+  const t = useTranslations("admin.blog.events");
   const tCommon = useTranslations("admin.common");
 
   // Tab state

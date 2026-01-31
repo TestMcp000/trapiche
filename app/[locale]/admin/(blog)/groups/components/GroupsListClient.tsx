@@ -43,7 +43,7 @@ function GroupsListContent({
   initialGroups,
   routeLocale,
 }: GroupsListClientProps) {
-  const t = useTranslations("admin.taxonomy");
+  const t = useTranslations("admin.blog.taxonomy");
 
   const [groups, setGroups] = useState(initialGroups);
   const [loading, setLoading] = useState(false);

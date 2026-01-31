@@ -41,7 +41,7 @@ export default function FAQsListClient(props: FAQsListClientProps) {
 }
 
 function FAQsListContent({ initialFaqs, routeLocale }: FAQsListClientProps) {
-  const t = useTranslations("admin.faqs");
+  const t = useTranslations("admin.blog.faqs");
   const tCommon = useTranslations("admin.common");
 
   // State

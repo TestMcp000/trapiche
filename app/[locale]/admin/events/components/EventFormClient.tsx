@@ -53,7 +53,7 @@ function EventFormContent({
   routeLocale,
 }: EventFormClientProps) {
   const router = useRouter();
-  const t = useTranslations("admin.events");
+  const t = useTranslations("admin.blog.events");
   const tCommon = useTranslations("admin.common");
 
   const isEditing = !!event;

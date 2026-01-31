@@ -26,7 +26,7 @@ export default async function EditEventPage({
 
   const t = await getTranslations({
     locale: routeLocale,
-    namespace: "admin.events",
+    namespace: "admin.blog.events",
   });
 
   const allMessages = await getMessages({ locale: routeLocale });

@@ -23,7 +23,7 @@ export default async function GroupsPage({
 
   const t = await getTranslations({
     locale: routeLocale,
-    namespace: "admin.taxonomy",
+    namespace: "admin.blog.taxonomy",
   });
 
   const allMessages = await getMessages({ locale: routeLocale });

@@ -66,7 +66,7 @@
 ### 實作備註
 
 - 實作入口：`app/[locale]/page.tsx` → `components/home/HomePageV2.tsx`
-- Hamburger nav fetch/parse：`lib/modules/content/cached.ts#getHamburgerNavCached`（invalid → fallback default）
+- Hamburger nav fetch/parse：`lib/modules/content/cached.ts#getHamburgerNavCached`（invalid/empty → empty nav；seed 只允許在 DB / `supabase/03_seed/*`）
 - Hotspots markdown 安全邊界：`lib/markdown/hotspots.ts`（server-only; 禁 raw HTML + sanitize + https/mailto links）
 - External URL allowlist（single source）：`lib/validators/external-url.ts`
 
@@ -514,18 +514,21 @@
     | Target Type | 必填欄位 | 選填欄位 | 說明 |
     |-------------|----------|----------|------|
     | `page` | `path` | `hash` | 內部靜態頁面（/about, /services, /contact, /faq, /collaboration, /events；/platforms 已為 legacy redirect） |
-    | `blog_index` | - | `q` | 部落格首頁（可帶搜尋） |
-    | `blog_category` | `categorySlug` | `q` | 部落格分類頁 |
-    | `blog_group` | `groupSlug` | `q` | 部落格群組頁（taxonomy v2） |
-    | `blog_topic` | `topicSlug` | `q` | 部落格主題頁（taxonomy v2） |
-    | `blog_tag` | `tagSlug` | - | 部落格標籤頁（taxonomy v2） |
-    | `gallery_index` | - | `q` | 畫廊首頁 |
-    | `gallery_category` | `categorySlug` | `q` | 畫廊分類頁 |
-    | `events_index` | - | `eventType`, `tag` | 活動列表（可篩選類型/標籤） |
+    | `blog_index` | - | `q`, `sort`, `page` | 部落格首頁（可帶搜尋 / 排序 / 分頁） |
+    | `blog_category` | `categorySlug` | `q`, `sort`, `page` | 部落格分類頁（legacy） |
+    | `blog_post` | `postSlug` | - | 部落格文章頁（v2 canonical） |
+    | `blog_group` | `groupSlug` | `q`, `sort`, `page` | 部落格群組頁（taxonomy v2） |
+    | `blog_topic` | `topicSlug` | `q`, `sort`, `page` | 部落格主題頁（taxonomy v2；canonical path 為 `/blog/categories/[slug]`） |
+    | `blog_tag` | `tagSlug` | `sort`, `page` | 部落格標籤頁（taxonomy v2） |
+    | `gallery_index` | - | `q`, `tag`, `sort`, `page` | 畫廊首頁（可帶搜尋 / 標籤 / 排序 / 分頁） |
+    | `gallery_category` | `categorySlug` | `q`, `tag`, `sort`, `page` | 畫廊分類頁 |
+    | `gallery_item` | `categorySlug`, `itemSlug` | - | 畫廊作品詳情頁 |
+    | `events_index` | - | `eventType`, `tag`, `q`, `sort`, `page` | 活動列表（可篩選類型/標籤/搜尋/排序/分頁；query param `type=` 對應 `eventType`） |
+    | `event_detail` | `eventSlug` | - | 活動詳情頁 |
     | `faq_index` | - | - | 常見問題頁 |
     | `anchor` | `hash` | - | 頁內錨點 |
     | `external` | `url` | - | 外部連結（僅 `https:`/`mailto:`） |
-- Deep Validation（Publish 時）：`blog_group/topic/tag`、`event_detail` 會驗證 DB 是否存在且可見
+- Deep Validation（Publish 時）：`blog_post/category/group/topic/tag`、`gallery_category/item`、`events_index`（有 `eventType`/`tag` 時）、`event_detail` 會驗證 DB 是否存在且可見
 - Footer copy：`site_content(section_key='footer')`（fallback：`messages/*`）
 - Company short name：`company_settings.company_name_short`（fallback：`site_content(section_key='metadata').title` → `messages/*`）
 - Home v2 hero copy：`site_content(section_key='hero')`

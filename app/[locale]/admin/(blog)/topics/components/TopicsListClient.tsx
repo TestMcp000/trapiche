@@ -48,7 +48,7 @@ function TopicsListContent({
   groups,
   routeLocale,
 }: TopicsListClientProps) {
-  const t = useTranslations("admin.taxonomy");
+  const t = useTranslations("admin.blog.taxonomy");
 
   const [topics, setTopics] = useState(initialTopics);
   const [loading, setLoading] = useState(false);
