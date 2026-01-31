@@ -20,6 +20,7 @@ import {
     deleteBlogTag,
     mergeBlogTags,
 } from '@/lib/modules/blog/taxonomy-admin-io';
+import { syncHamburgerNavAutogen } from '@/lib/modules/content/hamburger-nav-autogen-io';
 import {
     ADMIN_ERROR_CODES,
     actionSuccess,
@@ -213,6 +214,48 @@ export async function mergeTagsAction(
         return actionSuccess();
     } catch (error) {
         console.error('[tags/actions] mergeTagsAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Toggle tag "show in hamburger nav" flag
+ */
+export async function toggleTagShowInNavAction(
+    id: string,
+    showInNav: boolean,
+    locale: string
+): Promise<ActionResult<BlogTag>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const tag = await updateBlogTag(id, { show_in_nav: showInNav });
+
+        if (!tag) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        const sync = await syncHamburgerNavAutogen(guard.userId);
+        if (sync.updated) {
+            revalidateTag('site-content', { expire: 0 });
+            revalidatePath(`/${locale}`);
+            revalidatePath(`/${locale}/admin/settings/navigation`);
+        }
+
+        revalidateTag('blog', { expire: 0 });
+        revalidatePath(`/${locale}/admin/tags`);
+
+        return actionSuccess(tag);
+    } catch (error) {
+        console.error('[tags/actions] toggleTagShowInNavAction error:', error);
         return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 }

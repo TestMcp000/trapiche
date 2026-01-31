@@ -827,9 +827,14 @@ CREATE TABLE IF NOT EXISTS public.gallery_categories (
   name_zh VARCHAR(120) NOT NULL,
   slug VARCHAR(120) UNIQUE NOT NULL,
   is_visible BOOLEAN NOT NULL DEFAULT true,
+  show_in_nav BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW())
 );
+
+-- Idempotent upgrades (for existing DBs)
+ALTER TABLE IF EXISTS public.gallery_categories
+  ADD COLUMN IF NOT EXISTS show_in_nav BOOLEAN NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS public.gallery_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -874,6 +879,7 @@ CREATE TABLE IF NOT EXISTS public.gallery_pins (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_gallery_categories_visible_sort ON public.gallery_categories(is_visible, sort_order);
+CREATE INDEX IF NOT EXISTS idx_gallery_categories_show_in_nav ON public.gallery_categories(show_in_nav) WHERE show_in_nav = true;
 CREATE INDEX IF NOT EXISTS idx_gallery_items_category_visible_created ON public.gallery_items(category_id, is_visible, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gallery_items_visible_created ON public.gallery_items(is_visible, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gallery_items_visible_like_created ON public.gallery_items(is_visible, like_count DESC, created_at DESC);
@@ -4445,6 +4451,7 @@ CREATE TABLE IF NOT EXISTS public.blog_groups (
   name_zh TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_visible BOOLEAN NOT NULL DEFAULT true,
+  show_in_nav BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
@@ -4457,6 +4464,7 @@ CREATE TABLE IF NOT EXISTS public.blog_topics (
   name_zh TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_visible BOOLEAN NOT NULL DEFAULT true,
+  show_in_nav BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
@@ -4466,9 +4474,20 @@ CREATE TABLE IF NOT EXISTS public.blog_tags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
   name_zh TEXT NOT NULL,
+  show_in_nav BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
+
+-- Idempotent upgrades (for existing DBs)
+ALTER TABLE IF EXISTS public.blog_groups
+  ADD COLUMN IF NOT EXISTS show_in_nav BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE IF EXISTS public.blog_topics
+  ADD COLUMN IF NOT EXISTS show_in_nav BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE IF EXISTS public.blog_tags
+  ADD COLUMN IF NOT EXISTS show_in_nav BOOLEAN NOT NULL DEFAULT false;
 
 -- post_topics: join table (many-to-many)
 CREATE TABLE IF NOT EXISTS public.post_topics (
@@ -4514,15 +4533,18 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_blog_groups_slug ON public.blog_groups(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_groups_sort_order ON public.blog_groups(sort_order);
 CREATE INDEX IF NOT EXISTS idx_blog_groups_visible ON public.blog_groups(is_visible);
+CREATE INDEX IF NOT EXISTS idx_blog_groups_show_in_nav ON public.blog_groups(show_in_nav) WHERE show_in_nav = true;
 
 -- blog_topics indexes
 CREATE INDEX IF NOT EXISTS idx_blog_topics_slug ON public.blog_topics(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_topics_group_id ON public.blog_topics(group_id);
 CREATE INDEX IF NOT EXISTS idx_blog_topics_sort_order ON public.blog_topics(sort_order);
 CREATE INDEX IF NOT EXISTS idx_blog_topics_visible ON public.blog_topics(is_visible);
+CREATE INDEX IF NOT EXISTS idx_blog_topics_show_in_nav ON public.blog_topics(show_in_nav) WHERE show_in_nav = true;
 
 -- blog_tags indexes
 CREATE INDEX IF NOT EXISTS idx_blog_tags_slug ON public.blog_tags(slug);
+CREATE INDEX IF NOT EXISTS idx_blog_tags_show_in_nav ON public.blog_tags(show_in_nav) WHERE show_in_nav = true;
 
 -- post_topics indexes (composite PK serves as index for (post_id, topic_id))
 CREATE INDEX IF NOT EXISTS idx_post_topics_topic_id ON public.post_topics(topic_id);
@@ -4667,9 +4689,14 @@ CREATE TABLE IF NOT EXISTS public.event_types (
   name_zh TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_visible BOOLEAN NOT NULL DEFAULT true,
+  show_in_nav BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
+
+-- Idempotent upgrades (for existing DBs)
+ALTER TABLE IF EXISTS public.event_types
+  ADD COLUMN IF NOT EXISTS show_in_nav BOOLEAN NOT NULL DEFAULT false;
 
 -- events: 活動資料
 CREATE TABLE IF NOT EXISTS public.events (
@@ -4703,6 +4730,7 @@ CREATE TABLE IF NOT EXISTS public.events (
 CREATE INDEX IF NOT EXISTS idx_event_types_slug ON public.event_types(slug);
 CREATE INDEX IF NOT EXISTS idx_event_types_sort_order ON public.event_types(sort_order);
 CREATE INDEX IF NOT EXISTS idx_event_types_visible ON public.event_types(is_visible);
+CREATE INDEX IF NOT EXISTS idx_event_types_show_in_nav ON public.event_types(show_in_nav) WHERE show_in_nav = true;
 
 -- events indexes
 CREATE INDEX IF NOT EXISTS idx_events_slug ON public.events(slug);
@@ -4796,9 +4824,14 @@ CREATE TABLE IF NOT EXISTS public.event_tags (
   name_zh TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_visible BOOLEAN NOT NULL DEFAULT true,
+  show_in_nav BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
+
+-- Idempotent upgrades (for existing DBs)
+ALTER TABLE IF EXISTS public.event_tags
+  ADD COLUMN IF NOT EXISTS show_in_nav BOOLEAN NOT NULL DEFAULT false;
 
 -- event_event_tags: join table (many-to-many)
 CREATE TABLE IF NOT EXISTS public.event_event_tags (
@@ -4817,6 +4850,7 @@ CREATE TABLE IF NOT EXISTS public.event_event_tags (
 CREATE INDEX IF NOT EXISTS idx_event_tags_slug ON public.event_tags(slug);
 CREATE INDEX IF NOT EXISTS idx_event_tags_sort_order ON public.event_tags(sort_order);
 CREATE INDEX IF NOT EXISTS idx_event_tags_visible ON public.event_tags(is_visible);
+CREATE INDEX IF NOT EXISTS idx_event_tags_show_in_nav ON public.event_tags(show_in_nav) WHERE show_in_nav = true;
 
 -- event_event_tags indexes (composite PK serves as index for (event_id, tag_id))
 CREATE INDEX IF NOT EXISTS idx_event_event_tags_tag_id ON public.event_event_tags(tag_id);

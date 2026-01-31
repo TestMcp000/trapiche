@@ -10,7 +10,7 @@
 
 import { getTranslations, getMessages } from "next-intl/server";
 import type { AbstractIntlMessages } from "next-intl";
-import { getAllEventsAdmin, getAllEventTypesAdmin } from "./actions";
+import { getAllEventsAdmin, getAllEventTypesAdmin, getAllEventTagsAdmin } from "./actions";
 import EventsListClient from "./components/EventsListClient";
 
 export default async function EventsAdminPage({
@@ -28,9 +28,10 @@ export default async function EventsAdminPage({
   const allMessages = await getMessages({ locale: routeLocale });
   const adminMessages = { admin: allMessages.admin } as AbstractIntlMessages;
 
-  const [events, eventTypes] = await Promise.all([
+  const [events, eventTypes, eventTags] = await Promise.all([
     getAllEventsAdmin(),
     getAllEventTypesAdmin(),
+    getAllEventTagsAdmin(),
   ]);
 
   return (
@@ -51,6 +52,7 @@ export default async function EventsAdminPage({
       <EventsListClient
         initialEvents={events}
         eventTypes={eventTypes}
+        eventTags={eventTags}
         routeLocale={routeLocale}
         messages={adminMessages}
       />

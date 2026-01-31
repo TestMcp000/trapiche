@@ -7,6 +7,8 @@ export interface GalleryCategory {
   name_zh: string;
   slug: string;
   is_visible: boolean;
+  /** Whether this category should appear in hamburger_nav auto-generation */
+  show_in_nav: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -17,6 +19,7 @@ export interface GalleryCategoryInput {
   name_zh: string;
   slug: string;
   is_visible?: boolean;
+  show_in_nav?: boolean;
 }
 
 export interface GalleryItem {

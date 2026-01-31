@@ -34,7 +34,7 @@ import type { GalleryCategory } from "@/lib/types/gallery";
 import type { EventType, EventTag } from "@/lib/types/events";
 
 export const metadata: Metadata = {
-  title: "導覽選單設定 | 網站後台",
+  title: "首頁區塊（慢寶選單） | 網站後台",
   robots: { index: false, follow: false },
 };
 

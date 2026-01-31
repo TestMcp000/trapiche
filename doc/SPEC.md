@@ -434,11 +434,11 @@
 | `/admin/theme/layouts`        | Theme layout token editor                      |
 | `/admin/content`              | Site content                                   |
 | `/admin/content/[section]`    | Section content editor                         |
-| `/admin/landing`              | Landing page                                   |
-| `/admin/landing/[sectionKey]` | Landing section editor                         |
+| `/admin/landing`              | Landing sections（legacy；Home v2 不 render；後台側邊欄不提供入口） |
+| `/admin/landing/[sectionKey]` | Landing section editor（legacy）               |
 | `/admin/portfolio`            | Portfolio 管理                                 |
 | `/admin/settings`             | Company settings（theme 由 `/admin/theme` 管） |
-| `/admin/settings/navigation`  | 導覽選單可視化編輯器（Hamburger menu editor）  |
+| `/admin/settings/navigation`  | 首頁區塊（慢寶選單）可視化編輯器（Hamburger menu editor） |
 
 **Blog**
 
@@ -509,7 +509,8 @@
 ### 內容來源（Public Navigation / Landing）
 
 - Navigation IA（Header/Footer/Home v2）：`site_content(section_key='hamburger_nav')`（published JSON v2；解析：`parseHamburgerNav`；fallback：empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）
-  - 後台可視化編輯器：`/admin/settings/navigation`（支援 groups/items 拖曳排序、target picker、draft/publish 兩段式驗證）
+  - 後台可視化編輯器：`/admin/settings/navigation`（後台側邊欄：首頁區塊；支援 groups/items 拖曳排序、target picker、draft/publish 兩段式驗證）
+  - Auto-gen（Option A）：後台在各 domain panel 直接勾選 `show_in_nav`（blog_groups/blog_topics/blog_tags/event_types/event_tags/gallery_categories），由 server action 呼叫 `syncHamburgerNavAutogen()` 同步回 `site_content(hamburger_nav)`；合併規則只覆寫受管區塊並保留手動 groups/items（events/gallery 會保留非 filter/category items）
   - **Nav Target Allowlist（PR-42）**：
     | Target Type | 必填欄位 | 選填欄位 | 說明 |
     |-------------|----------|----------|------|

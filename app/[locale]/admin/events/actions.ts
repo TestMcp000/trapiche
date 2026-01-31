@@ -14,6 +14,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient } from '@/lib/infrastructure/supabase/server';
 import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
+import { syncHamburgerNavAutogen } from '@/lib/modules/content/hamburger-nav-autogen-io';
 import {
     getAllEventTypesAdmin,
     getEventTypeByIdAdmin,
@@ -224,6 +225,47 @@ export async function toggleEventTypeVisibilityAction(
         return actionSuccess(eventType);
     } catch (error) {
         console.error('[events/actions] toggleEventTypeVisibilityAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Toggle event type "show in hamburger nav" flag
+ */
+export async function toggleEventTypeShowInNavAction(
+    id: string,
+    showInNav: boolean,
+    locale: string
+): Promise<ActionResult<EventType>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const eventType = await updateEventType(id, { show_in_nav: showInNav });
+        if (!eventType) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        const sync = await syncHamburgerNavAutogen(guard.userId);
+        if (sync.updated) {
+            revalidateTag('site-content', { expire: 0 });
+            revalidatePath(`/${locale}`);
+            revalidatePath(`/${locale}/admin/settings/navigation`);
+        }
+
+        revalidateTag('events', { expire: 0 });
+        revalidatePath(`/${locale}/admin/events`);
+
+        return actionSuccess(eventType);
+    } catch (error) {
+        console.error('[events/actions] toggleEventTypeShowInNavAction error:', error);
         return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 }
@@ -652,6 +694,48 @@ export async function toggleEventTagVisibilityAction(
         return actionSuccess(eventTag);
     } catch (error) {
         console.error('[events/actions] toggleEventTagVisibilityAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Toggle event tag "show in hamburger nav" flag
+ */
+export async function toggleEventTagShowInNavAction(
+    id: string,
+    showInNav: boolean,
+    locale: string
+): Promise<ActionResult<EventTag>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const eventTag = await updateEventTag(id, { show_in_nav: showInNav });
+        if (!eventTag) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        const sync = await syncHamburgerNavAutogen(guard.userId);
+        if (sync.updated) {
+            revalidateTag('site-content', { expire: 0 });
+            revalidatePath(`/${locale}`);
+            revalidatePath(`/${locale}/admin/settings/navigation`);
+        }
+
+        revalidateTag('events', { expire: 0 });
+        revalidatePath(`/${locale}/admin/events`);
+        revalidatePath(`/${locale}/events`);
+
+        return actionSuccess(eventTag);
+    } catch (error) {
+        console.error('[events/actions] toggleEventTagShowInNavAction error:', error);
         return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 }

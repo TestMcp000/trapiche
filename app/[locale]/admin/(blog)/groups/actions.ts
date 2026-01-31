@@ -20,6 +20,7 @@ import {
     deleteBlogGroup,
     reorderBlogGroups,
 } from '@/lib/modules/blog/taxonomy-admin-io';
+import { syncHamburgerNavAutogen } from '@/lib/modules/content/hamburger-nav-autogen-io';
 import {
     ADMIN_ERROR_CODES,
     actionSuccess,
@@ -245,6 +246,49 @@ export async function toggleGroupVisibilityAction(
         return actionSuccess(group);
     } catch (error) {
         console.error('[groups/actions] toggleGroupVisibilityAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Toggle group "show in hamburger nav" flag
+ */
+export async function toggleGroupShowInNavAction(
+    id: string,
+    showInNav: boolean,
+    locale: string
+): Promise<ActionResult<BlogGroup>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const group = await updateBlogGroup(id, { show_in_nav: showInNav });
+
+        if (!group) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        // Keep hamburger_nav in sync with DB flags
+        const sync = await syncHamburgerNavAutogen(guard.userId);
+        if (sync.updated) {
+            revalidateTag('site-content', { expire: 0 });
+            revalidatePath(`/${locale}`);
+            revalidatePath(`/${locale}/admin/settings/navigation`);
+        }
+
+        revalidateTag('blog', { expire: 0 });
+        revalidatePath(`/${locale}/admin/groups`);
+
+        return actionSuccess(group);
+    } catch (error) {
+        console.error('[groups/actions] toggleGroupShowInNavAction error:', error);
         return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 }

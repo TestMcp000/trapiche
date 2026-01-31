@@ -19,6 +19,7 @@ import {
   updateTagAction,
   deleteTagAction,
   mergeTagsAction,
+  toggleTagShowInNavAction,
   type TagActionInput,
 } from "../actions";
 
@@ -159,6 +160,36 @@ function TagsListContent({ initialTags, routeLocale }: TagsListClientProps) {
         return;
       }
       setTags((prev) => prev.filter((t) => t.id !== tag.id));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==========================================================================
+  // Hamburger nav toggle
+  // ==========================================================================
+
+  const handleToggleShowInNav = async (tag: BlogTagWithCounts) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await toggleTagShowInNavAction(
+        tag.id,
+        !tag.show_in_nav,
+        routeLocale,
+      );
+      if (!result.success) {
+        setError(getErrorLabel(result.errorCode, routeLocale));
+        return;
+      }
+      if (result.data) {
+        setTags((prev) =>
+          prev.map((t) =>
+            t.id === tag.id ? { ...t, show_in_nav: result.data!.show_in_nav } : t,
+          ),
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -419,6 +450,21 @@ function TagsListContent({ initialTags, routeLocale }: TagsListClientProps) {
                 <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
                   {tag.post_count}
                 </span>
+
+                {/* Hamburger nav badge */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleShowInNav(tag)}
+                  disabled={loading}
+                  className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                    tag.show_in_nav
+                      ? "bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300"
+                      : "bg-gray-100 border-gray-200 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                  }`}
+                  title={t("common.showInNav")}
+                >
+                  {tag.show_in_nav ? t("common.inNav") : t("common.notInNav")}
+                </button>
 
                 {/* Actions (on hover) */}
                 <div className="hidden group-hover:flex items-center gap-1 ml-1">

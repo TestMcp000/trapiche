@@ -29,6 +29,7 @@ export interface GalleryCategoryDbPayload {
   slug: string;
   sort_order: number;
   is_visible: boolean;
+  show_in_nav?: boolean;
 }
 
 // =============================================================================
@@ -107,6 +108,7 @@ export async function createGalleryCategoryAdmin(
     slug: payload.slug.trim(),
     sort_order: payload.sort_order,
     is_visible: payload.is_visible,
+    show_in_nav: payload.show_in_nav ?? false,
   });
 
   if (error) {
@@ -136,6 +138,7 @@ export async function updateGalleryCategoryAdmin(
       slug: payload.slug.trim(),
       sort_order: payload.sort_order,
       is_visible: payload.is_visible,
+      ...(payload.show_in_nav !== undefined && { show_in_nav: payload.show_in_nav }),
     })
     .eq('id', id);
 
@@ -143,6 +146,27 @@ export async function updateGalleryCategoryAdmin(
     if (error.code === '23505') {
       return { error: '此 Slug 已存在，請使用其他 Slug。' };
     }
+    return { error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Update show_in_nav flag for a gallery category
+ */
+export async function updateGalleryCategoryShowInNavAdmin(
+  id: string,
+  showInNav: boolean
+): Promise<{ success: true } | { error: string }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('gallery_categories')
+    .update({ show_in_nav: showInNav })
+    .eq('id', id);
+
+  if (error) {
     return { error: error.message };
   }
 

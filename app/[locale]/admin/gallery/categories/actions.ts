@@ -10,10 +10,12 @@
 import { revalidateTag, revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/infrastructure/supabase/server';
 import { requireSiteAdmin } from '@/lib/modules/auth/admin-guard';
+import { syncHamburgerNavAutogen } from '@/lib/modules/content/hamburger-nav-autogen-io';
 import {
   getGalleryCategoriesWithCounts,
   createGalleryCategoryAdmin,
   updateGalleryCategoryAdmin,
+  updateGalleryCategoryShowInNavAdmin,
   deleteGalleryCategoryAdmin,
   hasItemsInCategoryAdmin,
   type CategoryWithCount,
@@ -150,5 +152,41 @@ export async function deleteGalleryCategory(
   }
 
   revalidateGalleryCache(locale);
+  return actionSuccess();
+}
+
+/**
+ * Toggle category "show in hamburger nav" flag
+ */
+export async function toggleGalleryCategoryShowInNav(
+  id: string,
+  showInNav: boolean,
+  locale: string
+): Promise<ActionResult<void>> {
+  const supabase = await createClient();
+  const guard = await requireSiteAdmin(supabase);
+  if (!guard.ok) {
+    return actionError(guard.errorCode);
+  }
+
+  if (!id) {
+    return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const result = await updateGalleryCategoryShowInNavAdmin(id, showInNav);
+  if ('error' in result) {
+    return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+  }
+
+  const sync = await syncHamburgerNavAutogen(guard.userId);
+  if (sync.updated) {
+    revalidateTag('site-content', { expire: 0 });
+    revalidatePath('/' + locale);
+    revalidatePath('/' + locale + '/admin/settings/navigation');
+  }
+
+  revalidateGalleryCache(locale);
+  revalidatePath('/' + locale + '/admin/gallery/categories');
+
   return actionSuccess();
 }

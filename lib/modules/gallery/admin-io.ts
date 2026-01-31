@@ -45,6 +45,7 @@ export {
   // Write operations
   createGalleryCategoryAdmin,
   updateGalleryCategoryAdmin,
+  updateGalleryCategoryShowInNavAdmin,
   hasItemsInCategoryAdmin,
   deleteGalleryCategoryAdmin,
 } from './categories-admin-io';

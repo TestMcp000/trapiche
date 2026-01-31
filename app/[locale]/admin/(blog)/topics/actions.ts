@@ -19,7 +19,9 @@ import {
     updateBlogTopic,
     deleteBlogTopic,
     reorderBlogTopics,
+    updateBlogGroup,
 } from '@/lib/modules/blog/taxonomy-admin-io';
+import { syncHamburgerNavAutogen } from '@/lib/modules/content/hamburger-nav-autogen-io';
 import {
     ADMIN_ERROR_CODES,
     actionSuccess,
@@ -252,6 +254,54 @@ export async function toggleTopicVisibilityAction(
         return actionSuccess(topic);
     } catch (error) {
         console.error('[topics/actions] toggleTopicVisibilityAction error:', error);
+        return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
+    }
+}
+
+/**
+ * Toggle topic "show in hamburger nav" flag
+ * If turning ON, also ensures the parent group is set to show_in_nav for UX consistency.
+ */
+export async function toggleTopicShowInNavAction(
+    id: string,
+    showInNav: boolean,
+    locale: string
+): Promise<ActionResult<BlogTopic>> {
+    try {
+        const supabase = await createClient();
+        const guard = await requireSiteAdmin(supabase);
+        if (!guard.ok) {
+            return actionError(guard.errorCode);
+        }
+
+        if (!id) {
+            return actionError(ADMIN_ERROR_CODES.VALIDATION_ERROR);
+        }
+
+        const topic = await updateBlogTopic(id, { show_in_nav: showInNav });
+
+        if (!topic) {
+            return actionError(ADMIN_ERROR_CODES.UPDATE_FAILED);
+        }
+
+        // If enabling a topic, ensure its parent group is also enabled for nav.
+        if (showInNav) {
+            await updateBlogGroup(topic.group_id, { show_in_nav: true });
+        }
+
+        const sync = await syncHamburgerNavAutogen(guard.userId);
+        if (sync.updated) {
+            revalidateTag('site-content', { expire: 0 });
+            revalidatePath(`/${locale}`);
+            revalidatePath(`/${locale}/admin/settings/navigation`);
+        }
+
+        revalidateTag('blog', { expire: 0 });
+        revalidatePath(`/${locale}/admin/topics`);
+
+        return actionSuccess(topic);
+    } catch (error) {
+        console.error('[topics/actions] toggleTopicShowInNavAction error:', error);
         return actionError(ADMIN_ERROR_CODES.INTERNAL_ERROR);
     }
 }

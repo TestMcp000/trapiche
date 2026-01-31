@@ -27,6 +27,8 @@ export interface EventType {
     name_zh: string;
     sort_order: number;
     is_visible: boolean;
+    /** Whether this type should appear in hamburger_nav auto-generation */
+    show_in_nav: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -51,6 +53,8 @@ export interface EventTag {
     name_zh: string;
     sort_order: number;
     is_visible: boolean;
+    /** Whether this tag should appear in hamburger_nav auto-generation */
+    show_in_nav: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -63,6 +67,7 @@ export interface EventTagInput {
     name_zh: string;
     sort_order?: number;
     is_visible?: boolean;
+    show_in_nav?: boolean;
 }
 
 /**
@@ -159,6 +164,7 @@ export interface EventTypeInput {
     name_zh: string;
     sort_order?: number;
     is_visible?: boolean;
+    show_in_nav?: boolean;
 }
 
 // =============================================================================

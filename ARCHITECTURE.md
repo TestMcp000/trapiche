@@ -382,7 +382,7 @@ interface ApiErrorResponse {
 - Public 頁面（預設）：使用 `components/Header.tsx` + `components/Footer.tsx`。
 - Home v2（`app/[locale]/page.tsx`）：允許使用 `components/home/*`（`MarqueeNotice` / `HeaderBarV2Client` / `HeroStageClient` 等）+ `components/Footer.tsx`。
 - Admin 頁面僅使用 `app/[locale]/admin/layout.tsx` (AdminSidebar)。
-- Navigation IA（Header/Footer/Home v2）：`site_content(section_key='hamburger_nav')`（typed targets；resolver 單一真相來源：`lib/site/nav-resolver.ts`；invalid/empty → empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`）。
+- Navigation IA（Header/Footer/Home v2）：`site_content(section_key='hamburger_nav')`（typed targets；resolver 單一真相來源：`lib/site/nav-resolver.ts`；invalid/empty → empty nav；內容 seed 只允許在 DB / `supabase/03_seed/*`；後台編輯器：`/[locale]/admin/settings/navigation`（側邊欄：首頁區塊）；Auto-gen（Option A）：各 domain table 以 `show_in_nav` 作為輸入（blog_groups/blog_topics/blog_tags/event_types/event_tags/gallery_categories），由 server action 呼叫 `lib/modules/content/hamburger-nav-autogen-io.ts` 同步，並保留非受管的 groups/items）。
 
 ## 10. 資料一致性與安全
 

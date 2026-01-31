@@ -78,6 +78,7 @@ describe("EventTag Type Contracts", () => {
                 name_zh: "工作坊",
                 sort_order: 1,
                 is_visible: true,
+                show_in_nav: false,
                 created_at: "2024-01-01T00:00:00Z",
                 updated_at: "2024-01-01T00:00:00Z",
             };
@@ -124,6 +125,7 @@ describe("EventTag Type Contracts", () => {
                 name_zh: "線上",
                 sort_order: 2,
                 is_visible: true,
+                show_in_nav: false,
                 created_at: "2024-01-01T00:00:00Z",
                 updated_at: "2024-01-01T00:00:00Z",
                 event_count: 5,
@@ -142,6 +144,7 @@ describe("EventTag Type Contracts", () => {
                 name_zh: "新標籤",
                 sort_order: 3,
                 is_visible: true,
+                show_in_nav: false,
                 created_at: "2024-01-01T00:00:00Z",
                 updated_at: "2024-01-01T00:00:00Z",
                 event_count: 0,

@@ -370,7 +370,12 @@
       "loggedInAs": "登入帳號",
       "siteAdmin": "網站後台",
       "roleMismatchTitle": "角色未同步",
-      "roleMismatchMessage": "您透過環境變數進入後台，但資料庫角色尚未同步。部分操作可能會被 RLS 拒絕。請聯繫 Owner 將您加入 site_admins 表格。"
+      "roleMismatchMessage": "您透過環境變數進入後台，但資料庫角色尚未同步。部分操作可能會被 RLS 拒絕。請聯繫 Owner 將您加入 site_admins 表格。",
+      "edit": "編輯",
+      "delete": "刪除",
+      "cancel": "取消",
+      "save": "儲存",
+      "saving": "儲存中..."
     },
     "buttons": {
       "signOut": "登出",
@@ -659,6 +664,9 @@
         "common": {
           "visible": "可見",
           "hidden": "隱藏",
+          "showInNav": "漢堡選單",
+          "inNav": "已加入",
+          "notInNav": "未加入",
           "actions": "操作",
           "edit": "編輯",
           "delete": "刪除",
@@ -741,7 +749,8 @@
         "subtitle": "管理講座與活動資訊",
         "tabs": {
           "events": "活動列表",
-          "types": "活動類型"
+          "types": "活動類型",
+          "tags": "活動標籤"
         },
         "newEvent": "新增活動",
         "noEvents": "尚無活動",
@@ -776,11 +785,35 @@
           "visibleLabel": "在前台顯示",
           "visible": "可見",
           "hidden": "隱藏",
+          "showInNav": "漢堡選單",
+          "inNav": "已加入",
+          "notInNav": "未加入",
           "events": "活動",
           "noTypes": "尚無活動類型",
           "noTypesDesc": "建立第一個類型來分類活動",
           "confirmDelete": "確定要刪除「{name}」類型嗎？",
           "cannotDeleteWithEvents": "無法刪除仍有活動的類型"
+        },
+        "tags": {
+          "add": "新增標籤",
+          "createTitle": "新增活動標籤",
+          "editTitle": "編輯活動標籤",
+          "nameLabel": "名稱",
+          "namePlaceholder": "輸入標籤名稱",
+          "slugLabel": "網址識別字（Slug）",
+          "slugPlaceholder": "tag-slug",
+          "slugHint": "用於網址，可使用小寫英數、底線與連字號",
+          "visibleLabel": "在前台顯示",
+          "visible": "可見",
+          "hidden": "隱藏",
+          "showInNav": "漢堡選單",
+          "inNav": "已加入",
+          "notInNav": "未加入",
+          "events": "活動",
+          "noTags": "尚無活動標籤",
+          "noTagsDesc": "建立第一個標籤來標記活動",
+          "confirmDelete": "確定要刪除「{name}」標籤嗎？",
+          "cannotDeleteWithEvents": "無法刪除仍有活動的標籤"
         },
         "form": {
           "newEvent": "新增活動",
@@ -1012,6 +1045,9 @@
         "sortOrder": "排序",
         "items": "作品",
         "visible": "顯示",
+        "showInNav": "漢堡選單",
+        "inNav": "已加入",
+        "notInNav": "未加入",
         "actions": "操作",
         "edit": "編輯",
         "delete": "刪除",
@@ -2216,8 +2252,8 @@
       "purgeFailed": "清除快取失敗"
     },
     "navigation": {
-      "title": "導覽選單設定",
-      "description": "編輯網站的漢堡選單結構，包含群組與連結項目",
+      "title": "首頁區塊（慢寶選單）",
+      "description": "管理首頁／漢堡選單要顯示的入口（群組與連結項目）",
       "statusPublished": "已發布",
       "statusDraft": "草稿",
       "history": "歷史紀錄",

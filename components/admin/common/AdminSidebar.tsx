@@ -393,7 +393,7 @@ function AdminSidebarContent({
       children: [
         {
           labelKey: "landing",
-          href: `/${routeLocale}/admin/landing`,
+          href: `/${routeLocale}/admin/settings/navigation`,
           icon: icons.landing,
         },
         {
@@ -433,11 +433,6 @@ function AdminSidebarContent({
           labelKey: "settings",
           href: `/${routeLocale}/admin/settings`,
           icon: icons.settings,
-        },
-        {
-          labelKey: "navigation",
-          href: `/${routeLocale}/admin/settings/navigation`,
-          icon: icons.content,
         },
         {
           labelKey: "theme",

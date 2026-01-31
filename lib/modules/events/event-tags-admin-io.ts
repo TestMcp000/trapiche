@@ -37,7 +37,7 @@ export async function createEventTag(input: EventTagInput): Promise<EventTag | n
     const supabase = await createClient();
     const { data: maxOrder } = await supabase.from('event_tags').select('sort_order').order('sort_order', { ascending: false }).limit(1).single();
     const { data, error } = await supabase.from('event_tags').insert({
-        slug: input.slug, name_zh: input.name_zh, sort_order: input.sort_order ?? (maxOrder?.sort_order ?? 0) + 1, is_visible: input.is_visible ?? true,
+        slug: input.slug, name_zh: input.name_zh, sort_order: input.sort_order ?? (maxOrder?.sort_order ?? 0) + 1, is_visible: input.is_visible ?? true, show_in_nav: input.show_in_nav ?? false,
     }).select().single();
     if (error) { console.error('[createEventTag] Error:', error); return null; }
     return data;
@@ -48,7 +48,7 @@ export async function updateEventTag(id: string, input: Partial<EventTagInput>):
     const supabase = await createClient();
     const { data, error } = await supabase.from('event_tags').update({
         ...(input.slug !== undefined && { slug: input.slug }), ...(input.name_zh !== undefined && { name_zh: input.name_zh }),
-        ...(input.sort_order !== undefined && { sort_order: input.sort_order }), ...(input.is_visible !== undefined && { is_visible: input.is_visible }),
+        ...(input.sort_order !== undefined && { sort_order: input.sort_order }), ...(input.is_visible !== undefined && { is_visible: input.is_visible }), ...(input.show_in_nav !== undefined && { show_in_nav: input.show_in_nav }),
         updated_at: new Date().toISOString(),
     }).eq('id', id).select().single();
     if (error) { console.error('[updateEventTag] Error:', error); return null; }

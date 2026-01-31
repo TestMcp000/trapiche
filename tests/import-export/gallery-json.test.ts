@@ -45,6 +45,7 @@ const MOCK_CATEGORY = {
   name_zh: '雕塑',
   sort_order: 1,
   is_visible: true,
+  show_in_nav: false,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
 };

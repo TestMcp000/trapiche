@@ -20,6 +20,7 @@ import {
   deleteGroupAction,
   reorderGroupsAction,
   toggleGroupVisibilityAction,
+  toggleGroupShowInNavAction,
   type GroupActionInput,
 } from "../actions";
 
@@ -201,6 +202,38 @@ function GroupsListContent({
   };
 
   // ==========================================================================
+  // Hamburger nav toggle
+  // ==========================================================================
+
+  const handleToggleShowInNav = async (group: BlogGroupWithCounts) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await toggleGroupShowInNavAction(
+        group.id,
+        !group.show_in_nav,
+        routeLocale,
+      );
+      if (!result.success) {
+        setError(getErrorLabel(result.errorCode, routeLocale));
+        return;
+      }
+      if (result.data) {
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.id === group.id
+              ? { ...g, show_in_nav: result.data!.show_in_nav }
+              : g,
+          ),
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==========================================================================
   // Drag and drop reorder
   // ==========================================================================
 
@@ -333,6 +366,9 @@ function GroupsListContent({
                 <th className="text-center px-6 py-3 text-sm font-medium text-gray-500 dark:text-gray-400">
                   {t("common.visible")}
                 </th>
+                <th className="text-center px-6 py-3 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t("common.showInNav")}
+                </th>
                 <th className="text-right px-6 py-3 text-sm font-medium text-gray-500 dark:text-gray-400">
                   {t("common.actions")}
                 </th>
@@ -388,6 +424,21 @@ function GroupsListContent({
                       {group.is_visible
                         ? t("common.visible")
                         : t("common.hidden")}
+                    </button>
+                  </td>
+                  <td className="px-6 py-3 text-center">
+                    <button
+                      onClick={() => handleToggleShowInNav(group)}
+                      disabled={loading}
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        group.show_in_nav
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                      }`}
+                      title={t("common.showInNav")}>
+                      {group.show_in_nav
+                        ? t("common.inNav")
+                        : t("common.notInNav")}
                     </button>
                   </td>
                   <td className="px-6 py-3">

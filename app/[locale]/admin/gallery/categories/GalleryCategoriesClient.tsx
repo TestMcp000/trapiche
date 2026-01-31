@@ -16,6 +16,7 @@ import {
   createGalleryCategory,
   updateGalleryCategory,
   deleteGalleryCategory,
+  toggleGalleryCategoryShowInNav,
   type CategoryWithCount,
   type CategoryPayload,
 } from './actions';
@@ -136,6 +137,34 @@ export default function GalleryCategoriesClient({
     }
 
     await refetchCategories();
+  };
+
+  const handleToggleShowInNav = async (category: CategoryWithCount) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await toggleGalleryCategoryShowInNav(
+        category.id,
+        !category.show_in_nav,
+        locale,
+      );
+
+      if (!result.success) {
+        setError(getErrorLabel(result.errorCode, locale));
+        return;
+      }
+
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === category.id
+            ? { ...c, show_in_nav: !category.show_in_nav }
+            : c,
+        ),
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -273,6 +302,9 @@ export default function GalleryCategoriesClient({
                 <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                   {t('visible')}
                 </th>
+                <th className="text-center px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t('showInNav')}
+                </th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                   {t('actions')}
                 </th>
@@ -304,6 +336,20 @@ export default function GalleryCategoriesClient({
                     ) : (
                       <span className="text-gray-400">✗</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      onClick={() => handleToggleShowInNav(category)}
+                      disabled={loading}
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        category.show_in_nav
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      }`}
+                      title={t('showInNav')}
+                    >
+                      {category.show_in_nav ? t('inNav') : t('notInNav')}
+                    </button>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">

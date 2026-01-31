@@ -95,6 +95,7 @@ export async function createEventType(input: EventTypeInput): Promise<EventType 
             name_zh: input.name_zh,
             sort_order: input.sort_order ?? newSortOrder,
             is_visible: input.is_visible ?? true,
+            show_in_nav: input.show_in_nav ?? false,
         })
         .select()
         .single();
@@ -123,6 +124,7 @@ export async function updateEventType(
             ...(input.name_zh !== undefined && { name_zh: input.name_zh }),
             ...(input.sort_order !== undefined && { sort_order: input.sort_order }),
             ...(input.is_visible !== undefined && { is_visible: input.is_visible }),
+            ...(input.show_in_nav !== undefined && { show_in_nav: input.show_in_nav }),
             updated_at: new Date().toISOString(),
         })
         .eq('id', id)

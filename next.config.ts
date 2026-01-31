@@ -138,19 +138,24 @@ export default withSentryConfig(configWithPlugins, {
   // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
 
-  // Automatically annotate React components to show their full name in breadcrumbs and session replay
-  reactComponentAnnotation: {
-    enabled: true,
-  },
-
   // Hides source maps from generated client bundles
   sourcemaps: {
     deleteSourcemapsAfterUpload: true,
   },
 
-  // Automatically tree-shake Sentry logger statements to reduce bundle size
-  disableLogger: true,
+  // Webpack-only options (new path; avoids Sentry deprecation warnings)
+  webpack: {
+    // Automatically annotate React components to show their full name in breadcrumbs and session replay
+    reactComponentAnnotation: {
+      enabled: true,
+    },
 
-  // Enables automatic instrumentation of Vercel Cron Monitors
-  automaticVercelMonitors: true,
+    // Automatically tree-shake Sentry logger statements to reduce bundle size
+    treeshake: {
+      removeDebugLogging: true,
+    },
+
+    // Enables automatic instrumentation of Vercel Cron Monitors
+    automaticVercelMonitors: true,
+  },
 });
