@@ -46,6 +46,7 @@ import rehypeStringify from 'rehype-stringify';
 import type { Element, Parent, Root } from 'hast';
 
 import { visit } from 'unist-util-visit';
+import { normalizeEscapedNewlines } from '@/lib/utils/normalize-escaped-newlines';
 
 /**
  * Custom Rehype plugin to add copy buttons to code blocks.
@@ -140,6 +141,7 @@ function rehypeCopyButton() {
  * @returns HTML string ready for rendering
  */
 export async function markdownToHtml(markdown: string): Promise<string> {
+  const normalized = normalizeEscapedNewlines(markdown);
   const result = await unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -149,7 +151,7 @@ export async function markdownToHtml(markdown: string): Promise<string> {
     .use(rehypePrismPlus, { ignoreMissing: true })
     .use(rehypeCopyButton) // Apply our custom plugin
     .use(rehypeStringify, { allowDangerousHtml: true })
-    .process(markdown);
+    .process(normalized);
 
   return String(result);
 }

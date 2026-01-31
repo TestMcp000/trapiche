@@ -11,32 +11,58 @@ interface HeaderProps {
 
 // Fallback header for build-time safety (no DB reads)
 function FallbackHeader({ locale = 'zh' }: { locale?: string }) {
+  const links: Array<{ href: string; label: string }> = [
+    { href: `/${locale}`, label: '首頁' },
+    { href: `/${locale}/blog`, label: '部落格' },
+    { href: `/${locale}/gallery`, label: '畫廊' },
+    { href: `/${locale}/events`, label: '活動' },
+    { href: `/${locale}/about`, label: '關於' },
+    { href: `/${locale}/services`, label: '服務' },
+    { href: `/${locale}/contact`, label: '聯絡' },
+  ];
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass shadow-soft transition-all duration-300">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href={`/${locale}`} className="text-xl font-bold text-foreground">
           網站
         </Link>
-        <div className="hidden md:flex items-center gap-6">
-          <Link
-            href={`/${locale}#about`}
-            className="text-secondary hover:text-foreground transition-colors"
+
+        <details className="relative">
+          <summary
+            className="list-none [&::-webkit-details-marker]:hidden p-2 rounded-full text-foreground hover:bg-foreground/5 transition-colors cursor-pointer"
+            aria-label="主選單"
           >
-            關於我們
-          </Link>
-          <Link
-            href={`/${locale}#services`}
-            className="text-secondary hover:text-foreground transition-colors"
-          >
-            服務項目
-          </Link>
-          <Link
-            href={`/${locale}#contact`}
-            className="text-secondary hover:text-foreground transition-colors"
-          >
-            聯絡我們
-          </Link>
-        </div>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </summary>
+
+          <div className="absolute right-0 mt-2 w-72 max-w-[85vw] bg-surface-raised border border-border-light rounded-xl shadow-lg p-2">
+            <nav aria-label="網站導覽">
+              <ul className="space-y-1">
+                {links.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="block px-3 py-2 rounded-lg text-sm text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        </details>
       </nav>
     </header>
   );

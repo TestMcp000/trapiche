@@ -39,6 +39,10 @@
     "location": "活動地點",
     "dateTime": "日期時間"
   },
+  "gallery": {
+    "title": "畫廊",
+    "description": "作品集與創作練習的整理與展示。"
+  },
   "breadcrumb": {
     "home": "首頁",
     "blog": "部落格"

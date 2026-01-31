@@ -17,6 +17,8 @@ import type { Metadata } from 'next';
 import { fetchSharedReport } from '@/lib/modules/ai-analysis/report-shares-io';
 import { untrustedMarkdownToHtml } from '@/lib/markdown/untrusted';
 import { SHARE_TOKEN_REGEX } from '@/lib/types/ai-analysis';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 // Force dynamic rendering to prevent stale cache after revocation
 export const dynamic = 'force-dynamic';
@@ -111,9 +113,12 @@ export default async function SharedReportPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="glass">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6">
+      <Header locale={locale} />
+
+      {/* Content */}
+      <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+        {/* Report Header */}
+        <header className="glass-card rounded-theme-lg shadow-soft border border-border-light/60 p-6 mb-8">
           <h1 className="text-2xl font-bold text-foreground">{templateName}</h1>
           <div className="mt-2 flex flex-wrap gap-4 text-sm text-secondary">
             <span>
@@ -136,11 +141,8 @@ export default async function SharedReportPage({ params }: PageProps) {
               {statusLabel}
             </span>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Content */}
-      <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
         {report.status === 'completed' && resultHtml ? (
           <article
             className="prose prose-lg max-w-none"
@@ -171,14 +173,15 @@ export default async function SharedReportPage({ params }: PageProps) {
             </p>
           </div>
         )}
+
+        <p className="mt-10 text-center text-sm text-secondary">
+          {locale === 'zh'
+            ? '此為 AI 分析報告的分享連結。'
+            : 'This is a shared AI analysis report.'}
+        </p>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border-light bg-surface-raised py-4 text-center text-sm text-secondary">
-        {locale === 'zh'
-          ? '此為 AI 分析報告的分享連結。'
-          : 'This is a shared AI analysis report.'}
-      </footer>
+      <Footer locale={locale} />
     </div>
   );
 }

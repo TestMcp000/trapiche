@@ -24,6 +24,7 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import type { Element, Root, RootContent } from 'hast';
 import { visit } from 'unist-util-visit';
+import { normalizeEscapedNewlines } from '@/lib/utils/normalize-escaped-newlines';
 
 /**
  * Allowed protocols for links in hotspots content.
@@ -126,8 +127,10 @@ export async function hotspotsMarkdownToHtml(markdown: string): Promise<string> 
         return '';
     }
 
+    const normalized = normalizeEscapedNewlines(markdown);
+
     const processor = createProcessor();
-    const result = await processor.process(markdown);
+    const result = await processor.process(normalized);
     return String(result).trim();
 }
 

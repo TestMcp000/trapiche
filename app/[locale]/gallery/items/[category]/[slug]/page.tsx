@@ -32,6 +32,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SimilarGalleryItems from "@/components/gallery/SimilarGalleryItems";
 import GalleryItemHotspotsClient from "@/components/gallery/GalleryItemHotspotsClient";
+import { normalizeEscapedNewlines } from "@/lib/utils/normalize-escaped-newlines";
 
 interface PageProps {
   params: Promise<{ locale: string; category: string; slug: string }>;
@@ -137,9 +138,11 @@ export default async function GalleryItemPage({ params }: PageProps) {
 
   // Localized content
   const title = item.title_zh;
-  const description = item.description_zh;
+  const description = item.description_zh
+    ? normalizeEscapedNewlines(item.description_zh)
+    : null;
   const categoryName = item.category.name_zh;
-  const material = item.material_zh;
+  const material = item.material_zh ? normalizeEscapedNewlines(item.material_zh) : null;
   const tags = item.tags_zh;
   const imageAlt = item.image_alt_zh || title;
 
@@ -214,7 +217,9 @@ export default async function GalleryItemPage({ params }: PageProps) {
           {/* Description */}
           {description && (
             <div className="prose dark:prose-invert max-w-none mb-8">
-              <p className="text-secondary leading-relaxed">{description}</p>
+              <p className="text-secondary leading-relaxed whitespace-pre-line">
+                {description}
+              </p>
             </div>
           )}
 
@@ -224,7 +229,7 @@ export default async function GalleryItemPage({ params }: PageProps) {
               <h2 className="text-sm font-medium text-secondary uppercase tracking-wide mb-2">
                 材質
               </h2>
-              <p className="text-foreground">{material}</p>
+              <p className="text-foreground whitespace-pre-line">{material}</p>
             </div>
           )}
 

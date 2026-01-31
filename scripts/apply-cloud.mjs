@@ -52,6 +52,11 @@ function normalizeNav(raw) {
   return { version, groups };
 }
 
+function normalizeEscapedNewlines(input) {
+  if (typeof input !== 'string') return '';
+  return input.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+}
+
 function ensureMainNavGroup(nav) {
   const mainGroup = {
     id: 'main',
@@ -194,10 +199,77 @@ async function main() {
     }
   }
 
+  console.log('==> Normalizing escaped newlines (seed/import artifacts)');
+
+  // Blog posts: content_zh / excerpt_zh
+  const { data: postsWithEscapes, error: postsReadError } = await supabase
+    .from('posts')
+    .select('id, slug, content_zh, excerpt_zh')
+    .like('content_zh', '%\\\\n%');
+
+  if (postsReadError) {
+    throw new Error(`Failed to read posts for normalization: ${postsReadError.message}`);
+  }
+
+  let postsUpdated = 0;
+  for (const post of postsWithEscapes ?? []) {
+    const nextContentZh = normalizeEscapedNewlines(post.content_zh ?? '');
+    const nextExcerptZh = post.excerpt_zh ? normalizeEscapedNewlines(post.excerpt_zh) : null;
+
+    const patch = {};
+    if (post.content_zh !== nextContentZh) patch.content_zh = nextContentZh;
+    if (post.excerpt_zh && post.excerpt_zh !== nextExcerptZh) patch.excerpt_zh = nextExcerptZh;
+    if (Object.keys(patch).length === 0) continue;
+
+    patch.updated_at = now;
+
+    const { error: postUpdateError } = await supabase
+      .from('posts')
+      .update(patch)
+      .eq('id', post.id);
+
+    if (postUpdateError) {
+      throw new Error(`Failed to normalize post "${post.slug}": ${postUpdateError.message}`);
+    }
+
+    postsUpdated += 1;
+  }
+
+  // Gallery hotspots: description_md (rendered as safe markdown)
+  const { data: hotspotsWithEscapes, error: hotspotsReadError } = await supabase
+    .from('gallery_hotspots')
+    .select('id, description_md')
+    .like('description_md', '%\\\\n%');
+
+  if (hotspotsReadError) {
+    throw new Error(`Failed to read gallery_hotspots for normalization: ${hotspotsReadError.message}`);
+  }
+
+  let hotspotsUpdated = 0;
+  for (const hotspot of hotspotsWithEscapes ?? []) {
+    const nextDescription = normalizeEscapedNewlines(hotspot.description_md ?? '');
+    if (hotspot.description_md === nextDescription) continue;
+
+    const { error: hotspotUpdateError } = await supabase
+      .from('gallery_hotspots')
+      .update({ description_md: nextDescription, updated_at: now })
+      .eq('id', hotspot.id);
+
+    if (hotspotUpdateError) {
+      throw new Error(`Failed to normalize gallery_hotspots(${hotspot.id}): ${hotspotUpdateError.message}`);
+    }
+
+    hotspotsUpdated += 1;
+  }
+
+  console.log(`   - posts updated: ${postsUpdated}`);
+  console.log(`   - hotspots updated: ${hotspotsUpdated}`);
+
   console.log('');
   console.log('DONE');
   console.log('- blog/gallery enabled (feature_settings)');
   console.log('- hamburger_nav updated & published');
+  console.log('- escaped newlines normalized (posts, gallery_hotspots)');
   console.log('- Note: frontend caches may take up to ~60s to refresh');
 }
 
@@ -207,4 +279,3 @@ main().catch((err) => {
   printUsage();
   process.exit(1);
 });
-
