@@ -19,6 +19,7 @@
     "db:seed": "node scripts/db.mjs seed",
     "db:drop": "node scripts/db.mjs drop",
     "db:reset": "node scripts/db.mjs reset",
+    "db:apply-cloud": "node scripts/apply-cloud.mjs",
     "lint:links": "linkinator http://localhost:3000 --skip \"^data:|mailto:|tel:\"",
     "analyze": "cross-env ANALYZE=true next build --webpack"
   },

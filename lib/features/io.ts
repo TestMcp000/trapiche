@@ -4,7 +4,7 @@
  * Provides public access to feature visibility settings.
  * Uses anon client (no cookies) for cacheable reads.
  *
- * Features: blog, gallery (all disabled by default)
+ * Features: blog, gallery (defaults controlled by DB seed/migrations)
  */
 
 import 'server-only';

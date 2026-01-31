@@ -97,24 +97,24 @@ export default function LoginClient({ routeLocale }: LoginClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
+        <div className="glass-card rounded-theme-lg shadow-soft border border-border-light/60 p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-bold text-foreground mb-2">
               Admin Login
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
+            <p className="text-secondary text-sm">
               Sign in to manage your blog
             </p>
           </div>
 
           {/* Error Message */}
           {(error || urlError) && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error ?? urlError}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700">{error ?? urlError}</p>
             </div>
           )}
 
@@ -122,10 +122,10 @@ export default function LoginClient({ routeLocale }: LoginClientProps) {
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-surface-raised border border-border-light rounded-lg hover:bg-surface-raised-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <svg className="w-5 h-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 animate-spin text-secondary" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path
                   className="opacity-75"
@@ -153,20 +153,20 @@ export default function LoginClient({ routeLocale }: LoginClientProps) {
                 />
               </svg>
             )}
-            <span className="text-gray-700 dark:text-gray-200 font-medium">
+            <span className="text-foreground font-medium">
               {loading ? 'Signing in...' : 'Continue with Google'}
             </span>
           </button>
 
           {/* Notice */}
-          <p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-6 text-center text-xs text-secondary">
             Only authorized administrators can access this area.
           </p>
         </div>
 
         {/* Back Link */}
         <div className="mt-6 text-center">
-          <a href={`/${locale}`} className="text-sm text-gray-400 hover:text-white transition-colors">
+          <a href={`/${locale}`} className="text-sm text-secondary/80 hover:text-foreground transition-colors">
             ← Back to site
           </a>
         </div>
@@ -174,4 +174,3 @@ export default function LoginClient({ routeLocale }: LoginClientProps) {
     </div>
   );
 }
-

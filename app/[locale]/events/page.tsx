@@ -186,7 +186,7 @@ function EventCard({
           </svg>
           <span>{locationText}</span>
           {isOnline && (
-            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded">
+            <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded">
               線上
             </span>
           )}

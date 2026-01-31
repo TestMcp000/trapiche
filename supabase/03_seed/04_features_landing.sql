@@ -15,11 +15,11 @@
 -- ============================================
 -- PART 1: 功能開關 (Feature Settings)
 -- ============================================
--- All features disabled by default, owner enables manually
+-- Default: enable blog + gallery for this project
 
 INSERT INTO feature_settings (feature_key, is_enabled, display_order, description_en, description_zh) VALUES
-  ('blog', false, 1, 'Blog posts and articles section', '部落格文章區塊'),
-  ('gallery', false, 2, 'Pinterest-style image gallery', 'Pinterest 風格圖片畫廊')
+  ('blog', true, 1, 'Blog posts and articles section', '部落格文章區塊'),
+  ('gallery', true, 2, 'Pinterest-style image gallery', 'Pinterest 風格圖片畫廊')
 ON CONFLICT (feature_key) DO NOTHING;
 
 

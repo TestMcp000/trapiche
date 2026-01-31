@@ -33,7 +33,8 @@
 
 CREATE TABLE IF NOT EXISTS public.ai_analysis_report_shares (
   -- Token is the primary key (64-char hex string, 256-bit entropy)
-  token TEXT PRIMARY KEY DEFAULT encode(gen_random_bytes(32), 'hex'),
+  -- Note: `gen_random_bytes` lives in the `extensions` schema in Supabase.
+  token TEXT PRIMARY KEY DEFAULT encode(extensions.gen_random_bytes(32), 'hex'),
   
   -- Reference to the report being shared
   report_id UUID NOT NULL REFERENCES public.ai_analysis_reports(id) ON DELETE CASCADE,

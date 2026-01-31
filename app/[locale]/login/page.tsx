@@ -9,7 +9,7 @@ export default async function LoginPage({
   const { locale } = await params;
 
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-900" />}>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <LoginClient routeLocale={locale} />
     </Suspense>
   );

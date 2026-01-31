@@ -524,6 +524,8 @@
         "derivedTokens": "衍生 Tokens",
         "derivedTokensDesc": "這些值通常是由基礎 tokens 衍生而來，但你可以覆寫它們。",
         "resetAll": "全部重設",
+        "quickPresets": "快速配色",
+        "quickPresetsDesc": "一鍵套用背景/文字/Accent 組合（會清除衍生 tokens 覆寫）",
         "bg": "背景顏色",
         "text": "文字顏色",
         "accent": "Accent 顏色",

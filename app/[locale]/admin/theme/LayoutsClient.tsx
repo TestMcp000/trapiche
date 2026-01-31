@@ -57,6 +57,29 @@ const CSS_VAR_TO_TOKEN_KEY: Record<CustomizableCssVar, string> = {
   '--border-light': 'borderLight',
 };
 
+type ThemeColorPreset = {
+  id: string;
+  label: string;
+  bg: string;
+  text: string;
+  accent: string;
+};
+
+/**
+ * One-click color presets for Theme v2 tokens.
+ *
+ * Applies: --theme-bg / --theme-text / --theme-accent
+ * Clears: derived overrides (surface/border) so they can re-derive cleanly.
+ */
+const COLOR_PRESETS: ThemeColorPreset[] = [
+  { id: 'tech-blue', label: '科技藍', bg: '#ffffff', text: '#1d1d1f', accent: '#0071e3' },
+  { id: 'sage', label: '日系霧藍', bg: '#F9F8F6', text: '#3D3D3D', accent: '#6B8CAE' },
+  { id: 'rose', label: '溫柔玫瑰', bg: '#ffffff', text: '#111827', accent: '#FF3366' },
+  { id: 'forest', label: '森林綠', bg: '#0B1220', text: '#E5E7EB', accent: '#10B981' },
+  { id: 'amber', label: '琥珀橘', bg: '#ffffff', text: '#111827', accent: '#F59E0B' },
+  { id: 'violet', label: '靛紫', bg: '#ffffff', text: '#111827', accent: '#7C3AED' },
+];
+
 // =============================================================================
 // Props Interface
 // =============================================================================
@@ -126,6 +149,27 @@ export default function LayoutsClient({ config, canEdit }: LayoutsClientProps) {
   const handleResetAll = useCallback(() => {
     if (!canEdit) return;
     setLocalOverrides({});
+  }, [canEdit]);
+
+  const handleApplyColorPreset = useCallback((preset: ThemeColorPreset) => {
+    if (!canEdit) return;
+
+    setLocalOverrides((prev) => {
+      const next: Record<string, string | null> = { ...prev };
+
+      next['--theme-bg'] = preset.bg;
+      next['--theme-text'] = preset.text;
+      next['--theme-accent'] = preset.accent;
+
+      // Clear derived overrides so they follow the new base tokens.
+      for (const key of DERIVED_CUSTOMIZABLE_VARS) {
+        delete next[key];
+      }
+
+      return next;
+    });
+
+    setMessage(null);
   }, [canEdit]);
 
   const handleSave = useCallback(() => {
@@ -307,6 +351,47 @@ export default function LayoutsClient({ config, canEdit }: LayoutsClientProps) {
                 {t('theme.tokens.resetAll')}
               </button>
             )}
+          </div>
+
+          {/* One-click Color Presets */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              {t('theme.tokens.quickPresets')}
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('theme.tokens.quickPresetsDesc')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {COLOR_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handleApplyColorPreset(preset)}
+                  disabled={!canEdit}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors
+                    ${canEdit
+                      ? 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-60 cursor-not-allowed'
+                    }
+                  `}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className="w-4 h-4 rounded border border-gray-300 dark:border-gray-600"
+                      style={{ backgroundColor: preset.bg }}
+                    />
+                    <span
+                      className="w-4 h-4 rounded border border-gray-300 dark:border-gray-600"
+                      style={{ backgroundColor: preset.accent }}
+                    />
+                  </span>
+                  <span className="text-gray-700 dark:text-gray-200 font-medium">
+                    {preset.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Base Tokens Section */}

@@ -251,7 +251,7 @@ export default async function EventDetailPage({ params }: PageProps) {
                     )}
                     {isOnline && (
                       <p className="text-sm flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded text-xs">
+                        <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
                           線上
                         </span>
                         {hasPhysicalLocation && <span>同步線上舉行</span>}

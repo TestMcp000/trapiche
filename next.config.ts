@@ -78,7 +78,12 @@ const nextConfig: NextConfig = {
       // =================================================================
       // Blog post: /blog/[category]/[slug] → /blog/posts/[slug]
       {
-        source: '/:locale(zh)/blog/:category/:slug',
+        // NOTE: Exclude current v2 canonical routes and taxonomy routes to avoid redirect loops.
+        // - /blog/posts/[slug]
+        // - /blog/categories/[slug]
+        // - /blog/tags/[slug]
+        // - /blog/groups/[slug]
+        source: '/:locale(zh)/blog/:category((?!posts|categories|tags|groups)[^/]+)/:slug',
         destination: '/:locale/blog/posts/:slug',
         permanent: true,
       },

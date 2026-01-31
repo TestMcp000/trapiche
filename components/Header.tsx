@@ -12,7 +12,7 @@ interface HeaderProps {
 // Fallback header for build-time safety (no DB reads)
 function FallbackHeader({ locale = 'zh' }: { locale?: string }) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-border/10 shadow-soft">
+    <header className="fixed top-0 left-0 right-0 z-50 glass shadow-soft transition-all duration-300">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href={`/${locale}`} className="text-xl font-bold text-foreground">
           網站

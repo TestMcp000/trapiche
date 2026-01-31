@@ -156,6 +156,14 @@ INSERT INTO site_content (section_key, content_en, content_zh, is_published) VAL
     "version": 2,
     "groups": [
       {
+        "id": "main",
+        "label": "內容",
+        "items": [
+          { "id": "blog-home", "label": "部落格", "target": { "type": "blog_index" } },
+          { "id": "gallery-home", "label": "畫廊", "target": { "type": "gallery_index" } }
+        ]
+      },
+      {
         "id": "health-education",
         "label": "身心健康衛教",
         "items": [
@@ -457,11 +465,11 @@ ON CONFLICT (key) DO UPDATE SET
 -- ============================================
 -- PART 1: 功能開關 (Feature Settings)
 -- ============================================
--- All features disabled by default, owner enables manually
+-- Default: enable blog + gallery for this project
 
 INSERT INTO feature_settings (feature_key, is_enabled, display_order, description_en, description_zh) VALUES
-  ('blog', false, 1, 'Blog posts and articles section', '部落格文章區塊'),
-  ('gallery', false, 2, 'Pinterest-style image gallery', 'Pinterest 風格圖片畫廊')
+  ('blog', true, 1, 'Blog posts and articles section', '部落格文章區塊'),
+  ('gallery', true, 2, 'Pinterest-style image gallery', 'Pinterest 風格圖片畫廊')
 ON CONFLICT (feature_key) DO NOTHING;
 
 

@@ -110,12 +110,12 @@ export default async function SharedReportPage({ params }: PageProps) {
     report.status;
 
   return (
-    <div className="min-h-screen bg-[var(--theme-bg)] text-[var(--theme-text)]">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-[var(--surface-border)] bg-[var(--surface-bg)]">
-        <div className="mx-auto max-w-4xl px-4 py-6">
-          <h1 className="text-2xl font-bold">{templateName}</h1>
-          <div className="mt-2 flex flex-wrap gap-4 text-sm text-[var(--text-muted)]">
+      <header className="glass">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6">
+          <h1 className="text-2xl font-bold text-foreground">{templateName}</h1>
+          <div className="mt-2 flex flex-wrap gap-4 text-sm text-secondary">
             <span>
               {locale === 'zh' ? '建立時間' : 'Created'}: {createdDate}
             </span>
@@ -125,12 +125,12 @@ export default async function SharedReportPage({ params }: PageProps) {
               </span>
             )}
             <span
-              className={`rounded px-2 py-0.5 text-xs font-medium ${
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                 report.status === 'completed'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  ? 'bg-primary/10 text-primary'
                   : report.status === 'failed'
-                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : 'bg-surface text-secondary'
               }`}
             >
               {statusLabel}
@@ -140,14 +140,14 @@ export default async function SharedReportPage({ params }: PageProps) {
       </header>
 
       {/* Content */}
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
         {report.status === 'completed' && resultHtml ? (
           <article
-            className="prose prose-lg dark:prose-invert max-w-none"
+            className="prose prose-lg max-w-none"
             dangerouslySetInnerHTML={{ __html: resultHtml }}
           />
         ) : report.status === 'pending' || report.status === 'running' ? (
-          <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-bg)] p-8 text-center">
+          <div className="glass-card rounded-theme-lg border border-border-light/60 p-8 text-center shadow-soft">
             <div className="mb-4 text-4xl">⏳</div>
             <p className="text-lg">
               {locale === 'zh'
@@ -156,17 +156,17 @@ export default async function SharedReportPage({ params }: PageProps) {
             </p>
           </div>
         ) : report.status === 'failed' ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-center dark:border-red-900/30 dark:bg-red-900/10">
+          <div className="rounded-theme-lg border border-red-200 bg-red-50 p-8 text-center">
             <div className="mb-4 text-4xl">❌</div>
-            <p className="text-lg text-red-800 dark:text-red-400">
+            <p className="text-lg text-red-700">
               {locale === 'zh'
                 ? '報告產生失敗。'
                 : 'Report generation failed.'}
             </p>
           </div>
         ) : (
-          <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-bg)] p-8 text-center">
-            <p className="text-lg text-[var(--text-muted)]">
+          <div className="glass-card rounded-theme-lg border border-border-light/60 p-8 text-center shadow-soft">
+            <p className="text-lg text-secondary">
               {locale === 'zh' ? '報告內容不可用。' : 'Report content unavailable.'}
             </p>
           </div>
@@ -174,7 +174,7 @@ export default async function SharedReportPage({ params }: PageProps) {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--surface-border)] bg-[var(--surface-bg)] py-4 text-center text-sm text-[var(--text-muted)]">
+      <footer className="border-t border-border-light bg-surface-raised py-4 text-center text-sm text-secondary">
         {locale === 'zh'
           ? '此為 AI 分析報告的分享連結。'
           : 'This is a shared AI analysis report.'}
